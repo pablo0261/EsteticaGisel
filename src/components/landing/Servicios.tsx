@@ -2,9 +2,19 @@ import Link from "next/link";
 import { Section } from "@/components/ui/Section";
 import { Container } from "@/components/ui/Container";
 import { SERVICIOS_UI } from "@/lib/site";
-import { formatPrecioARS } from "@/lib/format";
+import { formatPrecioARS, formatDuracion } from "@/lib/format";
+import { getServiciosPublicos } from "@/lib/data/servicios";
 
-export function Servicios() {
+export async function Servicios() {
+  const db = await getServiciosPublicos();
+  const items = db.length
+    ? db.map((s) => ({
+        nombre: s.nombre,
+        duracion: formatDuracion(s.duracion_minutos),
+        precio: s.precio,
+      }))
+    : SERVICIOS_UI;
+
   return (
     <Section id="servicios" className="bg-cream">
       <Container>
@@ -22,7 +32,7 @@ export function Servicios() {
         </div>
 
         <div className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {SERVICIOS_UI.map((s) => (
+          {items.map((s) => (
             <article
               key={s.nombre}
               className="flex flex-col rounded-2xl border border-mauve/15 bg-white/60 p-6 transition hover:border-mauve/40 hover:shadow-sm"
