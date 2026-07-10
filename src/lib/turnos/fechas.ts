@@ -26,3 +26,16 @@ export function minutosDelDiaAR(iso: string): number {
   const arMin = utcMin - OFFSET_MIN;
   return (arMin + 1440) % 1440;
 }
+
+/** Suma n días a una fecha "YYYY-MM-DD" (hora AR), devuelve "YYYY-MM-DD". */
+export function sumarDias(fecha: string, n: number): string {
+  const d = new Date(`${fecha}T12:00:00${OFFSET_AR}`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+/** Fecha de hoy en Argentina, "YYYY-MM-DD". */
+export function fechaHoyAR(): string {
+  const arMs = Date.now() - OFFSET_MIN * 60 * 1000;
+  return new Date(arMs).toISOString().slice(0, 10);
+}

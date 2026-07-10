@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { isoFechaHoraAR, diaSemanaAR, minutosDelDiaAR } from "./fechas";
+import {
+  isoFechaHoraAR,
+  diaSemanaAR,
+  minutosDelDiaAR,
+  sumarDias,
+} from "./fechas";
 
 describe("isoFechaHoraAR", () => {
   it("arma un ISO con offset de Argentina (-03:00)", () => {
@@ -20,5 +25,12 @@ describe("minutosDelDiaAR", () => {
   it("extrae los minutos desde medianoche (hora AR) de un timestamp", () => {
     expect(minutosDelDiaAR("2026-07-10T14:30:00-03:00")).toBe(870);
     expect(minutosDelDiaAR("2026-07-10T09:00:00-03:00")).toBe(540);
+  });
+});
+
+describe("sumarDias", () => {
+  it("suma días cruzando fin de mes", () => {
+    expect(sumarDias("2026-07-10", 1)).toBe("2026-07-11");
+    expect(sumarDias("2026-07-31", 1)).toBe("2026-08-01");
   });
 });
