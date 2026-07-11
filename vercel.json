@@ -1,6 +1,0 @@
-{
-  "crons": [
-    { "path": "/api/cron/liberar-turnos", "schedule": "*/15 * * * *" },
-    { "path": "/api/cron/recordatorios", "schedule": "0 * * * *" }
-  ]
-}
