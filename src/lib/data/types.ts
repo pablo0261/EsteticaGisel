@@ -34,3 +34,40 @@ export type Turno = {
   token_gestion: string;
   recordatorio_enviado: boolean;
 };
+
+export type CategoriaCurso = "profesional" | "publico_general";
+export type EstadoCurso = "borrador" | "publicado";
+
+export type Curso = {
+  id: string;
+  titulo: string;
+  descripcion: string | null;
+  categoria: CategoriaCurso;
+  video_storage_path: string | null;
+  permitir_descarga: boolean;
+  dias_acceso: number;
+  precio: number;
+  precio_oferta: number | null;
+  oferta_activa: boolean;
+  oferta_desde: string | null;
+  oferta_hasta: string | null;
+  estado: EstadoCurso;
+  orden: number;
+};
+
+export type ArchivoCurso = {
+  id: string;
+  curso_id: string;
+  nombre_archivo: string;
+  storage_path: string;
+  tipo: "pdf" | "pptx" | "otro";
+};
+
+export type AccesoCurso = {
+  id: string;
+  curso_id: string;
+  cliente_email: string;
+  comprado_en: string;
+  expira_en: string;
+  mp_payment_id: string | null;
+};
