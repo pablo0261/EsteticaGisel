@@ -65,7 +65,7 @@ export async function reprogramarTurno(
     return { ok: false, error: "Fuera del plazo permitido para reprogramar." };
   }
 
-  const disponibles = await getDisponibilidad(ctx.turno.servicio_id, nuevaFecha);
+  const disponibles = await getDisponibilidad([ctx.turno.servicio_id], nuevaFecha);
   if (!disponibles.some((s) => s.iso === nuevoIso)) {
     return { ok: false, error: "Ese horario ya no está disponible." };
   }

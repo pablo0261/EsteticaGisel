@@ -2,6 +2,7 @@ import { Nav } from "@/components/landing/Nav";
 import { Footer } from "@/components/landing/Footer";
 import { Container } from "@/components/ui/Container";
 import { getServiciosPublicos } from "@/lib/data/servicios";
+import { getConfiguracion } from "@/lib/data/configuracion";
 import { ReservaForm } from "@/components/turnos/ReservaForm";
 import { whatsappLink } from "@/lib/site";
 
@@ -9,6 +10,8 @@ export const metadata = { title: "Reservar turno · Gisel Bigurrarena" };
 
 export default async function TurnosPage() {
   const servicios = await getServiciosPublicos();
+  const config = await getConfiguracion();
+  const senaPorcentaje = config?.sena_porcentaje ?? 50;
 
   return (
     <>
@@ -33,7 +36,7 @@ export default async function TurnosPage() {
             </p>
           ) : (
             <div className="mt-8">
-              <ReservaForm servicios={servicios} />
+              <ReservaForm servicios={servicios} senaPorcentaje={senaPorcentaje} />
             </div>
           )}
         </Container>

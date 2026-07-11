@@ -22,10 +22,10 @@ function proximosDias(cantidad: number): { fecha: string; etiqueta: string }[] {
 }
 
 export function SlotPicker({
-  servicioId,
+  servicioIds,
   onSelect,
 }: {
-  servicioId: string;
+  servicioIds: string[];
   onSelect: (fecha: string, iso: string) => void;
 }) {
   const dias = proximosDias(14);
@@ -52,8 +52,8 @@ export function SlotPicker({
 
       <div className="mt-4">
         <SlotsDelDia
-          key={`${servicioId}-${fecha}`}
-          servicioId={servicioId}
+          key={`${servicioIds.join(",")}-${fecha}`}
+          servicioIds={servicioIds}
           fecha={fecha}
           onSelect={(iso) => onSelect(fecha, iso)}
         />
@@ -63,11 +63,11 @@ export function SlotPicker({
 }
 
 function SlotsDelDia({
-  servicioId,
+  servicioIds,
   fecha,
   onSelect,
 }: {
-  servicioId: string;
+  servicioIds: string[];
   fecha: string;
   onSelect: (iso: string) => void;
 }) {
@@ -76,13 +76,14 @@ function SlotsDelDia({
 
   useEffect(() => {
     let activo = true;
-    consultarDisponibilidad(servicioId, fecha).then((resultado) => {
+    consultarDisponibilidad(servicioIds, fecha).then((resultado) => {
       if (activo) setSlots(resultado);
     });
     return () => {
       activo = false;
     };
-  }, [servicioId, fecha]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [servicioIds.join(","), fecha]);
 
   if (slots === null) {
     return <p className="font-sans text-sm text-ink-soft">Buscando horarios…</p>;

@@ -3,9 +3,9 @@
 import { getDisponibilidad, type SlotDisponible } from "@/lib/data/turnos";
 
 export async function consultarDisponibilidad(
-  servicioId: string,
+  servicioIds: string[],
   fecha: string,
 ): Promise<SlotDisponible[]> {
-  if (!servicioId || !fecha) return [];
-  return getDisponibilidad(servicioId, fecha);
+  if (servicioIds.length === 0 || !fecha) return [];
+  return getDisponibilidad(servicioIds, fecha);
 }

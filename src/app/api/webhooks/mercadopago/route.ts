@@ -47,7 +47,10 @@ export async function POST(request: NextRequest) {
 
   const [refTipo, refId] = (pago.externalReference ?? "").split(":");
   if (refTipo === "turno" && refId) {
-    await procesarPagoTurno(refId, pago.status, pago.id);
+    // Una reserva puede combinar varios servicios consecutivos -> varios turnos.
+    for (const turnoId of refId.split(",")) {
+      await procesarPagoTurno(turnoId, pago.status, pago.id);
+    }
   } else if (refTipo === "curso" && refId) {
     await procesarPagoCurso(refId, pago);
   }

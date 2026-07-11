@@ -11,22 +11,31 @@ import {
 export type SlotDisponible = { hora: string; iso: string };
 
 /**
- * Calcula los horarios disponibles para un servicio en una fecha (YYYY-MM-DD),
- * contra el horario de atención, la duración del servicio, el margen de
- * preparación y los turnos ya ocupados (confirmados o pendientes no vencidos).
+ * Calcula los horarios disponibles para uno o más servicios en una fecha
+ * (YYYY-MM-DD), contra el horario de atención, la duración combinada de los
+ * servicios elegidos (se reservan consecutivos, sin hueco entre ellos), el
+ * margen de preparación y los turnos ya ocupados (confirmados o pendientes
+ * no vencidos).
  */
 export async function getDisponibilidad(
-  servicioId: string,
+  servicioIds: string[],
   fecha: string,
 ): Promise<SlotDisponible[]> {
+  if (servicioIds.length === 0) return [];
   const db = createAdminClient();
 
-  const { data: servicio } = await db
+  const { data: servicios } = await db
     .from("servicios")
     .select("duracion_minutos, activo")
-    .eq("id", servicioId)
-    .single();
-  if (!servicio || !servicio.activo) return [];
+    .in("id", servicioIds);
+  if (
+    !servicios ||
+    servicios.length !== servicioIds.length ||
+    servicios.some((s) => !s.activo)
+  ) {
+    return [];
+  }
+  const duracionTotal = servicios.reduce((sum, s) => sum + s.duracion_minutos, 0);
 
   const { data: config } = await db
     .from("configuracion_negocio")
@@ -65,7 +74,7 @@ export async function getDisponibilidad(
   const slots = calcularSlots({
     aperturaMin: hhmmToMin(horario[0]),
     cierreMin: hhmmToMin(horario[1]),
-    duracionMin: servicio.duracion_minutos,
+    duracionMin: duracionTotal,
     margenMin: config.minutos_preparacion_entre_turnos,
     ocupados,
     stepMin: 30,

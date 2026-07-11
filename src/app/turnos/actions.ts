@@ -10,14 +10,14 @@ export type ReservarTurnoResult =
   | { ok: false; error: string };
 
 export async function reservarTurno(formData: FormData): Promise<ReservarTurnoResult> {
-  const servicioId = String(formData.get("servicioId"));
+  const servicioIds = formData.getAll("servicioIds").map(String);
   const fecha = String(formData.get("fecha"));
   const iso = String(formData.get("iso"));
   const clienteNombre = String(formData.get("clienteNombre") || "").trim();
   const clienteEmail = String(formData.get("clienteEmail") || "").trim();
   const clienteTelefono = String(formData.get("clienteTelefono") || "").trim();
 
-  if (!servicioId || !iso || !clienteNombre || !clienteEmail) {
+  if (servicioIds.length === 0 || !iso || !clienteNombre || !clienteEmail) {
     return { ok: false, error: "Completá todos los campos obligatorios." };
   }
 
@@ -29,21 +29,23 @@ export async function reservarTurno(formData: FormData): Promise<ReservarTurnoRe
     };
   }
 
-  // Re-verificar que el slot sigue libre (evita choques por condición de carrera).
-  const disponibles = await getDisponibilidad(servicioId, fecha);
+  // Re-verificar que el slot combinado sigue libre (evita choques por condición de carrera).
+  const disponibles = await getDisponibilidad(servicioIds, fecha);
   if (!disponibles.some((s) => s.iso === iso)) {
     return { ok: false, error: "Ese horario ya no está disponible. Elegí otro." };
   }
 
   const db = createAdminClient();
 
-  const { data: servicio } = await db
+  const { data: serviciosSinOrden } = await db
     .from("servicios")
-    .select("nombre, duracion_minutos, precio, activo")
-    .eq("id", servicioId)
-    .single();
-  if (!servicio || !servicio.activo) {
-    return { ok: false, error: "Ese servicio no está disponible." };
+    .select("id, nombre, duracion_minutos, precio, activo")
+    .in("id", servicioIds);
+  const servicios = servicioIds
+    .map((id) => serviciosSinOrden?.find((s) => s.id === id))
+    .filter((s): s is NonNullable<typeof s> => !!s);
+  if (servicios.length !== servicioIds.length || servicios.some((s) => !s.activo)) {
+    return { ok: false, error: "Alguno de los servicios elegidos no está disponible." };
   }
 
   const { data: config } = await db
@@ -55,40 +57,52 @@ export async function reservarTurno(formData: FormData): Promise<ReservarTurnoRe
     return { ok: false, error: "No se pudo leer la configuración del negocio." };
   }
 
-  const montoSena = calcularMontoSena(servicio.precio, config.sena_porcentaje);
   const bloqueadoHasta = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+  let inicioActual = new Date(iso);
+  const turnoIds: string[] = [];
+  let montoSenaTotal = 0;
 
-  const { data: turno, error } = await db
-    .from("turnos")
-    .insert({
-      servicio_id: servicioId,
-      cliente_nombre: clienteNombre,
-      cliente_email: clienteEmail,
-      cliente_telefono: clienteTelefono || null,
-      fecha_hora: iso,
-      duracion_minutos: servicio.duracion_minutos,
-      estado: "pendiente_pago",
-      monto_sena: montoSena,
-      bloqueado_hasta: bloqueadoHasta,
-    })
-    .select("id")
-    .single();
+  for (const servicio of servicios) {
+    const montoSena = calcularMontoSena(servicio.precio, config.sena_porcentaje);
+    const { data: turno, error } = await db
+      .from("turnos")
+      .insert({
+        servicio_id: servicio.id,
+        cliente_nombre: clienteNombre,
+        cliente_email: clienteEmail,
+        cliente_telefono: clienteTelefono || null,
+        fecha_hora: inicioActual.toISOString(),
+        duracion_minutos: servicio.duracion_minutos,
+        estado: "pendiente_pago",
+        monto_sena: montoSena,
+        bloqueado_hasta: bloqueadoHasta,
+      })
+      .select("id")
+      .single();
 
-  if (error || !turno) {
-    return { ok: false, error: "No se pudo crear el turno. Probá de nuevo." };
+    if (error || !turno) {
+      // Revertir los turnos ya creados de esta reserva combinada.
+      if (turnoIds.length > 0) await db.from("turnos").delete().in("id", turnoIds);
+      return { ok: false, error: "No se pudo crear el turno. Probá de nuevo." };
+    }
+
+    turnoIds.push(turno.id);
+    montoSenaTotal += montoSena;
+    inicioActual = new Date(inicioActual.getTime() + servicio.duracion_minutos * 60000);
   }
 
   try {
+    const titulo = `Seña — ${servicios.map((s) => s.nombre).join(" + ")}`;
     const pref = await crearPreferencia({
-      titulo: `Seña — ${servicio.nombre}`,
-      monto: montoSena,
-      externalReference: `turno:${turno.id}`,
+      titulo,
+      monto: montoSenaTotal,
+      externalReference: `turno:${turnoIds.join(",")}`,
       clienteEmail,
       backUrls: { success: "/turnos/gracias", pending: "/turnos/gracias", failure: "/turnos" },
     });
     return { ok: true, initPoint: pref.initPoint };
   } catch {
-    // El turno queda pendiente_pago; el cron lo libera a los 15 min si no se paga.
+    // Los turnos quedan pendiente_pago; el cron los libera a los 15 min si no se paga.
     return {
       ok: false,
       error: "No se pudo iniciar el pago. Probá de nuevo o escribinos por WhatsApp.",

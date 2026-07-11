@@ -68,7 +68,7 @@ export function GestionPanel({
     return (
       <div className="flex flex-col gap-4">
         <SlotPicker
-          servicioId={servicioId}
+          servicioIds={[servicioId]}
           onSelect={(fecha, iso) => setNuevoIso({ fecha, iso })}
         />
         {error && (
