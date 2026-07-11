@@ -30,6 +30,7 @@ export default function RootLayout({
     <html
       lang="es-AR"
       className={`${cormorant.variable} ${jost.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
