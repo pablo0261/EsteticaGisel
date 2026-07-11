@@ -10,6 +10,7 @@ type CrearPreferenciaOpts = {
   monto: number;
   externalReference: string;
   clienteEmail: string;
+  backUrls: { success: string; pending: string; failure: string };
 };
 
 /** Crea una preferencia de Checkout Pro. Devuelve el init_point para redirigir. */
@@ -37,9 +38,9 @@ export async function crearPreferencia(
       payer: { email: opts.clienteEmail },
       external_reference: opts.externalReference,
       back_urls: {
-        success: `${siteUrl}/turnos/gracias`,
-        pending: `${siteUrl}/turnos/gracias`,
-        failure: `${siteUrl}/turnos`,
+        success: `${siteUrl}${opts.backUrls.success}`,
+        pending: `${siteUrl}${opts.backUrls.pending}`,
+        failure: `${siteUrl}${opts.backUrls.failure}`,
       },
       auto_return: "approved",
       notification_url: `${siteUrl}/api/webhooks/mercadopago`,
@@ -60,6 +61,7 @@ export type MpPayment = {
   status: string; // approved | pending | rejected | ...
   externalReference: string | null;
   transactionAmount: number;
+  payerEmail: string | null;
 };
 
 /** Consulta el estado real de un pago contra la API de MP (nunca confiar solo en el webhook). */
@@ -76,5 +78,6 @@ export async function obtenerPago(paymentId: string): Promise<MpPayment> {
     status: data.status,
     externalReference: data.external_reference ?? null,
     transactionAmount: data.transaction_amount,
+    payerEmail: data.payer?.email ?? null,
   };
 }

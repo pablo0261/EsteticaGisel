@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verificarFirmaWebhook } from "@/lib/mercadopago/signature";
-import { obtenerPago } from "@/lib/mercadopago/client";
+import { obtenerPago, type MpPayment } from "@/lib/mercadopago/client";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isGoogleConfigurado, crearEvento } from "@/lib/google-calendar/client";
 import { isEmailConfigurado, enviarEmail } from "@/lib/email/resend";
-import { plantillaConfirmacionTurno } from "@/lib/email/plantillas";
+import { plantillaConfirmacionTurno, plantillaCompraCurso } from "@/lib/email/plantillas";
+import { calcularExpiracion } from "@/lib/cursos/reglas";
 
 /**
  * Webhook de Mercado Pago. Nunca confía en el payload por sí solo:
@@ -47,8 +48,9 @@ export async function POST(request: NextRequest) {
   const [refTipo, refId] = (pago.externalReference ?? "").split(":");
   if (refTipo === "turno" && refId) {
     await procesarPagoTurno(refId, pago.status, pago.id);
+  } else if (refTipo === "curso" && refId) {
+    await procesarPagoCurso(refId, pago);
   }
-  // refTipo === "curso" se maneja en el módulo de cursos (Fase 4).
 
   return NextResponse.json({ received: true });
 }
@@ -112,6 +114,62 @@ async function procesarPagoTurno(turnoId: string, estadoPago: string, mpPaymentI
       await enviarEmail({ to: turno.cliente_email, subject, html });
     } catch {
       // El turno ya quedó confirmado; el email es best-effort.
+    }
+  }
+}
+
+async function procesarPagoCurso(cursoId: string, pago: MpPayment) {
+  if (pago.status !== "approved" || !pago.payerEmail) return;
+
+  const db = createAdminClient();
+
+  // Idempotencia: si este pago ya se procesó (reintento del webhook), no duplicar.
+  const { data: pagoExistente } = await db
+    .from("pagos")
+    .select("id")
+    .eq("tipo", "curso")
+    .eq("mp_payment_id", pago.id)
+    .maybeSingle();
+  if (pagoExistente) return;
+
+  const { data: curso } = await db
+    .from("cursos")
+    .select("titulo, dias_acceso")
+    .eq("id", cursoId)
+    .single();
+  if (!curso) return;
+
+  const expiraEn = calcularExpiracion(new Date().toISOString(), curso.dias_acceso);
+
+  const { data: acceso } = await db
+    .from("accesos_curso")
+    .insert({
+      curso_id: cursoId,
+      cliente_email: pago.payerEmail,
+      expira_en: expiraEn,
+      mp_payment_id: pago.id,
+    })
+    .select("token_acceso")
+    .single();
+
+  await db.from("pagos").insert({
+    tipo: "curso",
+    referencia_id: cursoId,
+    mp_payment_id: pago.id,
+    estado: "approved",
+    monto: pago.transactionAmount,
+  });
+
+  if (isEmailConfigurado() && acceso) {
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+    const { subject, html } = plantillaCompraCurso({
+      curso: curso.titulo,
+      linkAcceso: `${siteUrl}/cursos/acceso/${acceso.token_acceso}`,
+    });
+    try {
+      await enviarEmail({ to: pago.payerEmail, subject, html });
+    } catch {
+      // El acceso ya quedó creado; el email es best-effort.
     }
   }
 }

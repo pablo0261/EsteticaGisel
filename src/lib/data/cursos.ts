@@ -1,6 +1,6 @@
 import { createPublicClient } from "@/lib/supabase/public";
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { ArchivoCurso, Curso } from "./types";
+import type { AccesoCurso, ArchivoCurso, Curso } from "./types";
 
 export async function getCursosPublicos(): Promise<Curso[]> {
   try {
@@ -52,4 +52,17 @@ export async function getArchivosCurso(cursoId: string): Promise<ArchivoCurso[]>
     .order("creado_en");
   if (error) return [];
   return (data as ArchivoCurso[]) ?? [];
+}
+
+export type AccesoConCurso = AccesoCurso & { cursos: Curso };
+
+export async function getAccesoPorToken(token: string): Promise<AccesoConCurso | null> {
+  const db = createAdminClient();
+  const { data, error } = await db
+    .from("accesos_curso")
+    .select("*, cursos(*)")
+    .eq("token_acceso", token)
+    .single();
+  if (error) return null;
+  return data as unknown as AccesoConCurso;
 }

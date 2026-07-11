@@ -70,4 +70,5 @@ export type AccesoCurso = {
   comprado_en: string;
   expira_en: string;
   mp_payment_id: string | null;
+  token_acceso: string;
 };

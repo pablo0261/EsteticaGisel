@@ -84,6 +84,7 @@ export async function reservarTurno(formData: FormData): Promise<ReservarTurnoRe
       monto: montoSena,
       externalReference: `turno:${turno.id}`,
       clienteEmail,
+      backUrls: { success: "/turnos/gracias", pending: "/turnos/gracias", failure: "/turnos" },
     });
     return { ok: true, initPoint: pref.initPoint };
   } catch {
