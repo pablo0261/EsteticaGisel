@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getCursoAdmin, getArchivosCurso } from "@/lib/data/cursos";
+import { getCursoAdmin, getArchivosCurso, getAccesosDeCurso } from "@/lib/data/cursos";
 import {
   updateCurso,
   deleteCurso,
@@ -21,6 +21,7 @@ export default async function EditarCursoAdmin({
   const curso = await getCursoAdmin(id);
   if (!curso) notFound();
   const archivos = await getArchivosCurso(id);
+  const accesos = await getAccesosDeCurso(id);
 
   return (
     <div className="max-w-2xl">
@@ -211,6 +212,40 @@ export default async function EditarCursoAdmin({
           </SubmitButton>
           <FormPendingOverlay label="Subiendo archivo…" />
         </form>
+      </div>
+
+      <div className="mt-6 rounded-2xl border border-mauve/15 bg-white/60 p-5">
+        <h2 className="font-serif text-2xl text-ink">Compras</h2>
+        {accesos.length === 0 ? (
+          <p className="mt-2 font-sans text-sm text-ink-soft">
+            Todavía no hay compras de este curso.
+          </p>
+        ) : (
+          <ul className="mt-3 space-y-2">
+            {accesos.map((a) => {
+              const vigente = new Date(a.expira_en) > new Date();
+              return (
+                <li
+                  key={a.id}
+                  className="flex flex-wrap items-center justify-between gap-2 font-sans text-sm text-ink-soft"
+                >
+                  <span>
+                    {a.cliente_email} · comprado el{" "}
+                    {new Date(a.comprado_en).toLocaleDateString("es-AR")}
+                  </span>
+                  <span
+                    className={`rounded-full px-3 py-1 text-xs font-medium ${
+                      vigente ? "bg-sage/15 text-sage-dark" : "bg-ink/5 text-ink-soft"
+                    }`}
+                  >
+                    {vigente ? "Vigente" : "Vencido"} hasta{" "}
+                    {new Date(a.expira_en).toLocaleDateString("es-AR")}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </div>
 
       <form action={deleteCurso} className="mt-6">

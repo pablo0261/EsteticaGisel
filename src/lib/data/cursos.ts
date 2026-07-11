@@ -43,6 +43,17 @@ export async function getCursoAdmin(id: string): Promise<Curso | null> {
   return data as Curso;
 }
 
+export async function getAccesosDeCurso(cursoId: string): Promise<AccesoCurso[]> {
+  const db = createAdminClient();
+  const { data, error } = await db
+    .from("accesos_curso")
+    .select("*")
+    .eq("curso_id", cursoId)
+    .order("comprado_en", { ascending: false });
+  if (error) return [];
+  return (data as AccesoCurso[]) ?? [];
+}
+
 export async function getArchivosCurso(cursoId: string): Promise<ArchivoCurso[]> {
   const db = createAdminClient();
   const { data, error } = await db
