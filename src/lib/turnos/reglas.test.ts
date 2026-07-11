@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { puedeCancelar, calcularMontoSena } from "./reglas";
+import { puedeCancelar, calcularMontoSena, puedeReservar } from "./reglas";
 
 describe("puedeCancelar", () => {
   const ahora = "2026-07-10T12:00:00-03:00";
@@ -55,5 +55,20 @@ describe("calcularMontoSena", () => {
 
   it("redondea a entero", () => {
     expect(calcularMontoSena(10001, 50)).toBe(5001); // 5000.5 -> redondeo
+  });
+});
+
+describe("puedeReservar", () => {
+  it("permite reservar si todavía no llegó al máximo", () => {
+    expect(puedeReservar(0, 2)).toBe(true);
+    expect(puedeReservar(1, 2)).toBe(true);
+  });
+
+  it("bloquea al llegar exactamente al máximo", () => {
+    expect(puedeReservar(2, 2)).toBe(false);
+  });
+
+  it("bloquea si ya lo superó", () => {
+    expect(puedeReservar(3, 2)).toBe(false);
   });
 });

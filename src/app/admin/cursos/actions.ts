@@ -7,6 +7,11 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { videoProvider } from "@/lib/video";
 import { subirArchivoCurso, borrarArchivoCurso } from "@/lib/storage/archivos";
 
+// Límites de la versión de prueba (Supabase free tier = 1 GB de storage total).
+// Subir videos en MP4/H.264 comprimido (ej. 720p) para entrar cómodo en este tope.
+const MAX_VIDEO_BYTES = 150 * 1024 * 1024; // 150 MB
+const MAX_ARCHIVO_BYTES = 20 * 1024 * 1024; // 20 MB
+
 async function requireAdmin() {
   const supabase = await createClient();
   const {
@@ -23,6 +28,14 @@ function revalidar(cursoId?: string) {
 
 export async function createCurso(formData: FormData) {
   await requireAdmin();
+
+  const video = formData.get("video") as File | null;
+  if (video && video.size > MAX_VIDEO_BYTES) {
+    throw new Error(
+      `El video pesa ${Math.round(video.size / 1024 / 1024)}MB. Por ahora el límite es 150MB (versión de prueba) — comprimilo (MP4/H.264, ej. 720p) o subilo después.`,
+    );
+  }
+
   const db = createAdminClient();
   const { data, error } = await db
     .from("cursos")
@@ -36,7 +49,6 @@ export async function createCurso(formData: FormData) {
     .single();
   if (error || !data) throw new Error(error?.message ?? "No se pudo crear el curso");
 
-  const video = formData.get("video") as File | null;
   if (video && video.size > 0) {
     const buffer = Buffer.from(await video.arrayBuffer());
     const path = await videoProvider.subir(data.id, buffer, video.name);
@@ -91,6 +103,11 @@ export async function subirVideoCurso(formData: FormData) {
   const cursoId = String(formData.get("cursoId"));
   const file = formData.get("video") as File | null;
   if (!file || file.size === 0) return;
+  if (file.size > MAX_VIDEO_BYTES) {
+    throw new Error(
+      `El video pesa ${Math.round(file.size / 1024 / 1024)}MB. Por ahora el límite es 150MB (versión de prueba) — comprimilo (MP4/H.264, ej. 720p) y volvé a intentar.`,
+    );
+  }
 
   const buffer = Buffer.from(await file.arrayBuffer());
   const path = await videoProvider.subir(cursoId, buffer, file.name);
@@ -105,6 +122,11 @@ export async function subirArchivoAdicional(formData: FormData) {
   const cursoId = String(formData.get("cursoId"));
   const file = formData.get("archivo") as File | null;
   if (!file || file.size === 0) return;
+  if (file.size > MAX_ARCHIVO_BYTES) {
+    throw new Error(
+      `El archivo pesa ${Math.round(file.size / 1024 / 1024)}MB. Por ahora el límite es 20MB.`,
+    );
+  }
 
   const buffer = Buffer.from(await file.arrayBuffer());
   const path = await subirArchivoCurso(cursoId, buffer, file.name);

@@ -4,6 +4,7 @@ import { createCurso } from "./actions";
 import { formatPrecioARS } from "@/lib/format";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { FormPendingOverlay } from "@/components/ui/FormPendingOverlay";
+import { InfoHint } from "@/components/ui/InfoHint";
 
 export const metadata = { title: "Cursos · Panel" };
 
@@ -57,6 +58,15 @@ export default async function CursosAdmin() {
         <SubmitButton className="rounded-full bg-mauve px-6 py-2 text-sm font-medium text-cream transition hover:bg-mauve-dark disabled:opacity-60">
           Crear
         </SubmitButton>
+        <div className="w-full">
+          <InfoHint>
+            Subilo en <strong>MP4 (H.264)</strong>, comprimido a 720p si podés —
+            es el formato más liviano que se reproduce bien en todos los
+            celulares y navegadores. Límite de esta versión de prueba:{" "}
+            <strong>150MB por video</strong>. Si necesitás videos más pesados,
+            avisame para pasar a otro storage.
+          </InfoHint>
+        </div>
         <FormPendingOverlay label="Creando curso…" />
       </form>
 

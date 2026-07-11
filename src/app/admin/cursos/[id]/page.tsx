@@ -9,6 +9,7 @@ import {
 } from "../actions";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { FormPendingOverlay } from "@/components/ui/FormPendingOverlay";
+import { InfoHint } from "@/components/ui/InfoHint";
 
 export const metadata = { title: "Editar curso · Panel" };
 
@@ -158,6 +159,15 @@ export default async function EditarCursoAdmin({
 
       <div className="mt-6 rounded-2xl border border-mauve/15 bg-white/60 p-5">
         <h2 className="font-serif text-2xl text-ink">Video</h2>
+        <div className="mt-2">
+          <InfoHint>
+            Subilo en <strong>MP4 (H.264)</strong>, comprimido a 720p si podés —
+            es el formato más liviano que se reproduce bien en todos los
+            celulares y navegadores. Límite de esta versión de prueba:{" "}
+            <strong>150MB por video</strong>. Si necesitás videos más pesados,
+            avisame para pasar a otro storage.
+          </InfoHint>
+        </div>
         {curso.video_storage_path ? (
           <p className="mt-2 font-sans text-sm text-ink-soft">
             Video cargado.{" "}

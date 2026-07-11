@@ -2,12 +2,15 @@
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getDisponibilidad } from "@/lib/data/turnos";
-import { calcularMontoSena } from "@/lib/turnos/reglas";
+import { calcularMontoSena, puedeReservar } from "@/lib/turnos/reglas";
+import { getClientIp } from "@/lib/turnos/ip";
 import { isMpConfigurado, crearPreferencia } from "@/lib/mercadopago/client";
 
 export type ReservarTurnoResult =
   | { ok: true; initPoint: string }
   | { ok: false; error: string };
+
+const MAXIMO_RESERVAS_POR_HORA = 2;
 
 export async function reservarTurno(formData: FormData): Promise<ReservarTurnoResult> {
   const servicioIds = formData.getAll("servicioIds").map(String);
@@ -29,13 +32,28 @@ export async function reservarTurno(formData: FormData): Promise<ReservarTurnoRe
     };
   }
 
+  const db = createAdminClient();
+  const ip = await getClientIp();
+  const haceUnaHora = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+  const { count: intentosEnUltimaHora } = await db
+    .from("intentos_reserva")
+    .select("id", { count: "exact", head: true })
+    .eq("ip", ip)
+    .gte("creado_en", haceUnaHora);
+
+  if (!puedeReservar(intentosEnUltimaHora ?? 0, MAXIMO_RESERVAS_POR_HORA)) {
+    return {
+      ok: false,
+      error:
+        "Por seguridad, alcanzaste el máximo de reservas por hora. Esperá una hora para volver a intentar.",
+    };
+  }
+
   // Re-verificar que el slot combinado sigue libre (evita choques por condición de carrera).
   const disponibles = await getDisponibilidad(servicioIds, fecha);
   if (!disponibles.some((s) => s.iso === iso)) {
     return { ok: false, error: "Ese horario ya no está disponible. Elegí otro." };
   }
-
-  const db = createAdminClient();
 
   const { data: serviciosSinOrden } = await db
     .from("servicios")
@@ -90,6 +108,8 @@ export async function reservarTurno(formData: FormData): Promise<ReservarTurnoRe
     montoSenaTotal += montoSena;
     inicioActual = new Date(inicioActual.getTime() + servicio.duracion_minutos * 60000);
   }
+
+  await db.from("intentos_reserva").insert({ ip });
 
   try {
     const titulo = `Seña — ${servicios.map((s) => s.nombre).join(" + ")}`;

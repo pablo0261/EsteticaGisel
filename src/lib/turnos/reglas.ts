@@ -14,3 +14,8 @@ export function puedeCancelar(opts: {
 export function calcularMontoSena(precio: number, senaPorcentaje: number): number {
   return Math.round(precio * (senaPorcentaje / 100));
 }
+
+/** ¿Se puede intentar una nueva reserva, dado cuántas ya se hicieron en la ventana (ej. la última hora)? */
+export function puedeReservar(intentosEnVentana: number, maximo: number): boolean {
+  return intentosEnVentana < maximo;
+}
