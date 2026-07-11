@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { SlotPicker } from "./SlotPicker";
 import { cancelarTurno, reprogramarTurno } from "@/app/turnos/gestion/[token]/actions";
+import { LoadingOverlay } from "@/components/ui/LoadingOverlay";
 
 export function GestionPanel({
   token,
@@ -83,7 +84,7 @@ export function GestionPanel({
             onClick={onConfirmarReprogramacion}
             className="rounded-full bg-mauve px-6 py-2 font-sans text-sm font-medium text-cream transition hover:bg-mauve-dark disabled:opacity-60"
           >
-            {pending ? "Guardando…" : "Confirmar nuevo horario"}
+            Confirmar nuevo horario
           </button>
           <button
             type="button"
@@ -93,6 +94,7 @@ export function GestionPanel({
             Volver
           </button>
         </div>
+        <LoadingOverlay show={pending} label="Guardando cambios…" />
       </div>
     );
   }
@@ -121,6 +123,7 @@ export function GestionPanel({
           Cancelar turno
         </button>
       </div>
+      <LoadingOverlay show={pending} label="Cancelando…" />
     </div>
   );
 }

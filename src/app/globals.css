@@ -41,3 +41,28 @@ h4 {
   font-weight: 500;
   letter-spacing: -0.01em;
 }
+
+/* Feedback de interacción global: manito al pasar, achique al clickear. */
+a,
+button:not(:disabled),
+[role="button"],
+label:has(input[type="checkbox"]),
+label:has(input[type="radio"]) {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+a,
+button:not(:disabled) {
+  transition:
+    transform 0.12s ease,
+    opacity 0.12s ease;
+}
+
+a:active,
+button:not(:disabled):active {
+  transform: scale(0.97);
+}

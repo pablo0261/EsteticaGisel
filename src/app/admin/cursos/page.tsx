@@ -2,6 +2,8 @@ import Link from "next/link";
 import { getCursosAdmin } from "@/lib/data/cursos";
 import { createCurso } from "./actions";
 import { formatPrecioARS } from "@/lib/format";
+import { SubmitButton } from "@/components/ui/SubmitButton";
+import { FormPendingOverlay } from "@/components/ui/FormPendingOverlay";
 
 export const metadata = { title: "Cursos · Panel" };
 
@@ -12,7 +14,8 @@ export default async function CursosAdmin() {
     <div>
       <h1 className="font-serif text-4xl text-ink">Cursos</h1>
       <p className="mt-2 font-sans text-sm text-ink-soft">
-        Creá el curso con lo básico; el resto (video, archivos, oferta) se
+        Creá el curso con lo básico (el video es opcional acá, podés subirlo
+        ahora o después desde la edición). El resto (archivos, oferta) se
         edita después de crearlo.
       </p>
 
@@ -47,9 +50,14 @@ export default async function CursosAdmin() {
           defaultValue={7}
           className="w-36 rounded-lg border border-mauve/20 bg-cream px-3 py-2"
         />
-        <button className="rounded-full bg-mauve px-6 py-2 text-sm font-medium text-cream transition hover:bg-mauve-dark">
+        <label className="flex flex-col font-sans text-xs text-ink-soft">
+          Video (opcional)
+          <input name="video" type="file" accept="video/*" className="mt-1 text-sm" />
+        </label>
+        <SubmitButton className="rounded-full bg-mauve px-6 py-2 text-sm font-medium text-cream transition hover:bg-mauve-dark disabled:opacity-60">
           Crear
-        </button>
+        </SubmitButton>
+        <FormPendingOverlay label="Creando curso…" />
       </form>
 
       <div className="mt-6 space-y-3">

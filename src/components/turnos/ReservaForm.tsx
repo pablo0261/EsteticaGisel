@@ -5,6 +5,7 @@ import { SlotPicker } from "./SlotPicker";
 import { reservarTurno } from "@/app/turnos/actions";
 import { formatPrecioARS } from "@/lib/format";
 import { calcularMontoSena } from "@/lib/turnos/reglas";
+import { LoadingOverlay } from "@/components/ui/LoadingOverlay";
 import type { Servicio } from "@/lib/data/types";
 
 export function ReservaForm({
@@ -147,10 +148,11 @@ export function ReservaForm({
             disabled={pending}
             className="self-start rounded-full bg-mauve px-7 py-3 font-sans text-sm font-medium text-cream transition hover:bg-mauve-dark disabled:opacity-60"
           >
-            {pending ? "Redirigiendo…" : "Confirmar reserva"}
+            Confirmar reserva
           </button>
         </div>
       )}
+      <LoadingOverlay show={pending} label="Redirigiendo a Mercado Pago…" />
     </form>
   );
 }

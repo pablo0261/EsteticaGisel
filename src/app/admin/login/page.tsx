@@ -1,4 +1,6 @@
 import { login } from "../actions";
+import { SubmitButton } from "@/components/ui/SubmitButton";
+import { FormPendingOverlay } from "@/components/ui/FormPendingOverlay";
 
 export const metadata = { title: "Ingresar · Panel" };
 
@@ -44,12 +46,10 @@ export default async function LoginPage({
               className="mt-1 w-full rounded-lg border border-mauve/20 bg-cream px-3 py-2 text-ink outline-none focus:border-mauve"
             />
           </label>
-          <button
-            type="submit"
-            className="mt-2 rounded-full bg-mauve px-7 py-3 font-sans text-sm font-medium text-cream transition hover:bg-mauve-dark"
-          >
+          <SubmitButton className="mt-2 rounded-full bg-mauve px-7 py-3 font-sans text-sm font-medium text-cream transition hover:bg-mauve-dark disabled:opacity-60">
             Ingresar
-          </button>
+          </SubmitButton>
+          <FormPendingOverlay label="Ingresando…" />
         </form>
       </div>
     </main>

@@ -7,6 +7,8 @@ import {
   subirArchivoAdicional,
   eliminarArchivoAdicional,
 } from "../actions";
+import { SubmitButton } from "@/components/ui/SubmitButton";
+import { FormPendingOverlay } from "@/components/ui/FormPendingOverlay";
 
 export const metadata = { title: "Editar curso · Panel" };
 
@@ -147,9 +149,10 @@ export default async function EditarCursoAdmin({
           </div>
         </div>
 
-        <button className="self-start rounded-full bg-mauve px-7 py-3 text-sm font-medium text-cream transition hover:bg-mauve-dark">
+        <SubmitButton className="self-start rounded-full bg-mauve px-7 py-3 text-sm font-medium text-cream transition hover:bg-mauve-dark disabled:opacity-60">
           Guardar
-        </button>
+        </SubmitButton>
+        <FormPendingOverlay label="Guardando cambios…" />
       </form>
 
       <div className="mt-6 rounded-2xl border border-mauve/15 bg-white/60 p-5">
@@ -172,9 +175,10 @@ export default async function EditarCursoAdmin({
         <form action={subirVideoCurso} className="mt-3 flex items-center gap-3">
           <input type="hidden" name="cursoId" value={curso.id} />
           <input name="video" type="file" accept="video/*" required className="font-sans text-sm" />
-          <button className="rounded-full bg-sage px-4 py-2 text-sm text-cream transition hover:bg-sage-dark">
+          <SubmitButton className="rounded-full bg-sage px-4 py-2 text-sm text-cream transition hover:bg-sage-dark disabled:opacity-60">
             Subir
-          </button>
+          </SubmitButton>
+          <FormPendingOverlay label="Subiendo video…" />
         </form>
       </div>
 
@@ -188,7 +192,10 @@ export default async function EditarCursoAdmin({
                 <input type="hidden" name="id" value={a.id} />
                 <input type="hidden" name="cursoId" value={curso.id} />
                 <input type="hidden" name="storagePath" value={a.storage_path} />
-                <button className="text-mauve hover:text-mauve-dark">Eliminar</button>
+                <SubmitButton className="text-mauve hover:text-mauve-dark disabled:opacity-60">
+                  Eliminar
+                </SubmitButton>
+                <FormPendingOverlay label="Eliminando…" />
               </form>
             </li>
           ))}
@@ -199,17 +206,19 @@ export default async function EditarCursoAdmin({
         <form action={subirArchivoAdicional} className="mt-3 flex items-center gap-3">
           <input type="hidden" name="cursoId" value={curso.id} />
           <input name="archivo" type="file" accept=".pdf,.ppt,.pptx" required className="font-sans text-sm" />
-          <button className="rounded-full bg-sage px-4 py-2 text-sm text-cream transition hover:bg-sage-dark">
+          <SubmitButton className="rounded-full bg-sage px-4 py-2 text-sm text-cream transition hover:bg-sage-dark disabled:opacity-60">
             Subir
-          </button>
+          </SubmitButton>
+          <FormPendingOverlay label="Subiendo archivo…" />
         </form>
       </div>
 
       <form action={deleteCurso} className="mt-6">
         <input type="hidden" name="id" value={curso.id} />
-        <button className="font-sans text-sm text-mauve hover:text-mauve-dark">
+        <SubmitButton className="font-sans text-sm text-mauve hover:text-mauve-dark disabled:opacity-60">
           Eliminar este curso
-        </button>
+        </SubmitButton>
+        <FormPendingOverlay label="Eliminando curso…" />
       </form>
     </div>
   );

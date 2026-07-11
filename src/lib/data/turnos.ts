@@ -106,3 +106,29 @@ export async function getTurnoPorToken(token: string): Promise<TurnoConServicio 
     .single();
   return (data as unknown as TurnoConServicio) ?? null;
 }
+
+export type TurnoAdmin = {
+  id: string;
+  cliente_nombre: string;
+  cliente_email: string;
+  cliente_telefono: string | null;
+  fecha_hora: string;
+  duracion_minutos: number;
+  estado: string;
+  monto_sena: number | null;
+  google_calendar_event_id: string | null;
+  servicios: { nombre: string };
+};
+
+/** Todos los turnos, más recientes primero, para la vista de administración. */
+export async function getTurnosAdmin(): Promise<TurnoAdmin[]> {
+  const db = createAdminClient();
+  const { data, error } = await db
+    .from("turnos")
+    .select(
+      "id, cliente_nombre, cliente_email, cliente_telefono, fecha_hora, duracion_minutos, estado, monto_sena, google_calendar_event_id, servicios(nombre)",
+    )
+    .order("fecha_hora", { ascending: false });
+  if (error) return [];
+  return (data as unknown as TurnoAdmin[]) ?? [];
+}

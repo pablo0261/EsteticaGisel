@@ -29,6 +29,9 @@ export default async function AdminLayout({
             <Link href="/admin/servicios" className="text-ink-soft hover:text-mauve">
               Servicios
             </Link>
+            <Link href="/admin/turnos" className="text-ink-soft hover:text-mauve">
+              Turnos
+            </Link>
             <Link href="/admin/cursos" className="text-ink-soft hover:text-mauve">
               Cursos
             </Link>

@@ -1,6 +1,8 @@
 import { getConfiguracion } from "@/lib/data/configuracion";
 import { updateConfiguracion } from "./actions";
 import { DIAS_SEMANA } from "@/lib/turnos/horario";
+import { SubmitButton } from "@/components/ui/SubmitButton";
+import { FormPendingOverlay } from "@/components/ui/FormPendingOverlay";
 
 export const metadata = { title: "Configuración · Panel" };
 
@@ -97,9 +99,10 @@ export default async function ConfiguracionAdmin() {
           </div>
         </div>
 
-        <button className="self-start rounded-full bg-mauve px-7 py-3 text-sm font-medium text-cream transition hover:bg-mauve-dark">
+        <SubmitButton className="self-start rounded-full bg-mauve px-7 py-3 text-sm font-medium text-cream transition hover:bg-mauve-dark disabled:opacity-60">
           Guardar
-        </button>
+        </SubmitButton>
+        <FormPendingOverlay label="Guardando cambios…" />
       </form>
     </div>
   );

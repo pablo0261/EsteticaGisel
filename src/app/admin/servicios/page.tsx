@@ -1,6 +1,8 @@
 import { getServiciosAdmin } from "@/lib/data/servicios";
 import { createServicio, updateServicio, deleteServicio } from "./actions";
 import { formatPrecioARS, formatDuracion } from "@/lib/format";
+import { SubmitButton } from "@/components/ui/SubmitButton";
+import { FormPendingOverlay } from "@/components/ui/FormPendingOverlay";
 
 export const metadata = { title: "Servicios · Panel" };
 
@@ -45,9 +47,10 @@ export default async function ServiciosAdmin() {
           placeholder="Orden"
           className="w-24 rounded-lg border border-mauve/20 bg-cream px-3 py-2"
         />
-        <button className="rounded-full bg-mauve px-6 py-2 text-sm font-medium text-cream transition hover:bg-mauve-dark">
+        <SubmitButton className="rounded-full bg-mauve px-6 py-2 text-sm font-medium text-cream transition hover:bg-mauve-dark disabled:opacity-60">
           Agregar
-        </button>
+        </SubmitButton>
+        <FormPendingOverlay label="Agregando servicio…" />
       </form>
 
       {/* Listado editable */}
@@ -94,15 +97,16 @@ export default async function ServiciosAdmin() {
               <input name="activo" type="checkbox" defaultChecked={s.activo} />
               activo
             </label>
-            <button className="rounded-full bg-sage px-4 py-2 text-sm text-cream transition hover:bg-sage-dark">
+            <SubmitButton className="rounded-full bg-sage px-4 py-2 text-sm text-cream transition hover:bg-sage-dark disabled:opacity-60">
               Guardar
-            </button>
-            <button
+            </SubmitButton>
+            <SubmitButton
               formAction={deleteServicio}
-              className="font-sans text-sm text-mauve hover:text-mauve-dark"
+              className="font-sans text-sm text-mauve hover:text-mauve-dark disabled:opacity-60"
             >
               Eliminar
-            </button>
+            </SubmitButton>
+            <FormPendingOverlay label="Guardando cambios…" />
           </form>
         ))}
       </div>

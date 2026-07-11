@@ -35,6 +35,14 @@ export async function createCurso(formData: FormData) {
     .select("id")
     .single();
   if (error || !data) throw new Error(error?.message ?? "No se pudo crear el curso");
+
+  const video = formData.get("video") as File | null;
+  if (video && video.size > 0) {
+    const buffer = Buffer.from(await video.arrayBuffer());
+    const path = await videoProvider.subir(data.id, buffer, video.name);
+    await db.from("cursos").update({ video_storage_path: path }).eq("id", data.id);
+  }
+
   revalidar();
   redirect(`/admin/cursos/${data.id}`);
 }
