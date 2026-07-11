@@ -16,3 +16,21 @@ export type ConfiguracionNegocio = {
   sena_porcentaje: number;
   horario_atencion: Record<string, [string, string]>;
 };
+
+export type EstadoTurno = "pendiente_pago" | "confirmado" | "cancelado" | "completado";
+
+export type Turno = {
+  id: string;
+  servicio_id: string;
+  cliente_nombre: string;
+  cliente_email: string;
+  cliente_telefono: string | null;
+  fecha_hora: string;
+  duracion_minutos: number;
+  estado: EstadoTurno;
+  monto_sena: number | null;
+  google_calendar_event_id: string | null;
+  bloqueado_hasta: string | null;
+  token_gestion: string;
+  recordatorio_enviado: boolean;
+};

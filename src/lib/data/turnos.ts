@@ -74,3 +74,26 @@ export async function getDisponibilidad(
 
   return slots.map((m) => ({ hora: minToHhmm(m), iso: isoFechaHoraAR(fecha, m) }));
 }
+
+export type TurnoConServicio = {
+  id: string;
+  servicio_id: string;
+  cliente_nombre: string;
+  fecha_hora: string;
+  duracion_minutos: number;
+  estado: string;
+  token_gestion: string;
+  servicios: { nombre: string };
+};
+
+export async function getTurnoPorToken(token: string): Promise<TurnoConServicio | null> {
+  const db = createAdminClient();
+  const { data } = await db
+    .from("turnos")
+    .select(
+      "id, servicio_id, cliente_nombre, fecha_hora, duracion_minutos, estado, token_gestion, servicios(nombre)",
+    )
+    .eq("token_gestion", token)
+    .single();
+  return (data as unknown as TurnoConServicio) ?? null;
+}
