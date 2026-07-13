@@ -41,14 +41,9 @@ export default async function AdminLayout({
             >
               Configuración
             </Link>
-            <a
-              href="/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-ink-soft hover:text-mauve"
-            >
-              Ver sitio ↗
-            </a>
+            <Link href="/" className="text-ink-soft hover:text-mauve">
+              Ver sitio
+            </Link>
           </nav>
           <form action={logout}>
             <button className="font-sans text-sm text-mauve hover:text-mauve-dark">
