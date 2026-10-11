@@ -1,0 +1,12 @@
+node_modules
+.next
+.git
+.vercel
+coverage
+docs
+*.md
+npm-debug.log*
+.DS_Store
+# Secretos: nunca al contexto de build (se pasan como secret / env_file)
+.env*
+!.env.example

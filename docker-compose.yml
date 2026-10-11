@@ -1,0 +1,16 @@
+services:
+  web:
+    build:
+      context: .
+      secrets:
+        - env
+    image: estetica-gisel
+    ports:
+      - "3000:3000"
+    # Secretos de runtime (server-side). Nunca se copian a la imagen.
+    env_file: .env.local
+    restart: unless-stopped
+
+secrets:
+  env:
+    file: .env.local
