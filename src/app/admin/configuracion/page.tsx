@@ -45,11 +45,6 @@ export default async function ConfiguracionAdmin() {
             config.horas_minimas_cancelacion,
           )}
           {field(
-            "horas_anticipacion_recordatorio",
-            "Horas de anticipación del recordatorio",
-            config.horas_anticipacion_recordatorio,
-          )}
-          {field(
             "minutos_preparacion_entre_turnos",
             "Minutos de preparación entre turnos",
             config.minutos_preparacion_entre_turnos,

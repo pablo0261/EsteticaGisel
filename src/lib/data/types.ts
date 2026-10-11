@@ -11,7 +11,6 @@ export type Servicio = {
 export type ConfiguracionNegocio = {
   id: number;
   horas_minimas_cancelacion: number;
-  horas_anticipacion_recordatorio: number;
   minutos_preparacion_entre_turnos: number;
   sena_porcentaje: number;
   horario_atencion: Record<string, [string, string]>;
@@ -32,7 +31,6 @@ export type Turno = {
   google_calendar_event_id: string | null;
   bloqueado_hasta: string | null;
   token_gestion: string;
-  recordatorio_enviado: boolean;
 };
 
 export type CategoriaCurso = "profesional" | "publico_general";

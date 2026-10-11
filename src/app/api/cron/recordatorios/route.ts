@@ -1,14 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { isEmailConfigurado, enviarEmail } from "@/lib/email/resend";
+import { isEmailConfigurado, enviarEmail } from "@/lib/email/gmail";
 import { plantillaRecordatorioTurno } from "@/lib/email/plantillas";
+import { recordatorioQueCorresponde, type TipoRecordatorio } from "@/lib/turnos/recordatorios";
 
 function autorizado(request: NextRequest): boolean {
   const auth = request.headers.get("authorization");
   return auth === `Bearer ${process.env.CRON_SECRET}`;
 }
 
-/** Envía el recordatorio a turnos confirmados dentro de la ventana configurada. */
+const FALTA_TEXTO: Record<TipoRecordatorio, string> = {
+  "48h": "2 días",
+  "24h": "1 día",
+  "2h": "2 horas",
+};
+
+/** Envía los recordatorios de 48h, 24h y 2h a turnos confirmados. Corre cada 10 min. */
 export async function GET(request: NextRequest) {
   if (!autorizado(request)) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
@@ -18,25 +25,15 @@ export async function GET(request: NextRequest) {
   }
 
   const db = createAdminClient();
-  const { data: config } = await db
-    .from("configuracion_negocio")
-    .select("horas_anticipacion_recordatorio")
-    .eq("id", 1)
-    .single();
-  if (!config) {
-    return NextResponse.json({ error: "Sin configuración" }, { status: 500 });
-  }
-
   const ahora = new Date();
-  const limite = new Date(
-    ahora.getTime() + config.horas_anticipacion_recordatorio * 60 * 60 * 1000,
-  );
+  const limite = new Date(ahora.getTime() + 48 * 60 * 60 * 1000);
 
   const { data: turnos } = await db
     .from("turnos")
-    .select("id, cliente_email, fecha_hora, token_gestion, servicios(nombre)")
+    .select(
+      "id, cliente_email, fecha_hora, creado_en, token_gestion, servicios(nombre), recordatorios_enviados(tipo, canal)",
+    )
     .eq("estado", "confirmado")
-    .eq("recordatorio_enviado", false)
     .gte("fecha_hora", ahora.toISOString())
     .lte("fecha_hora", limite.toISOString());
 
@@ -44,6 +41,22 @@ export async function GET(request: NextRequest) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
 
   for (const turno of turnos ?? []) {
+    const tipo = recordatorioQueCorresponde({
+      fechaHoraIso: turno.fecha_hora,
+      creadoEnIso: turno.creado_en,
+      ahoraIso: ahora.toISOString(),
+      enviados: turno.recordatorios_enviados
+        .filter((r) => r.canal === "email")
+        .map((r) => r.tipo as TipoRecordatorio),
+    });
+    if (!tipo) continue;
+
+    // Se registra antes de enviar: la clave única evita duplicados si dos corridas se pisan.
+    const { error: yaTomado } = await db
+      .from("recordatorios_enviados")
+      .insert({ turno_id: turno.id, tipo, canal: "email" });
+    if (yaTomado) continue;
+
     const fechaHoraTexto = new Date(turno.fecha_hora).toLocaleString("es-AR", {
       dateStyle: "long",
       timeStyle: "short",
@@ -52,14 +65,18 @@ export async function GET(request: NextRequest) {
     const { subject, html } = plantillaRecordatorioTurno({
       servicio: (turno.servicios as unknown as { nombre: string }).nombre,
       fechaHoraTexto,
+      faltaTexto: FALTA_TEXTO[tipo],
       linkGestion: `${siteUrl}/turnos/gestion/${turno.token_gestion}`,
     });
     try {
       await enviarEmail({ to: turno.cliente_email, subject, html });
-      await db.from("turnos").update({ recordatorio_enviado: true }).eq("id", turno.id);
       enviados++;
     } catch {
-      // Se reintenta en la próxima corrida del cron.
+      // Se libera el registro para reintentar en la próxima corrida del cron.
+      await db
+        .from("recordatorios_enviados")
+        .delete()
+        .match({ turno_id: turno.id, tipo, canal: "email" });
     }
   }
 

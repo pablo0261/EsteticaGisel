@@ -130,9 +130,14 @@ export function ReservaForm({
             />
           </label>
           <label className="font-sans text-sm text-ink-soft">
-            Teléfono
+            WhatsApp
             <input
               name="clienteTelefono"
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
+              required
+              placeholder="Ej: 11 2345 6789"
               className="mt-1 w-full rounded-lg border border-mauve/20 bg-cream px-3 py-2 text-ink"
             />
           </label>

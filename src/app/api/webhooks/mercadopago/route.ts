@@ -3,7 +3,7 @@ import { verificarFirmaWebhook } from "@/lib/mercadopago/signature";
 import { obtenerPago, type MpPayment } from "@/lib/mercadopago/client";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isGoogleConfigurado, crearEvento } from "@/lib/google-calendar/client";
-import { isEmailConfigurado, enviarEmail } from "@/lib/email/resend";
+import { isEmailConfigurado, enviarEmail } from "@/lib/email/gmail";
 import { plantillaConfirmacionTurno, plantillaCompraCurso } from "@/lib/email/plantillas";
 import { calcularExpiracion } from "@/lib/cursos/reglas";
 

@@ -35,6 +35,11 @@ docker compose down
 
 Si cambia alguna `NEXT_PUBLIC_*`, hay que volver a construir la imagen (`--build`).
 
+## Crons
+
+Los dispara Supabase (pg_cron + pg_net), no Vercel: ver [supabase/migrations/0006_cron_jobs.sql](supabase/migrations/0006_cron_jobs.sql).
+Liberar turnos sin pagar cada 5 min y recordatorios (48h, 24h, 2h) cada 10 min. Requiere que el sitio tenga URL pública.
+
 ## Seguridad
 
 Los secretos van **solo** en `.env.local` (gitignoreado). Nunca se commitean ni se comparten en texto plano.

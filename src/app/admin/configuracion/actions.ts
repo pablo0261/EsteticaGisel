@@ -28,9 +28,6 @@ export async function updateConfiguracion(formData: FormData) {
       horas_minimas_cancelacion: Number(
         formData.get("horas_minimas_cancelacion"),
       ),
-      horas_anticipacion_recordatorio: Number(
-        formData.get("horas_anticipacion_recordatorio"),
-      ),
       minutos_preparacion_entre_turnos: Number(
         formData.get("minutos_preparacion_entre_turnos"),
       ),

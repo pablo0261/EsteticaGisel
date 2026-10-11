@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getDisponibilidad } from "@/lib/data/turnos";
 import { calcularMontoSena, puedeReservar } from "@/lib/turnos/reglas";
 import { getClientIp } from "@/lib/turnos/ip";
+import { normalizarWhatsApp } from "@/lib/turnos/whatsapp";
 import { isMpConfigurado, crearPreferencia } from "@/lib/mercadopago/client";
 
 export type ReservarTurnoResult =
@@ -20,8 +21,16 @@ export async function reservarTurno(formData: FormData): Promise<ReservarTurnoRe
   const clienteEmail = String(formData.get("clienteEmail") || "").trim();
   const clienteTelefono = String(formData.get("clienteTelefono") || "").trim();
 
-  if (servicioIds.length === 0 || !iso || !clienteNombre || !clienteEmail) {
+  if (servicioIds.length === 0 || !iso || !clienteNombre || !clienteEmail || !clienteTelefono) {
     return { ok: false, error: "Completá todos los campos obligatorios." };
+  }
+
+  const clienteWhatsApp = normalizarWhatsApp(clienteTelefono);
+  if (!clienteWhatsApp) {
+    return {
+      ok: false,
+      error: "El número de WhatsApp no es válido. Ingresalo con código de área, ej: 11 2345 6789.",
+    };
   }
 
   if (!isMpConfigurado()) {
@@ -88,7 +97,7 @@ export async function reservarTurno(formData: FormData): Promise<ReservarTurnoRe
         servicio_id: servicio.id,
         cliente_nombre: clienteNombre,
         cliente_email: clienteEmail,
-        cliente_telefono: clienteTelefono || null,
+        cliente_telefono: clienteWhatsApp,
         fecha_hora: inicioActual.toISOString(),
         duracion_minutos: servicio.duracion_minutos,
         estado: "pendiente_pago",

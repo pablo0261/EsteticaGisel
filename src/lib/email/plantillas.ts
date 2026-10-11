@@ -87,12 +87,13 @@ export function plantillaConfirmacionTurno(opts: {
 export function plantillaRecordatorioTurno(opts: {
   servicio: string;
   fechaHoraTexto: string;
+  faltaTexto: string;
   linkGestion: string;
 }): EmailPlantilla {
   return {
-    subject: `Recordatorio de tu turno — ${opts.servicio}`,
+    subject: `Recordatorio: faltan ${opts.faltaTexto} para tu turno — ${opts.servicio}`,
     html: layout(
-      "Recordatorio de tu turno",
+      `Faltan ${opts.faltaTexto} para tu turno`,
       `<p style="margin:0 0 16px;">Te esperamos para tu turno de <strong>${opts.servicio}</strong>.</p>
        <p style="margin:0 0 4px; color:${COLOR.inkSoft};">Fecha</p>
        <p style="margin:0 0 20px; font-size: 17px;"><strong>${opts.fechaHoraTexto}</strong></p>

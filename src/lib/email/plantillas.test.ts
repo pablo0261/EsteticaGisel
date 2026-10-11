@@ -25,9 +25,11 @@ describe("plantillaRecordatorioTurno", () => {
     const { subject, html } = plantillaRecordatorioTurno({
       servicio: "Masajes",
       fechaHoraTexto: "sábado 11 de julio, 10:00",
+      faltaTexto: "2 días",
       linkGestion: "https://esteticagisel.com.ar/turnos/gestion/xyz",
     });
     expect(subject).toContain("Recordatorio");
+    expect(subject).toContain("2 días");
     expect(html).toContain("Masajes");
     expect(html).toContain("sábado 11 de julio, 10:00");
   });

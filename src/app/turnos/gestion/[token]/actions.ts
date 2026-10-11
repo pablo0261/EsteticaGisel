@@ -98,6 +98,9 @@ export async function reprogramarTurno(
     .update({ fecha_hora: nuevoIso, google_calendar_event_id: nuevoEventId })
     .eq("id", ctx.turno.id);
 
+  // La nueva fecha vuelve a recibir sus recordatorios.
+  await db.from("recordatorios_enviados").delete().eq("turno_id", ctx.turno.id);
+
   revalidatePath(`/turnos/gestion/${token}`);
   return { ok: true };
 }
