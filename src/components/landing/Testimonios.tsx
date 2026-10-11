@@ -50,9 +50,6 @@ export function Testimonios() {
             </figure>
           ))}
         </div>
-        <p className="mt-6 text-center font-sans text-sm italic text-sage">
-          (Testimonios de ejemplo — se reemplazan por reseñas reales.)
-        </p>
       </Container>
     </Section>
   );

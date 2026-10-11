@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { Section } from "@/components/ui/Section";
 import { Container } from "@/components/ui/Container";
 
@@ -6,14 +7,14 @@ export function SobreMi() {
     <Section id="sobre-mi" className="bg-cream-dark">
       <Container>
         <div className="grid items-center gap-12 lg:grid-cols-2">
-          {/* Placeholder de foto (reemplazar por imagen real en public/brand/) */}
           <div className="relative aspect-[4/5] w-full overflow-hidden rounded-3xl bg-gradient-to-br from-mauve-soft to-sage/30">
-            <span
-              aria-hidden
-              className="absolute inset-0 flex items-center justify-center font-serif text-9xl text-white/40"
-            >
-              GB
-            </span>
+            <Image
+              src="/gisel/retrato.jpg"
+              alt="Gisel Bigurrarena, esteticista"
+              fill
+              sizes="(min-width: 1024px) 50vw, 100vw"
+              className="object-cover"
+            />
           </div>
 
           <div>
