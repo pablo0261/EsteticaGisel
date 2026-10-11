@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "migrar": "node --env-file=.env.local scripts/migrar.mjs",
+    "test:aislamiento": "node --env-file=.env.local scripts/test-aislamiento.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.0",
@@ -28,6 +30,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
+    "pg": "^8.23.1",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.10"
