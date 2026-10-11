@@ -10,6 +10,8 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   // Genera .next/standalone (server.js + deps mínimas) para la imagen Docker.
   output: "standalone",
+  // Miniaturas de las vistas previas de cursos (YouTube).
+  images: { remotePatterns: [new URL("https://i.ytimg.com/vi/**")] },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

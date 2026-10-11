@@ -51,6 +51,17 @@ export default async function EditarCursoAdmin({
           />
         </label>
 
+        <label className="font-sans text-sm text-ink-soft">
+          Vista previa (link de YouTube, se muestran los primeros 30 s)
+          <input
+            name="preview_youtube_url"
+            type="url"
+            defaultValue={curso.preview_youtube_url ?? ""}
+            placeholder="https://www.youtube.com/watch?v=..."
+            className="mt-1 w-full rounded-lg border border-mauve/20 bg-cream px-3 py-2 text-ink"
+          />
+        </label>
+
         <div className="flex gap-4">
           <label className="flex-1 font-sans text-sm text-ink-soft">
             Categoría

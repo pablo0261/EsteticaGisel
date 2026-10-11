@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { videoProvider } from "@/lib/video";
 import { subirArchivoCurso, borrarArchivoCurso } from "@/lib/storage/archivos";
+import { youtubeId } from "@/lib/video/youtube";
 
 // Límites de la versión de prueba (Supabase free tier = 1 GB de storage total).
 // Subir videos en MP4/H.264 comprimido (ej. 720p) para entrar cómodo en este tope.
@@ -67,12 +68,17 @@ export async function updateCurso(formData: FormData) {
   const ofertaDesde = String(formData.get("oferta_desde") || "");
   const ofertaHasta = String(formData.get("oferta_hasta") || "");
   const precioOferta = String(formData.get("precio_oferta") || "");
+  const previewYoutubeUrl = String(formData.get("preview_youtube_url") || "").trim();
+  if (previewYoutubeUrl && !youtubeId(previewYoutubeUrl)) {
+    throw new Error("El link de vista previa no es un video de YouTube válido.");
+  }
 
   await db
     .from("cursos")
     .update({
       titulo: String(formData.get("titulo")),
       descripcion: String(formData.get("descripcion") || "") || null,
+      preview_youtube_url: previewYoutubeUrl || null,
       categoria: String(formData.get("categoria")),
       permitir_descarga: formData.get("permitir_descarga") === "on",
       dias_acceso: Number(formData.get("dias_acceso") || 7),

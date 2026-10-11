@@ -42,6 +42,7 @@ export type Curso = {
   descripcion: string | null;
   categoria: CategoriaCurso;
   video_storage_path: string | null;
+  preview_youtube_url: string | null;
   permitir_descarga: boolean;
   dias_acceso: number;
   precio: number;

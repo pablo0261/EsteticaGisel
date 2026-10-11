@@ -6,6 +6,10 @@ import { getCursoPublico } from "@/lib/data/cursos";
 import { precioEfectivo } from "@/lib/cursos/reglas";
 import { formatPrecioARS } from "@/lib/format";
 import { CompraForm } from "@/components/cursos/CompraForm";
+import { youtubeId } from "@/lib/video/youtube";
+import { VistaPreviaYoutube } from "@/components/cursos/VistaPreviaYoutube";
+
+const SEGUNDOS_PREVIEW = 30;
 
 export default async function CursoDetallePage({
   params,
@@ -25,6 +29,7 @@ export default async function CursoDetallePage({
     ahoraIso: new Date().toISOString(),
   });
   const enOferta = precio !== curso.precio;
+  const videoId = curso.preview_youtube_url ? youtubeId(curso.preview_youtube_url) : null;
 
   return (
     <>
@@ -41,6 +46,19 @@ export default async function CursoDetallePage({
             <p className="mt-4 font-sans text-ink-soft">{curso.descripcion}</p>
           )}
 
+          {videoId && (
+            <figure className="mt-8">
+              <VistaPreviaYoutube
+                videoId={videoId}
+                titulo={curso.titulo}
+                segundos={SEGUNDOS_PREVIEW}
+              />
+              <figcaption className="mt-2 font-sans text-sm text-ink-soft">
+                Vista previa de {SEGUNDOS_PREVIEW} segundos. El curso completo se habilita al comprarlo.
+              </figcaption>
+            </figure>
+          )}
+
           <p className="mt-6 font-sans text-2xl text-mauve-dark">
             {enOferta && (
               <span className="mr-2 text-base text-ink-soft line-through">
@@ -54,7 +72,9 @@ export default async function CursoDetallePage({
             Acceso por {curso.dias_acceso} días desde la compra.
           </p>
 
-          <CompraForm cursoId={curso.id} />
+          <div id="comprar" className="scroll-mt-28">
+            <CompraForm cursoId={curso.id} />
+          </div>
         </Container>
       </main>
       <Footer />

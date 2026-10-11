@@ -1,3 +1,5 @@
+import Image from "next/image";
+import { connection } from "next/server";
 import Link from "next/link";
 import { Nav } from "@/components/landing/Nav";
 import { Footer } from "@/components/landing/Footer";
@@ -5,10 +7,13 @@ import { Container } from "@/components/ui/Container";
 import { getCursosPublicos } from "@/lib/data/cursos";
 import { precioEfectivo } from "@/lib/cursos/reglas";
 import { formatPrecioARS } from "@/lib/format";
+import { youtubeId, youtubeMiniatura } from "@/lib/video/youtube";
 
 export const metadata = { title: "Cursos · Gisel Bigurrarena" };
 
 export default async function CursosPage() {
+  // El catálogo cambia desde el admin: se renderiza en cada request, no en el build.
+  await connection();
   const cursos = await getCursosPublicos();
   const ahora = new Date().toISOString();
 
@@ -44,24 +49,57 @@ export default async function CursosPage() {
                   ahoraIso: ahora,
                 });
                 const enOferta = precio !== c.precio;
+                const videoId = c.preview_youtube_url ? youtubeId(c.preview_youtube_url) : null;
                 return (
                   <Link
                     key={c.id}
                     href={`/cursos/${c.id}`}
-                    className="flex flex-col rounded-2xl border border-mauve/15 bg-white/60 p-6 transition hover:border-mauve/40 hover:shadow-sm"
+                    className="group flex flex-col overflow-hidden rounded-2xl border border-mauve/15 bg-white/60 transition hover:border-mauve/40 hover:shadow-sm"
                   >
-                    <p className="font-sans text-xs uppercase tracking-wider text-sage">
-                      {c.categoria === "profesional" ? "Profesional" : "Público general"}
-                    </p>
-                    <h2 className="mt-2 font-serif text-2xl text-ink">{c.titulo}</h2>
-                    <p className="mt-3 font-sans text-lg text-mauve-dark">
-                      {enOferta && (
-                        <span className="mr-2 text-sm text-ink-soft line-through">
-                          {formatPrecioARS(c.precio)}
+                    <div className="relative aspect-video w-full overflow-hidden bg-gradient-to-br from-mauve-soft to-sage/30">
+                      {videoId ? (
+                        <>
+                          <Image
+                            src={youtubeMiniatura(videoId)}
+                            alt=""
+                            fill
+                            sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                            className="object-cover transition duration-300 group-hover:scale-105"
+                          />
+                          <span className="absolute inset-0 flex items-center justify-center bg-ink/10">
+                            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-cream/90 text-mauve-dark shadow-md">
+                              <svg aria-hidden viewBox="0 0 24 24" className="ml-1 h-6 w-6 fill-current">
+                                <path d="M8 5v14l11-7z" />
+                              </svg>
+                            </span>
+                          </span>
+                          <span className="absolute bottom-3 left-3 rounded-full bg-ink/70 px-3 py-1 font-sans text-xs text-cream">
+                            Vista previa
+                          </span>
+                        </>
+                      ) : (
+                        <span
+                          aria-hidden
+                          className="absolute inset-0 flex items-center justify-center font-serif text-6xl text-white/40"
+                        >
+                          GB
                         </span>
                       )}
-                      {formatPrecioARS(precio)}
-                    </p>
+                    </div>
+                    <div className="flex flex-1 flex-col p-6">
+                      <p className="font-sans text-xs uppercase tracking-wider text-sage">
+                        {c.categoria === "profesional" ? "Profesional" : "Público general"}
+                      </p>
+                      <h2 className="mt-2 font-serif text-2xl text-ink">{c.titulo}</h2>
+                      <p className="mt-3 font-sans text-lg text-mauve-dark">
+                        {enOferta && (
+                          <span className="mr-2 text-sm text-ink-soft line-through">
+                            {formatPrecioARS(c.precio)}
+                          </span>
+                        )}
+                        {formatPrecioARS(precio)}
+                      </p>
+                    </div>
                   </Link>
                 );
               })}
