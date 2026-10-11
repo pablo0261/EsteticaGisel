@@ -9,7 +9,7 @@ export type Servicio = {
 };
 
 export type ConfiguracionNegocio = {
-  id: number;
+  tenant_id: string;
   horas_minimas_cancelacion: number;
   minutos_preparacion_entre_turnos: number;
   sena_porcentaje: number;
@@ -70,4 +70,10 @@ export type AccesoCurso = {
   expira_en: string;
   mp_payment_id: string | null;
   token_acceso: string;
+};
+
+export type Testimonio = {
+  id: string;
+  nombre: string;
+  texto: string;
 };

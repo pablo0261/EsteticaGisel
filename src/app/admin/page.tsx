@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { tenantDelAdmin } from "@/lib/tenant/admin";
 
-export default function AdminDashboard() {
+export default async function AdminDashboard() {
+  const tenant = await tenantDelAdmin();
   return (
     <div>
-      <h1 className="font-serif text-4xl text-ink">Hola, Gisel</h1>
+      <h1 className="font-serif text-4xl text-ink">Hola, {tenant.nombre}</h1>
       <p className="mt-2 font-sans text-ink-soft">
         Gestioná tu sitio desde acá.
       </p>

@@ -1,13 +1,10 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import { datosDelTenant } from "@/lib/tenant/datos";
 import type { ConfiguracionNegocio } from "./types";
 
-export async function getConfiguracion(): Promise<ConfiguracionNegocio | null> {
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("configuracion_negocio")
-    .select("*")
-    .eq("id", 1)
-    .single();
-  if (error) return null;
-  return data as ConfiguracionNegocio;
+export async function getConfiguracion(tenantId: string): Promise<ConfiguracionNegocio | null> {
+  const { data, error } = await datosDelTenant(tenantId)
+    .select("configuracion_negocio")
+    .maybeSingle();
+  if (error || !data) return null;
+  return data as unknown as ConfiguracionNegocio;
 }

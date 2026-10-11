@@ -1,16 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { construirHorarioAtencion, DIAS_SEMANA } from "@/lib/turnos/horario";
+import { tenantDelAdmin } from "@/lib/tenant/admin";
+import { datosDelTenant } from "@/lib/tenant/datos";
 
 export async function updateConfiguracion(formData: FormData) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("No autorizado");
+  const tenant = await tenantDelAdmin();
 
   const horarioAtencion = construirHorarioAtencion(
     DIAS_SEMANA.map((d) => ({
@@ -21,19 +17,12 @@ export async function updateConfiguracion(formData: FormData) {
     })),
   );
 
-  const db = createAdminClient();
-  await db
-    .from("configuracion_negocio")
-    .update({
-      horas_minimas_cancelacion: Number(
-        formData.get("horas_minimas_cancelacion"),
-      ),
-      minutos_preparacion_entre_turnos: Number(
-        formData.get("minutos_preparacion_entre_turnos"),
-      ),
-      sena_porcentaje: Number(formData.get("sena_porcentaje")),
-      horario_atencion: horarioAtencion,
-    })
-    .eq("id", 1);
+  await datosDelTenant(tenant.id).update("configuracion_negocio", {
+    horas_minimas_cancelacion: Number(formData.get("horas_minimas_cancelacion")),
+    minutos_preparacion_entre_turnos: Number(formData.get("minutos_preparacion_entre_turnos")),
+    sena_porcentaje: Number(formData.get("sena_porcentaje")),
+    horario_atencion: horarioAtencion,
+  });
   revalidatePath("/admin/configuracion");
+  revalidatePath("/sitio/[tenant]", "layout");
 }

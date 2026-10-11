@@ -6,6 +6,8 @@ import { isGoogleConfigurado, crearEvento } from "@/lib/google-calendar/client";
 import { isEmailConfigurado, enviarEmail } from "@/lib/email/gmail";
 import { plantillaConfirmacionTurno, plantillaCompraCurso } from "@/lib/email/plantillas";
 import { calcularExpiracion } from "@/lib/cursos/reglas";
+import { datosDelTenant } from "@/lib/tenant/datos";
+import { urlDelTenant } from "@/lib/tenant/urls";
 
 /**
  * Webhook de Mercado Pago. Nunca confía en el payload por sí solo:
@@ -61,14 +63,15 @@ export async function POST(request: NextRequest) {
 async function procesarPagoTurno(turnoId: string, estadoPago: string, mpPaymentId: string) {
   if (estadoPago !== "approved") return;
 
-  const db = createAdminClient();
-  const { data: turno } = await db
+  // El pago llega sin tenant: se resuelve desde el turno (consulta de sistema por id).
+  const { data: turno } = await createAdminClient()
     .from("turnos")
-    .select("*, servicios(nombre)")
+    .select("*, servicios(nombre), tenants(slug)")
     .eq("id", turnoId)
-    .single();
+    .maybeSingle();
 
   if (!turno || turno.estado !== "pendiente_pago") return; // ya procesado o inexistente
+  const db = datosDelTenant(turno.tenant_id);
 
   let eventId: string | null = null;
   if (isGoogleConfigurado()) {
@@ -89,11 +92,10 @@ async function procesarPagoTurno(turnoId: string, estadoPago: string, mpPaymentI
   }
 
   await db
-    .from("turnos")
-    .update({ estado: "confirmado", google_calendar_event_id: eventId })
+    .update("turnos", { estado: "confirmado", google_calendar_event_id: eventId })
     .eq("id", turnoId);
 
-  await db.from("pagos").insert({
+  await db.insert("pagos", {
     tipo: "turno",
     referencia_id: turnoId,
     mp_payment_id: mpPaymentId,
@@ -102,7 +104,6 @@ async function procesarPagoTurno(turnoId: string, estadoPago: string, mpPaymentI
   });
 
   if (isEmailConfigurado()) {
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
     const fechaHoraTexto = new Date(turno.fecha_hora).toLocaleString("es-AR", {
       dateStyle: "long",
       timeStyle: "short",
@@ -111,7 +112,7 @@ async function procesarPagoTurno(turnoId: string, estadoPago: string, mpPaymentI
     const { subject, html } = plantillaConfirmacionTurno({
       servicio: turno.servicios.nombre,
       fechaHoraTexto,
-      linkGestion: `${siteUrl}/turnos/gestion/${turno.token_gestion}`,
+      linkGestion: `${urlDelTenant(turno.tenants.slug)}/turnos/gestion/${turno.token_gestion}`,
     });
     try {
       await enviarEmail({ to: turno.cliente_email, subject, html });
@@ -124,29 +125,27 @@ async function procesarPagoTurno(turnoId: string, estadoPago: string, mpPaymentI
 async function procesarPagoCurso(cursoId: string, pago: MpPayment) {
   if (pago.status !== "approved" || !pago.payerEmail) return;
 
-  const db = createAdminClient();
+  // El pago llega sin tenant: se resuelve desde el curso (consulta de sistema por id).
+  const { data: curso } = await createAdminClient()
+    .from("cursos")
+    .select("tenant_id, titulo, dias_acceso, tenants(slug)")
+    .eq("id", cursoId)
+    .maybeSingle();
+  if (!curso) return;
+  const db = datosDelTenant(curso.tenant_id);
 
   // Idempotencia: si este pago ya se procesó (reintento del webhook), no duplicar.
   const { data: pagoExistente } = await db
-    .from("pagos")
-    .select("id")
+    .select("pagos", "id")
     .eq("tipo", "curso")
     .eq("mp_payment_id", pago.id)
     .maybeSingle();
   if (pagoExistente) return;
 
-  const { data: curso } = await db
-    .from("cursos")
-    .select("titulo, dias_acceso")
-    .eq("id", cursoId)
-    .single();
-  if (!curso) return;
-
   const expiraEn = calcularExpiracion(new Date().toISOString(), curso.dias_acceso);
 
   const { data: acceso } = await db
-    .from("accesos_curso")
-    .insert({
+    .insert("accesos_curso", {
       curso_id: cursoId,
       cliente_email: pago.payerEmail,
       expira_en: expiraEn,
@@ -155,7 +154,7 @@ async function procesarPagoCurso(cursoId: string, pago: MpPayment) {
     .select("token_acceso")
     .single();
 
-  await db.from("pagos").insert({
+  await db.insert("pagos", {
     tipo: "curso",
     referencia_id: cursoId,
     mp_payment_id: pago.id,
@@ -164,10 +163,10 @@ async function procesarPagoCurso(cursoId: string, pago: MpPayment) {
   });
 
   if (isEmailConfigurado() && acceso) {
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+    const slug = (curso.tenants as unknown as { slug: string }).slug;
     const { subject, html } = plantillaCompraCurso({
       curso: curso.titulo,
-      linkAcceso: `${siteUrl}/cursos/acceso/${acceso.token_acceso}`,
+      linkAcceso: `${urlDelTenant(slug)}/cursos/acceso/${acceso.token_acceso}`,
     });
     try {
       await enviarEmail({ to: pago.payerEmail, subject, html });

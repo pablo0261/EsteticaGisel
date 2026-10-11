@@ -10,6 +10,8 @@ type CrearPreferenciaOpts = {
   monto: number;
   externalReference: string;
   clienteEmail: string;
+  /** URL del sitio del tenant: retorno de Mercado Pago y webhook. */
+  baseUrl: string;
   backUrls: { success: string; pending: string; failure: string };
 };
 
@@ -17,7 +19,6 @@ type CrearPreferenciaOpts = {
 export async function crearPreferencia(
   opts: CrearPreferenciaOpts,
 ): Promise<{ id: string; initPoint: string }> {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL!;
   const moneda = process.env.MP_CURRENCY || "ARS";
 
   const res = await fetch(`${MP_API}/checkout/preferences`, {
@@ -38,12 +39,12 @@ export async function crearPreferencia(
       payer: { email: opts.clienteEmail },
       external_reference: opts.externalReference,
       back_urls: {
-        success: `${siteUrl}${opts.backUrls.success}`,
-        pending: `${siteUrl}${opts.backUrls.pending}`,
-        failure: `${siteUrl}${opts.backUrls.failure}`,
+        success: `${opts.baseUrl}${opts.backUrls.success}`,
+        pending: `${opts.baseUrl}${opts.backUrls.pending}`,
+        failure: `${opts.baseUrl}${opts.backUrls.failure}`,
       },
       auto_return: "approved",
-      notification_url: `${siteUrl}/api/webhooks/mercadopago`,
+      notification_url: `${opts.baseUrl}/api/webhooks/mercadopago`,
     }),
   });
 

@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { getCursoAdmin, getArchivosCurso, getAccesosDeCurso } from "@/lib/data/cursos";
+import { tenantDelAdmin } from "@/lib/tenant/admin";
 import {
   updateCurso,
   deleteCurso,
@@ -18,11 +19,12 @@ export default async function EditarCursoAdmin({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const tenant = await tenantDelAdmin();
   const { id } = await params;
-  const curso = await getCursoAdmin(id);
+  const curso = await getCursoAdmin(tenant.id, id);
   if (!curso) notFound();
-  const archivos = await getArchivosCurso(id);
-  const accesos = await getAccesosDeCurso(id);
+  const archivos = await getArchivosCurso(tenant.id, id);
+  const accesos = await getAccesosDeCurso(tenant.id, id);
 
   return (
     <div className="max-w-2xl">
@@ -213,7 +215,6 @@ export default async function EditarCursoAdmin({
               <form action={eliminarArchivoAdicional}>
                 <input type="hidden" name="id" value={a.id} />
                 <input type="hidden" name="cursoId" value={curso.id} />
-                <input type="hidden" name="storagePath" value={a.storage_path} />
                 <SubmitButton className="text-mauve hover:text-mauve-dark disabled:opacity-60">
                   Eliminar
                 </SubmitButton>

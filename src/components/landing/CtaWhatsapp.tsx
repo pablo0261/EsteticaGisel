@@ -1,8 +1,13 @@
 import { Container } from "@/components/ui/Container";
 import { Button } from "@/components/ui/Button";
-import { whatsappLink } from "@/lib/site";
+import { whatsappLink } from "@/lib/tenant/urls";
+import type { Tenant } from "@/lib/tenant/tipos";
 
-export function CtaWhatsapp() {
+export function CtaWhatsapp({ tenant }: { tenant: Tenant }) {
+  const whatsapp = whatsappLink(tenant.marca.whatsapp, "¡Hola! Quería consultar por un turno.");
+  const reservaOnline = tenant.modulos.turnos;
+  if (!whatsapp && !reservaOnline) return null;
+
   return (
     <section className="bg-mauve">
       <Container className="flex flex-col items-center gap-6 py-16 text-center sm:py-20">
@@ -10,20 +15,27 @@ export function CtaWhatsapp() {
           ¿Lista para tu próximo turno?
         </h2>
         <p className="max-w-xl font-sans text-cream/90">
-          Escribime por WhatsApp para cualquier consulta, o reservá directamente
-          online con seña.
+          {whatsapp && reservaOnline
+            ? "Escribime por WhatsApp para cualquier consulta, o reservá directamente online."
+            : whatsapp
+              ? "Escribime por WhatsApp y coordinamos tu turno."
+              : "Reservá tu turno online en pocos pasos."}
         </p>
         <div className="flex flex-col gap-3 sm:flex-row">
-          <Button href={whatsappLink()} variant="onDark">
-            Escribir por WhatsApp
-          </Button>
-          <Button
-            href="/turnos"
-            variant="outline"
-            className="border-cream text-cream hover:bg-cream hover:text-mauve"
-          >
-            Reservar online
-          </Button>
+          {whatsapp && (
+            <Button href={whatsapp} variant="onDark">
+              Escribir por WhatsApp
+            </Button>
+          )}
+          {reservaOnline && (
+            <Button
+              href="/turnos"
+              variant="outline"
+              className="border-cream text-cream hover:bg-cream hover:text-mauve"
+            >
+              Reservar online
+            </Button>
+          )}
         </div>
       </Container>
     </section>

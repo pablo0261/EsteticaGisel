@@ -1,28 +1,21 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { isGoogleConfigurado, borrarEvento } from "@/lib/google-calendar/client";
-
-async function requireAdmin() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("No autorizado");
-}
+import { tenantDelAdmin } from "@/lib/tenant/admin";
+import { datosDelTenant } from "@/lib/tenant/datos";
+import type { Turno } from "@/lib/data/types";
 
 export async function cancelarTurnoAdmin(formData: FormData) {
-  await requireAdmin();
+  const tenant = await tenantDelAdmin();
+  const db = datosDelTenant(tenant.id);
   const id = String(formData.get("id"));
-  const db = createAdminClient();
 
-  const { data: turno } = await db
-    .from("turnos")
-    .select("google_calendar_event_id")
+  const { data: fila } = await db
+    .select("turnos", "google_calendar_event_id")
     .eq("id", id)
-    .single();
+    .maybeSingle();
+  const turno = fila as unknown as Pick<Turno, "google_calendar_event_id"> | null;
 
   if (turno?.google_calendar_event_id && isGoogleConfigurado()) {
     try {
@@ -32,17 +25,14 @@ export async function cancelarTurnoAdmin(formData: FormData) {
     }
   }
 
-  await db
-    .from("turnos")
-    .update({ estado: "cancelado", google_calendar_event_id: null })
-    .eq("id", id);
+  await db.update("turnos", { estado: "cancelado", google_calendar_event_id: null }).eq("id", id);
   revalidatePath("/admin/turnos");
 }
 
 export async function marcarCompletado(formData: FormData) {
-  await requireAdmin();
-  const id = String(formData.get("id"));
-  const db = createAdminClient();
-  await db.from("turnos").update({ estado: "completado" }).eq("id", id);
+  const tenant = await tenantDelAdmin();
+  await datosDelTenant(tenant.id)
+    .update("turnos", { estado: "completado" })
+    .eq("id", String(formData.get("id")));
   revalidatePath("/admin/turnos");
 }

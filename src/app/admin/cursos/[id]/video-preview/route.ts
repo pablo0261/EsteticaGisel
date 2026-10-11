@@ -1,17 +1,14 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { getCursoAdmin } from "@/lib/data/cursos";
 import { videoProvider } from "@/lib/video";
+import { tenantDelAdmin } from "@/lib/tenant/admin";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const tenant = await tenantDelAdmin().catch(() => null);
+  if (!tenant) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
   const { id } = await params;
-  const curso = await getCursoAdmin(id);
+  const curso = await getCursoAdmin(tenant.id, id);
   if (!curso?.video_storage_path) {
     return NextResponse.json({ error: "Este curso no tiene video subido." }, { status: 404 });
   }

@@ -1,55 +1,53 @@
-import { Nav } from "@/components/landing/Nav";
-import { Footer } from "@/components/landing/Footer";
 import { Container } from "@/components/ui/Container";
 import { Button } from "@/components/ui/Button";
 import { getTurnoPorToken } from "@/lib/data/turnos";
 import { getConfiguracion } from "@/lib/data/configuracion";
 import { puedeCancelar } from "@/lib/turnos/reglas";
 import { GestionPanel } from "@/components/turnos/GestionPanel";
+import { tenantDeLaPagina } from "@/lib/tenant/actual";
 
-export const metadata = { title: "Gestionar turno · Gisel Bigurrarena" };
+export const metadata = { title: "Gestionar turno" };
 
 export default async function GestionTurnoPage({
   params,
 }: {
-  params: Promise<{ token: string }>;
+  params: Promise<{ tenant: string; token: string }>;
 }) {
+  const tenant = await tenantDeLaPagina(params);
   const { token } = await params;
-  const turno = await getTurnoPorToken(token);
+  const turno = await getTurnoPorToken(tenant.id, token);
 
   return (
-    <>
-      <Nav />
-      <main className="min-h-screen bg-cream px-6 pt-24 pb-20">
-        <Container className="max-w-lg">
-          {!turno ? (
-            <p className="font-sans text-ink-soft">No encontramos ese turno.</p>
-          ) : turno.estado === "cancelado" ? (
-            <p className="font-sans text-ink-soft">Este turno ya fue cancelado.</p>
-          ) : turno.estado !== "confirmado" ? (
-            <p className="font-sans text-ink-soft">
-              Este turno todavía no está confirmado. Si ya pagaste la seña, esperá
-              la confirmación por email.
-            </p>
-          ) : (
-            <TurnoDetalle turno={turno} />
-          )}
-          <Button href="/" className="mt-8">
-            Volver al inicio
-          </Button>
-        </Container>
-      </main>
-      <Footer />
-    </>
+    <main className="min-h-screen bg-cream px-6 pt-24 pb-20">
+      <Container className="max-w-lg">
+        {!turno ? (
+          <p className="font-sans text-ink-soft">No encontramos ese turno.</p>
+        ) : turno.estado === "cancelado" ? (
+          <p className="font-sans text-ink-soft">Este turno ya fue cancelado.</p>
+        ) : turno.estado !== "confirmado" ? (
+          <p className="font-sans text-ink-soft">
+            Este turno todavía no está confirmado. Si ya pagaste la seña, esperá la confirmación por
+            email.
+          </p>
+        ) : (
+          <TurnoDetalle tenantId={tenant.id} turno={turno} />
+        )}
+        <Button href="/" className="mt-8">
+          Volver al inicio
+        </Button>
+      </Container>
+    </main>
   );
 }
 
 async function TurnoDetalle({
+  tenantId,
   turno,
 }: {
+  tenantId: string;
   turno: NonNullable<Awaited<ReturnType<typeof getTurnoPorToken>>>;
 }) {
-  const config = await getConfiguracion();
+  const config = await getConfiguracion(tenantId);
   const permitido = puedeCancelar({
     fechaHoraIso: turno.fecha_hora,
     horasMinimas: config?.horas_minimas_cancelacion ?? 24,

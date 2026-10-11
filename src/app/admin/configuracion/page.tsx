@@ -1,4 +1,5 @@
 import { getConfiguracion } from "@/lib/data/configuracion";
+import { tenantDelAdmin } from "@/lib/tenant/admin";
 import { updateConfiguracion } from "./actions";
 import { DIAS_SEMANA } from "@/lib/turnos/horario";
 import { SubmitButton } from "@/components/ui/SubmitButton";
@@ -7,7 +8,8 @@ import { FormPendingOverlay } from "@/components/ui/FormPendingOverlay";
 export const metadata = { title: "Configuración · Panel" };
 
 export default async function ConfiguracionAdmin() {
-  const config = await getConfiguracion();
+  const tenant = await tenantDelAdmin();
+  const config = await getConfiguracion(tenant.id);
 
   if (!config) {
     return (

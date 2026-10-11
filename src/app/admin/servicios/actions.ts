@@ -1,26 +1,17 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
-
-async function requireAdmin() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("No autorizado");
-}
+import { tenantDelAdmin } from "@/lib/tenant/admin";
+import { datosDelTenant } from "@/lib/tenant/datos";
 
 function revalidar() {
   revalidatePath("/admin/servicios");
-  revalidatePath("/");
+  revalidatePath("/sitio/[tenant]", "layout");
 }
 
 export async function createServicio(formData: FormData) {
-  await requireAdmin();
-  const db = createAdminClient();
-  await db.from("servicios").insert({
+  const tenant = await tenantDelAdmin();
+  await datosDelTenant(tenant.id).insert("servicios", {
     nombre: String(formData.get("nombre")),
     duracion_minutos: Number(formData.get("duracion_minutos")),
     precio: Number(formData.get("precio") || 0),
@@ -30,25 +21,21 @@ export async function createServicio(formData: FormData) {
 }
 
 export async function updateServicio(formData: FormData) {
-  await requireAdmin();
-  const db = createAdminClient();
-  const id = String(formData.get("id"));
-  await db
-    .from("servicios")
-    .update({
+  const tenant = await tenantDelAdmin();
+  await datosDelTenant(tenant.id)
+    .update("servicios", {
       nombre: String(formData.get("nombre")),
       duracion_minutos: Number(formData.get("duracion_minutos")),
       precio: Number(formData.get("precio") || 0),
       orden: Number(formData.get("orden") || 0),
       activo: formData.get("activo") === "on",
     })
-    .eq("id", id);
+    .eq("id", String(formData.get("id")));
   revalidar();
 }
 
 export async function deleteServicio(formData: FormData) {
-  await requireAdmin();
-  const db = createAdminClient();
-  await db.from("servicios").delete().eq("id", String(formData.get("id")));
+  const tenant = await tenantDelAdmin();
+  await datosDelTenant(tenant.id).delete("servicios").eq("id", String(formData.get("id")));
   revalidar();
 }

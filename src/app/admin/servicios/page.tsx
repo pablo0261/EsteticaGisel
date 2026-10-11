@@ -1,4 +1,5 @@
 import { getServiciosAdmin } from "@/lib/data/servicios";
+import { tenantDelAdmin } from "@/lib/tenant/admin";
 import { createServicio, updateServicio, deleteServicio } from "./actions";
 import { formatPrecioARS, formatDuracion } from "@/lib/format";
 import { SubmitButton } from "@/components/ui/SubmitButton";
@@ -7,7 +8,8 @@ import { FormPendingOverlay } from "@/components/ui/FormPendingOverlay";
 export const metadata = { title: "Servicios · Panel" };
 
 export default async function ServiciosAdmin() {
-  const servicios = await getServiciosAdmin();
+  const tenant = await tenantDelAdmin();
+  const servicios = await getServiciosAdmin(tenant.id);
 
   return (
     <div>

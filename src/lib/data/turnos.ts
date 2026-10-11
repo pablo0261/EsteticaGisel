@@ -1,4 +1,4 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import { datosDelTenant } from "@/lib/tenant/datos";
 import { calcularSlots, hhmmToMin, minToHhmm } from "@/lib/turnos/disponibilidad";
 import {
   isoFechaHoraAR,
@@ -7,6 +7,7 @@ import {
   fechaHoyAR,
   sumarDias,
 } from "@/lib/turnos/fechas";
+import type { ConfiguracionNegocio, Servicio, Turno } from "./types";
 
 export type SlotDisponible = { hora: string; iso: string };
 
@@ -18,16 +19,19 @@ export type SlotDisponible = { hora: string; iso: string };
  * no vencidos).
  */
 export async function getDisponibilidad(
+  tenantId: string,
   servicioIds: string[],
   fecha: string,
 ): Promise<SlotDisponible[]> {
   if (servicioIds.length === 0) return [];
-  const db = createAdminClient();
+  const db = datosDelTenant(tenantId);
 
-  const { data: servicios } = await db
-    .from("servicios")
-    .select("duracion_minutos, activo")
+  const { data: filasServicios } = await db
+    .select("servicios", "duracion_minutos, activo")
     .in("id", servicioIds);
+  const servicios = filasServicios as unknown as
+    | Pick<Servicio, "duracion_minutos" | "activo">[]
+    | null;
   if (
     !servicios ||
     servicios.length !== servicioIds.length ||
@@ -37,11 +41,13 @@ export async function getDisponibilidad(
   }
   const duracionTotal = servicios.reduce((sum, s) => sum + s.duracion_minutos, 0);
 
-  const { data: config } = await db
-    .from("configuracion_negocio")
-    .select("horario_atencion, minutos_preparacion_entre_turnos")
-    .eq("id", 1)
+  const { data: filaConfig } = await db
+    .select("configuracion_negocio", "horario_atencion, minutos_preparacion_entre_turnos")
     .single();
+  const config = filaConfig as unknown as Pick<
+    ConfiguracionNegocio,
+    "horario_atencion" | "minutos_preparacion_entre_turnos"
+  > | null;
   if (!config) return [];
 
   const horario = (
@@ -49,11 +55,13 @@ export async function getDisponibilidad(
   )[diaSemanaAR(fecha)];
   if (!horario) return []; // día cerrado (ej. domingo)
 
-  const { data: turnos } = await db
-    .from("turnos")
-    .select("fecha_hora, duracion_minutos, estado, bloqueado_hasta")
+  const { data: filasTurnos } = await db
+    .select("turnos", "fecha_hora, duracion_minutos, estado, bloqueado_hasta")
     .gte("fecha_hora", isoFechaHoraAR(fecha, 0))
     .lt("fecha_hora", isoFechaHoraAR(sumarDias(fecha, 1), 0));
+  const turnos = filasTurnos as unknown as
+    | Pick<Turno, "fecha_hora" | "duracion_minutos" | "estado" | "bloqueado_hasta">[]
+    | null;
 
   const ahora = new Date().toISOString();
   const ocupados = (turnos ?? [])
@@ -95,15 +103,17 @@ export type TurnoConServicio = {
   servicios: { nombre: string };
 };
 
-export async function getTurnoPorToken(token: string): Promise<TurnoConServicio | null> {
-  const db = createAdminClient();
-  const { data } = await db
-    .from("turnos")
+export async function getTurnoPorToken(
+  tenantId: string,
+  token: string,
+): Promise<TurnoConServicio | null> {
+  const { data } = await datosDelTenant(tenantId)
     .select(
+      "turnos",
       "id, servicio_id, cliente_nombre, fecha_hora, duracion_minutos, estado, token_gestion, servicios(nombre)",
     )
     .eq("token_gestion", token)
-    .single();
+    .maybeSingle();
   return (data as unknown as TurnoConServicio) ?? null;
 }
 
@@ -120,12 +130,11 @@ export type TurnoAdmin = {
   servicios: { nombre: string };
 };
 
-/** Todos los turnos, más recientes primero, para la vista de administración. */
-export async function getTurnosAdmin(): Promise<TurnoAdmin[]> {
-  const db = createAdminClient();
-  const { data, error } = await db
-    .from("turnos")
+/** Turnos del tenant, más recientes primero, para el panel. */
+export async function getTurnosAdmin(tenantId: string): Promise<TurnoAdmin[]> {
+  const { data, error } = await datosDelTenant(tenantId)
     .select(
+      "turnos",
       "id, cliente_nombre, cliente_email, cliente_telefono, fecha_hora, duracion_minutos, estado, monto_sena, google_calendar_event_id, servicios(nombre)",
     )
     .order("fecha_hora", { ascending: false });

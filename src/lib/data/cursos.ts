@@ -1,79 +1,72 @@
-import { createPublicClient } from "@/lib/supabase/public";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { datosDelTenant } from "@/lib/tenant/datos";
 import type { AccesoCurso, ArchivoCurso, Curso } from "./types";
 
-export async function getCursosPublicos(): Promise<Curso[]> {
+export async function getCursosPublicos(tenantId: string): Promise<Curso[]> {
   try {
-    const supabase = createPublicClient();
-    const { data, error } = await supabase
-      .from("cursos")
-      .select("*")
+    const { data, error } = await datosDelTenant(tenantId)
+      .select("cursos")
       .eq("estado", "publicado")
       .order("orden");
     if (error) return [];
-    return (data as Curso[]) ?? [];
+    return (data as unknown as Curso[]) ?? [];
   } catch {
     return [];
   }
 }
 
-export async function getCursoPublico(id: string): Promise<Curso | null> {
-  const supabase = createPublicClient();
-  const { data, error } = await supabase
-    .from("cursos")
-    .select("*")
+export async function getCursoPublico(tenantId: string, id: string): Promise<Curso | null> {
+  const { data, error } = await datosDelTenant(tenantId)
+    .select("cursos")
     .eq("id", id)
     .eq("estado", "publicado")
-    .single();
-  if (error) return null;
-  return data as Curso;
+    .maybeSingle();
+  if (error || !data) return null;
+  return data as unknown as Curso;
 }
 
-export async function getCursosAdmin(): Promise<Curso[]> {
-  const db = createAdminClient();
-  const { data, error } = await db.from("cursos").select("*").order("orden");
+export async function getCursosAdmin(tenantId: string): Promise<Curso[]> {
+  const { data, error } = await datosDelTenant(tenantId).select("cursos").order("orden");
   if (error) throw new Error(error.message);
-  return (data as Curso[]) ?? [];
+  return (data as unknown as Curso[]) ?? [];
 }
 
-export async function getCursoAdmin(id: string): Promise<Curso | null> {
-  const db = createAdminClient();
-  const { data, error } = await db.from("cursos").select("*").eq("id", id).single();
-  if (error) return null;
-  return data as Curso;
+export async function getCursoAdmin(tenantId: string, id: string): Promise<Curso | null> {
+  const { data, error } = await datosDelTenant(tenantId)
+    .select("cursos")
+    .eq("id", id)
+    .maybeSingle();
+  if (error || !data) return null;
+  return data as unknown as Curso;
 }
 
-export async function getAccesosDeCurso(cursoId: string): Promise<AccesoCurso[]> {
-  const db = createAdminClient();
-  const { data, error } = await db
-    .from("accesos_curso")
-    .select("*")
+export async function getAccesosDeCurso(tenantId: string, cursoId: string): Promise<AccesoCurso[]> {
+  const { data, error } = await datosDelTenant(tenantId)
+    .select("accesos_curso")
     .eq("curso_id", cursoId)
     .order("comprado_en", { ascending: false });
   if (error) return [];
-  return (data as AccesoCurso[]) ?? [];
+  return (data as unknown as AccesoCurso[]) ?? [];
 }
 
-export async function getArchivosCurso(cursoId: string): Promise<ArchivoCurso[]> {
-  const db = createAdminClient();
-  const { data, error } = await db
-    .from("archivos_curso")
-    .select("*")
+export async function getArchivosCurso(tenantId: string, cursoId: string): Promise<ArchivoCurso[]> {
+  const { data, error } = await datosDelTenant(tenantId)
+    .select("archivos_curso")
     .eq("curso_id", cursoId)
     .order("creado_en");
   if (error) return [];
-  return (data as ArchivoCurso[]) ?? [];
+  return (data as unknown as ArchivoCurso[]) ?? [];
 }
 
 export type AccesoConCurso = AccesoCurso & { cursos: Curso };
 
-export async function getAccesoPorToken(token: string): Promise<AccesoConCurso | null> {
-  const db = createAdminClient();
-  const { data, error } = await db
-    .from("accesos_curso")
-    .select("*, cursos(*)")
+export async function getAccesoPorToken(
+  tenantId: string,
+  token: string,
+): Promise<AccesoConCurso | null> {
+  const { data, error } = await datosDelTenant(tenantId)
+    .select("accesos_curso", "*, cursos(*)")
     .eq("token_acceso", token)
-    .single();
-  if (error) return null;
+    .maybeSingle();
+  if (error || !data) return null;
   return data as unknown as AccesoConCurso;
 }

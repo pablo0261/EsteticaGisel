@@ -20,7 +20,10 @@ En desarrollo por fases. Ver el diseño y el roadmap en
 ```bash
 npm install
 cp .env.example .env.local   # completar con las credenciales (nunca commitear)
-npm run dev
+npm run dev                  # http://gisel.localhost:3000 (cada cliente es un subdominio)
+npm test                     # tests unitarios
+npm run test:aislamiento     # aislamiento entre tenants contra la base real
+npm run migrar -- supabase/migrations/<archivo>.sql
 ```
 
 ## Docker

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { SlotPicker } from "./SlotPicker";
-import { cancelarTurno, reprogramarTurno } from "@/app/turnos/gestion/[token]/actions";
+import { cancelarTurno, reprogramarTurno } from "@/app/sitio/[tenant]/turnos/gestion/[token]/actions";
 import { LoadingOverlay } from "@/components/ui/LoadingOverlay";
 
 export function GestionPanel({

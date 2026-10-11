@@ -1,25 +1,32 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { getDisponibilidad } from "@/lib/data/turnos";
 import { puedeCancelar } from "@/lib/turnos/reglas";
 import { isGoogleConfigurado, crearEvento, borrarEvento } from "@/lib/google-calendar/client";
+import { tenantDelRequest } from "@/lib/tenant/actual";
+import { datosDelTenant } from "@/lib/tenant/datos";
+import type { ConfiguracionNegocio, Turno } from "@/lib/data/types";
 
 async function getTurnoGestionable(token: string) {
-  const db = createAdminClient();
-  const { data: turno } = await db
-    .from("turnos")
-    .select("*, servicios(nombre)")
+  const tenant = await tenantDelRequest();
+  if (!tenant) return null;
+  const db = datosDelTenant(tenant.id);
+
+  const { data: fila } = await db
+    .select("turnos", "*, servicios(nombre)")
     .eq("token_gestion", token)
-    .single();
+    .maybeSingle();
+  const turno = fila as unknown as (Turno & { servicios: { nombre: string } }) | null;
   if (!turno || turno.estado !== "confirmado") return null;
 
-  const { data: config } = await db
-    .from("configuracion_negocio")
-    .select("horas_minimas_cancelacion")
-    .eq("id", 1)
-    .single();
+  const { data: filaConfig } = await db
+    .select("configuracion_negocio", "horas_minimas_cancelacion")
+    .maybeSingle();
+  const config = filaConfig as unknown as Pick<
+    ConfiguracionNegocio,
+    "horas_minimas_cancelacion"
+  > | null;
 
   const permitido = puedeCancelar({
     fechaHoraIso: turno.fecha_hora,
@@ -27,7 +34,7 @@ async function getTurnoGestionable(token: string) {
     ahoraIso: new Date().toISOString(),
   });
 
-  return { turno, permitido };
+  return { tenant, db, turno, permitido };
 }
 
 type AccionResult = { ok: true } | { ok: false; error: string };
@@ -38,7 +45,6 @@ export async function cancelarTurno(token: string): Promise<AccionResult> {
     return { ok: false, error: "Fuera del plazo permitido para cancelar." };
   }
 
-  const db = createAdminClient();
   if (ctx.turno.google_calendar_event_id && isGoogleConfigurado()) {
     try {
       await borrarEvento(ctx.turno.google_calendar_event_id);
@@ -46,12 +52,11 @@ export async function cancelarTurno(token: string): Promise<AccionResult> {
       // La cancelación en la DB sigue adelante aunque falle Calendar.
     }
   }
-  await db
-    .from("turnos")
-    .update({ estado: "cancelado", google_calendar_event_id: null })
+  await ctx.db
+    .update("turnos", { estado: "cancelado", google_calendar_event_id: null })
     .eq("id", ctx.turno.id);
 
-  revalidatePath(`/turnos/gestion/${token}`);
+  revalidatePath("/sitio/[tenant]/turnos/gestion/[token]", "page");
   return { ok: true };
 }
 
@@ -65,14 +70,12 @@ export async function reprogramarTurno(
     return { ok: false, error: "Fuera del plazo permitido para reprogramar." };
   }
 
-  const disponibles = await getDisponibilidad([ctx.turno.servicio_id], nuevaFecha);
+  const disponibles = await getDisponibilidad(ctx.tenant.id, [ctx.turno.servicio_id], nuevaFecha);
   if (!disponibles.some((s) => s.iso === nuevoIso)) {
     return { ok: false, error: "Ese horario ya no está disponible." };
   }
 
-  const db = createAdminClient();
   let nuevoEventId: string | null = null;
-
   if (isGoogleConfigurado()) {
     try {
       if (ctx.turno.google_calendar_event_id) {
@@ -93,14 +96,13 @@ export async function reprogramarTurno(
     }
   }
 
-  await db
-    .from("turnos")
-    .update({ fecha_hora: nuevoIso, google_calendar_event_id: nuevoEventId })
+  await ctx.db
+    .update("turnos", { fecha_hora: nuevoIso, google_calendar_event_id: nuevoEventId })
     .eq("id", ctx.turno.id);
 
   // La nueva fecha vuelve a recibir sus recordatorios.
-  await db.from("recordatorios_enviados").delete().eq("turno_id", ctx.turno.id);
+  await ctx.db.delete("recordatorios_enviados").eq("turno_id", ctx.turno.id);
 
-  revalidatePath(`/turnos/gestion/${token}`);
+  revalidatePath("/sitio/[tenant]/turnos/gestion/[token]", "page");
   return { ok: true };
 }

@@ -3,6 +3,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { isEmailConfigurado, enviarEmail } from "@/lib/email/gmail";
 import { plantillaRecordatorioTurno } from "@/lib/email/plantillas";
 import { recordatorioQueCorresponde, type TipoRecordatorio } from "@/lib/turnos/recordatorios";
+import { datosDelTenant } from "@/lib/tenant/datos";
+import { urlDelTenant } from "@/lib/tenant/urls";
 
 function autorizado(request: NextRequest): boolean {
   const auth = request.headers.get("authorization");
@@ -31,14 +33,13 @@ export async function GET(request: NextRequest) {
   const { data: turnos } = await db
     .from("turnos")
     .select(
-      "id, cliente_email, fecha_hora, creado_en, token_gestion, servicios(nombre), recordatorios_enviados(tipo, canal)",
+      "id, tenant_id, cliente_email, fecha_hora, creado_en, token_gestion, servicios(nombre), recordatorios_enviados(tipo, canal), tenants(slug)",
     )
     .eq("estado", "confirmado")
     .gte("fecha_hora", ahora.toISOString())
     .lte("fecha_hora", limite.toISOString());
 
   let enviados = 0;
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
 
   for (const turno of turnos ?? []) {
     const tipo = recordatorioQueCorresponde({
@@ -50,11 +51,11 @@ export async function GET(request: NextRequest) {
         .map((r) => r.tipo as TipoRecordatorio),
     });
     if (!tipo) continue;
+    const datos = datosDelTenant(turno.tenant_id);
 
     // Se registra antes de enviar: la clave única evita duplicados si dos corridas se pisan.
-    const { error: yaTomado } = await db
-      .from("recordatorios_enviados")
-      .insert({ turno_id: turno.id, tipo, canal: "email" });
+    const { error: yaTomado } = await datos
+      .insert("recordatorios_enviados", { turno_id: turno.id, tipo, canal: "email" });
     if (yaTomado) continue;
 
     const fechaHoraTexto = new Date(turno.fecha_hora).toLocaleString("es-AR", {
@@ -66,16 +67,15 @@ export async function GET(request: NextRequest) {
       servicio: (turno.servicios as unknown as { nombre: string }).nombre,
       fechaHoraTexto,
       faltaTexto: FALTA_TEXTO[tipo],
-      linkGestion: `${siteUrl}/turnos/gestion/${turno.token_gestion}`,
+      linkGestion: `${urlDelTenant((turno.tenants as unknown as { slug: string }).slug)}/turnos/gestion/${turno.token_gestion}`,
     });
     try {
       await enviarEmail({ to: turno.cliente_email, subject, html });
       enviados++;
     } catch {
       // Se libera el registro para reintentar en la próxima corrida del cron.
-      await db
-        .from("recordatorios_enviados")
-        .delete()
+      await datos
+        .delete("recordatorios_enviados")
         .match({ turno_id: turno.id, tipo, canal: "email" });
     }
   }

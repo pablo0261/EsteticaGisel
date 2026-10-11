@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { SlotPicker } from "./SlotPicker";
-import { reservarTurno } from "@/app/turnos/actions";
+import { reservarTurno } from "@/app/sitio/[tenant]/turnos/actions";
 import { formatPrecioARS } from "@/lib/format";
 import { calcularMontoSena } from "@/lib/turnos/reglas";
 import { LoadingOverlay } from "@/components/ui/LoadingOverlay";

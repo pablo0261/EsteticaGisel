@@ -4,8 +4,8 @@ import type { VideoProvider } from "./provider";
 export const BUCKET_VIDEOS = "cursos-videos";
 
 export const supabaseVideoProvider: VideoProvider = {
-  async subir(cursoId, archivo, nombreArchivo) {
-    const path = `${cursoId}/${Date.now()}-${nombreArchivo}`;
+  async subir(carpeta, archivo, nombreArchivo) {
+    const path = `${carpeta}/${Date.now()}-${nombreArchivo}`;
     const db = createAdminClient();
     const { error } = await db.storage
       .from(BUCKET_VIDEOS)

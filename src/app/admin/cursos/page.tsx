@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getCursosAdmin } from "@/lib/data/cursos";
+import { tenantDelAdmin } from "@/lib/tenant/admin";
 import { createCurso } from "./actions";
 import { formatPrecioARS } from "@/lib/format";
 import { SubmitButton } from "@/components/ui/SubmitButton";
@@ -9,7 +10,8 @@ import { InfoHint } from "@/components/ui/InfoHint";
 export const metadata = { title: "Cursos · Panel" };
 
 export default async function CursosAdmin() {
-  const cursos = await getCursosAdmin();
+  const tenant = await tenantDelAdmin();
+  const cursos = await getCursosAdmin(tenant.id);
 
   return (
     <div>

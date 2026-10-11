@@ -5,16 +5,27 @@ import Link from "next/link";
 import { Container } from "@/components/ui/Container";
 import { Button } from "@/components/ui/Button";
 import { Logo } from "@/components/ui/Logo";
+import type { Modulos } from "@/lib/tenant/tipos";
 
-const LINKS = [
-  { href: "/#servicios", label: "Servicios" },
-  { href: "/#sobre-mi", label: "Sobre mí" },
-  { href: "/#testimonios", label: "Testimonios" },
-  { href: "/cursos", label: "Cursos" },
-  { href: "/#contacto", label: "Contacto" },
-];
-
-export function Nav() {
+export function Nav({
+  nombre,
+  logoUrl,
+  modulos,
+  whatsappUrl,
+}: {
+  nombre: string;
+  logoUrl: string | null;
+  modulos: Modulos;
+  whatsappUrl: string | null;
+}) {
+  const links = [
+    { href: "/#servicios", label: "Servicios" },
+    ...(modulos.sobreMi ? [{ href: "/#sobre-mi", label: "Sobre mí" }] : []),
+    ...(modulos.testimonios ? [{ href: "/#testimonios", label: "Testimonios" }] : []),
+    ...(modulos.cursos ? [{ href: "/cursos", label: "Cursos" }] : []),
+    { href: "/#contacto", label: "Contacto" },
+  ];
+  const reservarHref = modulos.turnos ? "/turnos" : whatsappUrl;
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
 
@@ -35,11 +46,11 @@ export function Nav() {
     >
       <Container className="flex h-16 items-center justify-between sm:h-20">
         <Link href="/" aria-label="Inicio" onClick={() => setOpen(false)}>
-          <Logo />
+          <Logo src={logoUrl} alt={nombre} />
         </Link>
 
         <nav className="hidden items-center gap-8 md:flex">
-          {LINKS.map((l) => (
+          {links.map((l) => (
             <Link
               key={l.href}
               href={l.href}
@@ -48,7 +59,7 @@ export function Nav() {
               {l.label}
             </Link>
           ))}
-          <Button href="/turnos">Reservar turno</Button>
+          {reservarHref && <Button href={reservarHref}>Reservar turno</Button>}
         </nav>
 
         <button
@@ -71,7 +82,7 @@ export function Nav() {
       {open && (
         <nav className="border-t border-mauve/15 bg-cream md:hidden">
           <Container className="flex flex-col gap-1 py-4">
-            {LINKS.map((l) => (
+            {links.map((l) => (
               <Link
                 key={l.href}
                 href={l.href}
@@ -81,9 +92,11 @@ export function Nav() {
                 {l.label}
               </Link>
             ))}
-            <Button href="/turnos" className="mt-2 w-full">
-              Reservar turno
-            </Button>
+            {reservarHref && (
+              <Button href={reservarHref} className="mt-2 w-full">
+                Reservar turno
+              </Button>
+            )}
           </Container>
         </nav>
       )}

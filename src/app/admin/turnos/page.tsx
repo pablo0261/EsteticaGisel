@@ -1,4 +1,5 @@
 import { getTurnosAdmin } from "@/lib/data/turnos";
+import { tenantDelAdmin } from "@/lib/tenant/admin";
 import { cancelarTurnoAdmin, marcarCompletado } from "./actions";
 import { formatPrecioARS } from "@/lib/format";
 import { SubmitButton } from "@/components/ui/SubmitButton";
@@ -21,7 +22,8 @@ const ESTADO_COLOR: Record<string, string> = {
 };
 
 export default async function TurnosAdmin() {
-  const turnos = await getTurnosAdmin();
+  const tenant = await tenantDelAdmin();
+  const turnos = await getTurnosAdmin(tenant.id);
 
   return (
     <div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { consultarDisponibilidad } from "@/app/turnos/disponibilidad-action";
+import { consultarDisponibilidad } from "@/app/sitio/[tenant]/turnos/disponibilidad-action";
 import type { SlotDisponible } from "@/lib/data/turnos";
 
 function proximosDias(cantidad: number): { fecha: string; etiqueta: string }[] {

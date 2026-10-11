@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { comprarCurso } from "@/app/cursos/[id]/actions";
+import { comprarCurso } from "@/app/sitio/[tenant]/cursos/[id]/actions";
 import { LoadingOverlay } from "@/components/ui/LoadingOverlay";
 
 export function CompraForm({ cursoId }: { cursoId: string }) {
