@@ -20,6 +20,12 @@ type Fila = Record<string, unknown>;
  * Acceso a datos acotado a un tenant: cada lectura, modificación y borrado lleva el
  * filtro tenant_id, y cada insert lo fija. El servidor usa la service role (se saltea
  * RLS), así que todo acceso a tablas de negocio tiene que pasar por acá.
+ *
+ * Reglas:
+ * - Los embeds (ej. "*, servicios(nombre)") no se filtran por tenant: la base lo garantiza
+ *   con FK compuestas (tenant_id, id), así que no hay que escribir FKs de otro tenant.
+ * - update/delete sin otro filtro afectan todas las filas del tenant: siempre encadenar
+ *   .eq("id", ...).
  */
 export function consultasDelTenant(db: SupabaseClient, tenantId: string) {
   return {

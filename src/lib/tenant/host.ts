@@ -29,8 +29,10 @@ export function configHost(): ConfigHost {
 
 /** A qué parte de la plataforma corresponde un host. */
 export function resolverHost(host: string, cfg: ConfigHost): Destino {
-  const h = host.trim().toLowerCase();
   const dominio = cfg.dominio.toLowerCase();
+  let h = host.trim().toLowerCase();
+  if (h.endsWith(".")) h = h.slice(0, -1);
+  if (!dominio.includes(":")) h = h.replace(/:(80|443)$/, "");
 
   if (h === dominio || h === `www.${dominio}`) return { tipo: "raiz" };
 

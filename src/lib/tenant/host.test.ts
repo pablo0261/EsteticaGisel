@@ -62,4 +62,31 @@ describe("resolverHost", () => {
   it("no confunde un dominio que solo termina igual", () => {
     expect(resolverHost("gisel.otrotuproducto.com", cfg)).toEqual({ tipo: "desconocido" });
   });
+
+  it("normaliza el punto final del FQDN", () => {
+    expect(resolverHost("app.tuproducto.com.", cfg)).toEqual({ tipo: "master" });
+    expect(resolverHost("gisel.tuproducto.com.", cfg)).toEqual({ tipo: "tenant", slug: "gisel" });
+  });
+
+  it("ignora :80 y :443 si el dominio no tiene puerto, pero no otros puertos", () => {
+    expect(resolverHost("gisel.tuproducto.com:443", cfg)).toEqual({ tipo: "tenant", slug: "gisel" });
+    expect(resolverHost("gisel.tuproducto.com:80", cfg)).toEqual({ tipo: "tenant", slug: "gisel" });
+    expect(resolverHost("gisel.tuproducto.com:8080", cfg)).toEqual({ tipo: "desconocido" });
+  });
+
+  it("no quita puertos si el dominio configurado tiene puerto", () => {
+    expect(resolverHost("gisel.localhost:3000", { dominio: "localhost:3000" })).toEqual({
+      tipo: "tenant",
+      slug: "gisel",
+    });
+    expect(resolverHost("gisel.localhost:80", { dominio: "localhost:3000" })).toEqual({
+      tipo: "desconocido",
+    });
+  });
+
+  it("subdominio vacío o reservado es desconocido", () => {
+    expect(resolverHost(".tuproducto.com", cfg)).toEqual({ tipo: "desconocido" });
+    expect(resolverHost("admin.tuproducto.com", cfg)).toEqual({ tipo: "desconocido" });
+    expect(resolverHost("master.tuproducto.com", cfg)).toEqual({ tipo: "desconocido" });
+  });
 });

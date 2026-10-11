@@ -14,7 +14,8 @@ export const getTenantPorSlug = cache(async (slug: string): Promise<Tenant | nul
     .select("*, tenant_marca(*)")
     .eq("slug", slug)
     .maybeSingle();
-  if (error || !data) return null;
+  if (error) throw new Error(error.message);
+  if (!data) return null;
   return mapearTenant(data as FilaTenant);
 });
 
