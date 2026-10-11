@@ -328,6 +328,29 @@ begin
   end loop;
 end $$;
 
+-- ---------- Un hijo solo puede apuntar a un padre del mismo tenant ----------
+-- Los embeds de PostgREST (ej. turnos → servicios(nombre)) no filtran por tenant:
+-- las FK compuestas garantizan en la base que nunca se cruzan tenants.
+alter table servicios add constraint servicios_tenant_id_id_key unique (tenant_id, id);
+alter table turnos add constraint turnos_tenant_id_id_key unique (tenant_id, id);
+alter table cursos add constraint cursos_tenant_id_id_key unique (tenant_id, id);
+
+alter table turnos drop constraint if exists turnos_servicio_id_fkey;
+alter table turnos add constraint turnos_servicio_mismo_tenant
+  foreign key (tenant_id, servicio_id) references servicios (tenant_id, id);
+
+alter table archivos_curso drop constraint if exists archivos_curso_curso_id_fkey;
+alter table archivos_curso add constraint archivos_curso_mismo_tenant
+  foreign key (tenant_id, curso_id) references cursos (tenant_id, id) on delete cascade;
+
+alter table accesos_curso drop constraint if exists accesos_curso_curso_id_fkey;
+alter table accesos_curso add constraint accesos_curso_mismo_tenant
+  foreign key (tenant_id, curso_id) references cursos (tenant_id, id);
+
+alter table recordatorios_enviados drop constraint if exists recordatorios_enviados_turno_id_fkey;
+alter table recordatorios_enviados add constraint recordatorios_mismo_tenant
+  foreign key (tenant_id, turno_id) references turnos (tenant_id, id) on delete cascade;
+
 -- ---------- configuracion_negocio: de "una sola fila" a una fila por tenant ----------
 alter table configuracion_negocio
   add column tenant_id uuid references tenants (id) on delete cascade;
@@ -597,7 +620,7 @@ async function crearTenant(letra) {
   if (error) throw new Error(`usuario: ${error.message}`);
   usuariosCreados.push(creado.user.id);
   await ok(admin.from("perfiles").insert({ user_id: creado.user.id, rol: "cliente", tenant_id: t }), "perfil");
-  return { id: t, userId: creado.user.id, email, password };
+  return { id: t, userId: creado.user.id, email, password, servicioId: servicio.id, cursoId: curso.id };
 }
 
 async function clienteLogueado(email, password) {
@@ -633,6 +656,17 @@ try {
 
   const intruso = await usuarioA.from("servicios").insert({ tenant_id: b.id, nombre: "Intruso", duracion_minutos: 30 });
   verificar(!!intruso.error, "servicios: no puede insertar en B");
+
+  console.log("\nIntegridad en la base (aun con service role):");
+  const turnoCruzado = await admin.from("turnos").insert({
+    tenant_id: a.id, servicio_id: b.servicioId, cliente_nombre: "X", cliente_email: "x@example.com",
+    fecha_hora: new Date().toISOString(), duracion_minutos: 30,
+  });
+  verificar(!!turnoCruzado.error, "turnos: no puede apuntar a un servicio de otro tenant");
+  const accesoCruzado = await admin.from("accesos_curso").insert({
+    tenant_id: a.id, curso_id: b.cursoId, cliente_email: "x@example.com", expira_en: new Date().toISOString(),
+  });
+  verificar(!!accesoCruzado.error, "accesos_curso: no puede apuntar a un curso de otro tenant");
 
   console.log("\nUsuario cliente del tenant A, sobre lo propio que no debe tocar:");
   const credenciales = await usuarioA.from("tenant_credenciales").select("tenant_id");
@@ -3666,7 +3700,8 @@ En `src/app/api/cron/recordatorios/route.ts`:
 # Cada cliente es <slug>.<PLATFORM_DOMAIN>. En desarrollo: localhost:3000 → http://gisel.localhost:3000
 PLATFORM_DOMAIN=localhost:3000
 PLATFORM_PROTOCOLO=http
-# Tenant que se muestra cuando el host no es de la plataforma (túneles, IP). Vacío = 404.
+# Solo para desarrollo y demos: tenant que se muestra cuando el host no es de la plataforma
+# (túneles, IP). Dejar vacío en producción (vacío = 404).
 TENANT_POR_DEFECTO=gisel
 # Conexión directa a Postgres para scripts/migrar.mjs (Supabase → Connect → Session pooler).
 SUPABASE_DB_URL=
