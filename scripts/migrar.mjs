@@ -1,5 +1,6 @@
 // Aplica migraciones SQL a la base de Supabase, cada una en una transacción, y las
 // registra en public.migraciones_aplicadas (saltea las ya registradas).
+// Los .sql no deben traer su propio begin/commit ni "create index concurrently" (cada archivo ya corre en una transacción).
 // Uso:     node --env-file=.env.local scripts/migrar.mjs supabase/migrations/0008_multitenant.sql [...]
 // Marcar como aplicadas sin ejecutar (las que se corrieron a mano en el SQL Editor):
 //          node --env-file=.env.local scripts/migrar.mjs --solo-registrar supabase/migrations/0001_init.sql [...]
@@ -49,7 +50,7 @@ try {
       await db.query("commit");
       console.log(`${soloRegistrar ? "✓ registrada" : "✓ aplicada"} ${nombre}`);
     } catch (e) {
-      await db.query("rollback");
+      await db.query("rollback").catch(() => {});
       console.error(`✗ ${nombre}: ${e.message}`);
       process.exitCode = 1;
       break;
