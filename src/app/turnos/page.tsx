@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { Nav } from "@/components/landing/Nav";
 import { Footer } from "@/components/landing/Footer";
 import { Container } from "@/components/ui/Container";
@@ -9,6 +10,8 @@ import { whatsappLink } from "@/lib/site";
 export const metadata = { title: "Reservar turno · Gisel Bigurrarena" };
 
 export default async function TurnosPage() {
+  // Servicios y disponibilidad cambian: se renderiza en cada request, no en el build.
+  await connection();
   const servicios = await getServiciosPublicos();
   const config = await getConfiguracion();
   const senaPorcentaje = config?.sena_porcentaje ?? 50;
