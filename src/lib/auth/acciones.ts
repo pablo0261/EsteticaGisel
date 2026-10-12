@@ -21,6 +21,7 @@ import { normalizarCodigo } from "./codigos";
 import { COOKIE_MFA, firmarMfa } from "./cookie-mfa";
 import { DURACION_COOKIE_S, opcionesCookieAuth, protocoloPlataforma } from "./cookies";
 import { COOKIE_DISPOSITIVO } from "./dispositivo";
+import { sesionConPassword } from "./primer-factor";
 import { normalizarEmail, validarNuevaContrasena } from "./recuperacion";
 import { RUTAS_AUTH } from "./rutas";
 import { secretoMfa } from "./secreto";
@@ -53,11 +54,14 @@ function ir(area: Area | null, ruta: string, params?: Record<string, string>): n
   redirect(`${rutaEn(area, ruta)}${query}`);
 }
 
-/** session_id del access token recién emitido (las cookies nuevas no se leen en este request). */
-async function sessionIdDelToken(supabase: ClienteSupabase, accessToken: string): Promise<string> {
+/**
+ * session_id del access token recién emitido (las cookies nuevas no se leen en este request).
+ * null si la sesión no se inició con contraseña (no debería pasar con signInWithPassword).
+ */
+async function sessionIdDelToken(supabase: ClienteSupabase, accessToken: string): Promise<string | null> {
   const { data, error } = await supabase.auth.getClaims(accessToken);
   if (error || !data) throw new Error("No se pudo leer la sesión recién creada");
-  return data.claims.session_id;
+  return sesionConPassword(data.claims) ? data.claims.session_id : null;
 }
 
 /** Segundo factor cumplido: cookie mfa firmada sobre el usuario y el session_id. */
@@ -118,6 +122,10 @@ export async function iniciarSesion(formData: FormData) {
 
   const almacen = await cookies();
   const sessionId = await sessionIdDelToken(supabase, session.access_token);
+  if (!sessionId) {
+    await supabase.auth.signOut({ scope: "local" });
+    ir(area, RUTAS_AUTH.login, { error: "credenciales" });
+  }
 
   // Dispositivo recordado vigente: ya es el segundo factor.
   const token = almacen.get(COOKIE_DISPOSITIVO)?.value;

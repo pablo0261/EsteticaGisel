@@ -3,6 +3,7 @@ import { cache } from "react";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { COOKIE_MFA, verificarMfa } from "./cookie-mfa";
+import { sesionConPassword } from "./primer-factor";
 
 export type Sesion = {
   userId: string;
@@ -19,12 +20,13 @@ export type Sesion = {
  * sesión cerrada o revocada (el token sigue firmado hasta que vence). Por eso además se
  * valida con getUser() contra Supabase: si la sesión ya no existe, no hay sesión. Así lo
  * que se decide en el servidor (server actions, tenantDelAdmin) no depende solo del proxy.
+ * Una sesión que no se inició con contraseña (magic link, OTP) no cuenta: sesionConPassword.
  */
 export const sesionActual = cache(async (): Promise<Sesion | null> => {
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
   const claims = data?.claims;
-  if (!claims) return null;
+  if (!claims || !sesionConPassword(claims)) return null;
   const { data: datosUsuario, error } = await supabase.auth.getUser();
   if (error || datosUsuario.user?.id !== claims.sub) return null;
   const mfa = (await cookies()).get(COOKIE_MFA)?.value;

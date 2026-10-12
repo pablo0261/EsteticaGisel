@@ -1,7 +1,7 @@
 // Prueba de punta a punta del login en dos pasos contra el servidor en marcha (puerto 3000).
 // Se comporta como un navegador sin JavaScript: los formularios con server actions llevan
 // un campo oculto $ACTION_ID_…, y Next ejecuta la action y responde 303 con Location.
-// Crea usuarios temporales (un cliente de "gisel" y un master) y los borra al terminar,
+// Crea usuarios temporales (dos clientes de "gisel" y un master) y los borra al terminar,
 // junto con sus filas de intentos de login y pedidos de recuperación.
 //   dev <log>  servidor de desarrollo. <log> es el archivo con su salida, de donde se leen
 //              los códigos y los links que imprime "[MFA dev]". El servidor tiene que
@@ -10,6 +10,7 @@
 //              prueba el límite de login por email e IP.
 //   docker     contenedor de producción sin email de plataforma: el login tiene que fallar cerrado.
 // Uso: node --env-file=.env.local scripts/e2e-login.mjs dev <log> | docker
+import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { createHmac, randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
@@ -35,6 +36,7 @@ const sufijo = Date.now().toString(36);
 const email = `e2e-login-${sufijo}@example.com`;
 const emailMaster = `e2e-master-${sufijo}@example.com`;
 const emailInexistente = `e2e-nadie-${sufijo}@example.com`;
+const emailOtp = `e2e-otp-${sufijo}@example.com`;
 const claveInicial = randomBytes(18).toString("base64url");
 const claveNueva = randomBytes(18).toString("base64url");
 const claveMaster = randomBytes(18).toString("base64url");
@@ -190,6 +192,7 @@ async function pruebaDev() {
 
   let pagina = await T.get("/admin/verificar");
   verificar(pagina.status === 200, "la pantalla de verificación responde");
+  const htmlVerificar = pagina.html;
   r = await T.enviar("/admin/verificar", pagina.html, "form-reenviar", {});
   verificar(destino(r) === "/admin/verificar?error=espera", "no se puede reenviar antes de 60 s", resumen(r));
   const momentoCodigo = Date.now();
@@ -353,6 +356,54 @@ async function pruebaDev() {
   const MT = new Navegador(HOST_TENANT);
   r = await ingresar(MT, "/admin", emailMaster, claveMaster);
   verificar(destino(r).startsWith("/admin/verificar?"), "master en gisel /admin: también pide el código", resumen(r));
+
+  await pruebaSesionSinContrasena(htmlVerificar);
+}
+
+/**
+ * Cookies de una sesión de Supabase obtenida con magic link (sin contraseña), con la clave
+ * publicable, como lo haría cualquiera con signInWithOtp. Las escribe @supabase/ssr, con el
+ * mismo formato que las de la app. Devuelve también el cliente, para comprobar que la sesión es válida.
+ */
+async function sesionPorMagicLink(emailUsuario) {
+  const { data: link, error } = await admin.auth.admin.generateLink({ type: "magiclink", email: emailUsuario });
+  if (error) throw new Error(`magic link: ${error.message}`);
+  const cookies = new Map();
+  const cliente = createServerClient(url, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, {
+    cookies: {
+      getAll: () => [...cookies].map(([name, value]) => ({ name, value })),
+      setAll: (lista) => lista.forEach(({ name, value }) => (value ? cookies.set(name, value) : cookies.delete(name))),
+    },
+  });
+  const { error: errorOtp } = await cliente.auth.verifyOtp({ type: "magiclink", token_hash: link.properties.hashed_token });
+  if (errorOtp) throw new Error(`verificar magic link: ${errorOtp.message}`);
+  for (let i = 0; i < 20 && cookies.size === 0; i++) await dormir(50);
+  if (cookies.size === 0) throw new Error("la sesión del magic link no escribió cookies");
+  return { cookies, cliente };
+}
+
+async function pruebaSesionSinContrasena(htmlVerificar) {
+  console.log("\nSesión sin contraseña (magic link con la clave publicable):");
+  const { cookies, cliente } = await sesionPorMagicLink(emailOtp);
+  const { data: datosUsuario } = await cliente.auth.getUser();
+  verificar(datosUsuario.user?.email === emailOtp, "control: la sesión del magic link es válida para Supabase");
+
+  const O = new Navegador(HOST_TENANT);
+  for (const [k, v] of cookies) O.cookies.set(k, v);
+  let r = await O.get("/admin/verificar");
+  verificar(r.status === 307 && destino(r) === "/admin/login", "/admin/verificar redirige al login (no cuenta como primer factor)", resumen(r));
+  r = await O.get("/admin");
+  verificar(r.status === 307 && destino(r) === "/admin/login", "/admin redirige al login", resumen(r));
+  const codigosAntes = ocurrencias(reCodigo(emailOtp)).length;
+  r = await O.enviar("/admin/verificar", htmlVerificar, "form-reenviar", {});
+  verificar(destino(r) === "/admin/login", "pedir el código lleva al login", resumen(r));
+  await dormir(1500);
+  verificar(ocurrencias(reCodigo(emailOtp)).length === codigosAntes, "no se envía un código");
+
+  const OM = new Navegador(HOST_MASTER);
+  for (const [k, v] of cookies) OM.cookies.set(k, v);
+  r = await OM.get("/");
+  verificar(r.status === 307 && destino(r) === "/login", "app.: la home redirige al login", resumen(r));
 }
 
 async function pruebaDocker() {
@@ -387,6 +438,7 @@ try {
   await crearUsuario(email, claveInicial, { rol: "cliente", tenant_id: gisel.id });
   if (modo === "dev") {
     await crearUsuario(emailMaster, claveMaster, { rol: "master", tenant_id: null });
+    await crearUsuario(emailOtp, randomBytes(18).toString("base64url"), { rol: "cliente", tenant_id: gisel.id });
     await pruebaDev();
   } else {
     await pruebaDocker();
@@ -404,7 +456,7 @@ try {
       fallas++;
     }
   }
-  const emails = [email, emailMaster, emailInexistente];
+  const emails = [email, emailMaster, emailInexistente, emailOtp];
   const borrados = await Promise.all([
     admin.from("intentos_login").delete().in("email_hash", emails.map((e) => hmacEmail("login", e))),
     admin.from("pedidos_recuperacion").delete().in("email_hash", emails.map((e) => hmacEmail("recuperacion", e))),

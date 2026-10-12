@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { COOKIE_MFA, verificarMfa } from "@/lib/auth/cookie-mfa";
+import { sesionConPassword } from "@/lib/auth/primer-factor";
 import { decidirAcceso, rutaDelArea, rutaRelativa, type TipoArea } from "@/lib/auth/rutas";
 
 type Opciones = {
@@ -41,12 +42,13 @@ export async function protegerArea(request: NextRequest, { tipo, cabeceras, rees
   );
 
   // getUser() valida la sesión contra Supabase (detecta sesiones cerradas o revocadas);
-  // getClaims() da el session_id del JWT, al que está atada la cookie mfa.
+  // getClaims() da el session_id del JWT, al que está atada la cookie mfa. Una sesión que
+  // no se inició con contraseña (magic link, OTP) cuenta como sin sesión.
   const {
     data: { user },
   } = await supabase.auth.getUser();
   const claims = user ? (await supabase.auth.getClaims()).data?.claims : undefined;
-  const haySesion = Boolean(user && claims && claims.sub === user.id);
+  const haySesion = Boolean(user && claims && claims.sub === user.id && sesionConPassword(claims));
   const mfaValida =
     haySesion &&
     verificarMfa(process.env.MFA_SECRET, request.cookies.get(COOKIE_MFA)?.value, claims?.sub, claims?.session_id);
