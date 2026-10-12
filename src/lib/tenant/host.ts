@@ -1,6 +1,9 @@
 /** Subdominios que nunca pueden ser un tenant. */
 export const SUBDOMINIOS_RESERVADOS = ["www", "app", "admin", "master", "api"] as const;
 
+/** Cabecera con la que el proxy le pasa al layout raíz el slug del tenant del sitio público. */
+export const CABECERA_TENANT = "x-tenant-slug";
+
 const SLUG = /^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/;
 
 export function esSlugValido(slug: string): boolean {

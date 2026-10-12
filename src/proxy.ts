@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
-import { resolverHost, configHost } from "@/lib/tenant/host";
+import { resolverHost, configHost, CABECERA_TENANT } from "@/lib/tenant/host";
 
 /**
  * Enruta por subdominio: <slug>.<dominio>/… se reescribe a /sitio/<slug>/…
@@ -25,7 +25,12 @@ export async function proxy(request: NextRequest) {
 
   const url = request.nextUrl.clone();
   url.pathname = `/sitio/${destino.slug}${path === "/" ? "" : path}`;
-  return NextResponse.rewrite(url);
+  // El layout raíz lee el tenant de esta cabecera para el lang del documento. Va en los
+  // headers del request (no de la respuesta), así no llega al navegador; set() pisa
+  // cualquier valor que haya mandado el cliente.
+  const cabeceras = new Headers(request.headers);
+  cabeceras.set(CABECERA_TENANT, destino.slug);
+  return NextResponse.rewrite(url, { request: { headers: cabeceras } });
 }
 
 export const config = {
