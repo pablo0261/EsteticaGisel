@@ -3822,6 +3822,12 @@ La prueba automática cubre el flujo **sin JavaScript**. Esta lista cubre lo que
    - El del master llega con la paleta neutra.
    - Para el portugués: `node --env-file=.env.local scripts/tenant-demo-br.mjs crear`, un usuario de `demo-br`, y el email llega en portugués.
 9. En el dashboard de Supabase (Authentication → Providers → Email), confirmar que "Email OTP Expiration" sea 3600 s, que es la hora que promete el email de recuperación.
+10. **Agregado al ejecutar la Task 13.** La E2E (`scripts/e2e-login.mjs dev`) ya cubre sin JavaScript: código incorrecto y agotado (5 intentos), espera y reenvío, dispositivo recordado, salir, recuperación con cierre de las sesiones abiertas, el bloqueo por email e IP (5 contraseñas malas desde una IP bloquean esa IP y no a otra) y el login de un master temporal. Queda para el navegador:
+    - Todos los puntos de arriba **con JavaScript**: la action redirige en el cliente (sin 303) y muestra los overlays; comprobar que cada pantalla llega a su destino y muestra el mensaje correcto (`demasiados_intentos`, `agotado`, `espera`, `reenviado`).
+    - El aspecto de las pantallas master (paleta neutra) y de la tabla de clientes.
+    - Los límites de 20 fallidos por IP y 50 por email (solo tienen tests unitarios).
+    - En producción, configurar `CABECERA_IP_CONFIABLE` (por ejemplo `x-real-ip`, fijada por Caddy con `{remote_host}`). Sin ella el login se limita solo por email y un tercero puede trabar una cuenta 15 minutos.
+    - Crear el master real: agregar `MASTER_EMAIL` y `MASTER_PASSWORD` (12 caracteres o más) al `.env.local`, correr `node --env-file=.env.local scripts/crear-master.mjs` dos veces (la segunda tiene que decir que ya existía y ya era master), repetir el punto 6 y borrar `MASTER_PASSWORD` del `.env.local`.
 
 - [ ] **Step 7: Commit**
 
