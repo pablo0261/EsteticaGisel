@@ -21,6 +21,7 @@ import { normalizarCodigo } from "./codigos";
 import { COOKIE_MFA, firmarMfa } from "./cookie-mfa";
 import { DURACION_COOKIE_S, opcionesCookieAuth, protocoloPlataforma } from "./cookies";
 import { COOKIE_DISPOSITIVO } from "./dispositivo";
+import { limiteDeSupabase } from "./limite-login";
 import { sesionConPassword } from "./primer-factor";
 import { normalizarEmail, validarNuevaContrasena } from "./recuperacion";
 import { RUTAS_AUTH } from "./rutas";
@@ -98,6 +99,8 @@ export async function iniciarSesion(formData: FormData) {
 
   const email = String(formData.get("email") ?? "").trim();
   // Límite propio antes de llamar a Supabase: el mismo mensaje exista o no la cuenta.
+  // Es defensa en profundidad: el endpoint de tokens de Supabase se alcanza directo con la
+  // clave publicable, sin pasar por acá. El control real es el segundo factor.
   const ip = await getClientIp();
   if (await loginBloqueado(email, ip)) ir(area, RUTAS_AUTH.login, { error: "demasiados_intentos" });
 
@@ -107,6 +110,8 @@ export async function iniciarSesion(formData: FormData) {
     password: String(formData.get("password") ?? ""),
   });
   const { user, session } = data;
+  // El límite de pedidos de Supabase no es una contraseña mala: no cuenta como intento fallido.
+  if (limiteDeSupabase(error)) ir(area, RUTAS_AUTH.login, { error: "servicio_ocupado" });
   if (error || !user || !session) {
     await registrarIntentoLogin(email, ip, false);
     ir(area, RUTAS_AUTH.login, { error: "credenciales" });

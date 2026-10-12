@@ -8,6 +8,7 @@ import { LARGO_MINIMO_CONTRASENA } from "./recuperacion";
 const ERRORES: Record<string, string> = {
   credenciales: "Email o contraseña incorrectos.",
   demasiados_intentos: "Demasiados intentos. Esperá unos minutos.",
+  servicio_ocupado: "El servicio está ocupado. Probá de nuevo en unos minutos.",
   sitio: "Este sitio no está disponible.",
   envio_no_configurado: "El envío de códigos no está configurado.",
   envio_emails_no_configurado: "El envío de emails no está configurado.",

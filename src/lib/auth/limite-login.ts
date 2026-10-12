@@ -25,3 +25,11 @@ export function loginPermitido(fallidos: {
   if (ip === null) return porEmail < MAX_FALLIDOS_POR_EMAIL_SIN_IP;
   return ip.porEmailEIp < MAX_FALLIDOS_POR_EMAIL_E_IP && ip.porIp < MAX_FALLIDOS_POR_IP && porEmail < MAX_FALLIDOS_POR_EMAIL;
 }
+
+/**
+ * ¿El error de signInWithPassword es el límite de pedidos de Supabase (no una contraseña
+ * mala)? Ese caso no cuenta como intento fallido: si contara, Supabase ocupado trabaría cuentas.
+ */
+export function limiteDeSupabase(error: { status?: number; code?: string } | null): boolean {
+  return error?.status === 429 || error?.code === "over_request_rate_limit";
+}
