@@ -19,7 +19,8 @@ describe("mensajes de las pantallas de ingreso", () => {
     const claves = [
       "incorrecto", "reintentar", "sin_codigo", "vencido", "agotado", "usado", "formato",
       "espera", "limite", "envio_fallo", "envio_no_configurado", "envio_emails_no_configurado",
-      "sitio", "email", "link", "demasiados_intentos", "contrasena_corta", "contrasena_distinta", "contrasena_rechazada",
+      "sitio", "email", "link", "contrasena_corta", "contrasena_distinta", "contrasena_rechazada",
+      "sesiones_no_cerradas", "demasiados_intentos",
     ];
     for (const clave of claves) expect(mensajeError(clave), clave).toBeTruthy();
     for (const clave of ["codigo_enviado", "reenviado", "recuperacion_enviada", "contrasena_cambiada"]) {

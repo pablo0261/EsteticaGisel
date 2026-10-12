@@ -18,11 +18,11 @@ export async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
   if (esRutaInterna(path)) return new NextResponse(null, { status: 404 });
-  if (path.startsWith("/api/")) return NextResponse.next();
 
-  // x-tenant-slug solo lo fija el proxy: se descarta el que mande el cliente.
+  // x-tenant-slug solo lo fija el proxy: se descarta el que mande el cliente (también en /api).
   const cabeceras = new Headers(request.headers);
   cabeceras.delete(CABECERA_TENANT);
+  if (path.startsWith("/api/")) return NextResponse.next({ request: { headers: cabeceras } });
 
   const destino = resolverHost(request.headers.get("host") ?? "", configHost());
   if (destino.tipo === "master") {

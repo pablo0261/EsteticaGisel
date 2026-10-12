@@ -25,6 +25,8 @@ const ERRORES: Record<string, string> = {
   link: "El link no es válido o ya venció. Pedí uno nuevo.",
   contrasena_corta: `La contraseña tiene que tener al menos ${LARGO_MINIMO_CONTRASENA} caracteres.`,
   contrasena_distinta: "Las contraseñas no coinciden.",
+  sesiones_no_cerradas:
+    "Tu contraseña cambió, pero no pudimos cerrar las otras sesiones abiertas. Ingresá y volvé a cambiarla para cerrarlas.",
   contrasena_rechazada:
     "No pudimos guardar esa contraseña (puede ser muy débil o igual a la anterior). Pedí un link nuevo y probá con otra.",
 };

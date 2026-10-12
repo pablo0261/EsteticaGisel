@@ -165,6 +165,10 @@ export async function reenviarCodigo() {
   if (!area) ir(null, RUTAS_AUTH.login, { error: "sitio" });
   const sesion = await sesionActual();
   if (!sesion?.email) ir(area, RUTAS_AUTH.login);
+  if (!perfilPermitido(await perfilDe(sesion.userId), area)) {
+    await (await createClient()).auth.signOut({ scope: "local" });
+    ir(area, RUTAS_AUTH.login, { error: "credenciales" });
+  }
 
   const envio = await enviarCodigo(area, sesion.userId, sesion.email);
   if (envio === "no_configurado") {
@@ -244,8 +248,13 @@ export async function restablecerContrasena(formData: FormData) {
     ir(area, RUTAS_AUTH.recuperar, { error: "contrasena_rechazada" });
   }
 
+  // Primero se cierran todas las sesiones; los dispositivos se olvidan aunque eso falle.
+  const { error: errorSalida } = await supabase.auth.signOut({ scope: "global" });
   await revocarDispositivos(usuario.id);
-  await supabase.auth.signOut({ scope: "global" });
   (await cookies()).delete(COOKIE_MFA);
+  if (errorSalida) {
+    console.error("Contraseña cambiada, pero no se pudieron cerrar las sesiones:", errorSalida.message);
+    ir(area, RUTAS_AUTH.login, { error: "sesiones_no_cerradas" });
+  }
   ir(area, RUTAS_AUTH.login, { info: "contrasena_cambiada" });
 }
