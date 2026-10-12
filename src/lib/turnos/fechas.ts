@@ -71,14 +71,21 @@ export function offsetEnZona(zona: string, instante: Date): string {
   return formatoOffset(offsetMinutos(zona, instante));
 }
 
-/** ISO con el offset de la zona para una fecha "YYYY-MM-DD" y minutos del día (hora de pared). */
+/**
+ * ISO con el offset de la zona para una fecha "YYYY-MM-DD" y minutos del día (hora de pared).
+ * `minutosDelDia` va de 0 a 1439: para el día siguiente, usar sumarDias(fecha, 1) y 0.
+ * En un salto de horario de verano la hora inexistente se corre hacia adelante; en la hora
+ * repetida puede devolver cualquiera de los dos instantes válidos.
+ */
 export function isoFechaHora(fecha: string, minutosDelDia: number, zona: string): string {
   const [anio, mes, dia] = fecha.split("-").map(Number);
   const paredComoUtc = Date.UTC(anio, mes - 1, dia, 0, minutosDelDia);
   // El offset depende del instante, que todavía no se conoce: se estima con la hora de
   // pared tomada como UTC y se corrige una vez (cubre los cambios de horario de verano).
   const estimado = offsetMinutos(zona, new Date(paredComoUtc));
-  const offset = offsetMinutos(zona, new Date(paredComoUtc - estimado * 60000));
+  const o1 = offsetMinutos(zona, new Date(paredComoUtc - estimado * 60000));
+  const o2 = offsetMinutos(zona, new Date(paredComoUtc - o1 * 60000));
+  const offset = o1 === o2 ? o1 : Math.min(o1, o2);
   const hh = pad(Math.floor(minutosDelDia / 60));
   const mm = pad(minutosDelDia % 60);
   return `${fecha}T${hh}:${mm}:00${formatoOffset(offset)}`;

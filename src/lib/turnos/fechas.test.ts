@@ -107,3 +107,17 @@ describe("fechaHoy", () => {
     expect(fechaHoy(MANAOS)).toBe("2026-07-10");
   });
 });
+
+describe("isoFechaHora con horas inexistentes (cambio de horario)", () => {
+  const casos: [string, string, number][] = [
+    [MADRID, "2026-03-29", 150],
+    ["America/New_York", "2026-03-08", 150],
+    [SAO_PAULO, "2018-11-04", 0],
+  ];
+
+  it.each(casos)("%s %s (min %i) no retrocede ni cambia de día", (zona, fecha, m) => {
+    const iso = isoFechaHora(fecha, m, zona);
+    expect(minutosDelDia(iso, zona)).toBeGreaterThanOrEqual(m);
+    expect(fechaEnZona(new Date(iso), zona)).toBe(fecha);
+  });
+});

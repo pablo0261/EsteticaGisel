@@ -1,4 +1,5 @@
 import type { Idioma } from "@/lib/i18n/textos";
+import type { DiaSemana } from "./fechas";
 
 export const DIAS_SEMANA = [
   { key: "lun", label: "Lunes" },
@@ -27,9 +28,9 @@ export function construirHorarioAtencion(
 
 type NombresHorario = {
   /** Nombre del día en un rango ("Lunes a viernes"). */
-  enRango: Record<string, string>;
+  enRango: Record<DiaSemana, string>;
   /** Nombre del día cuando va solo ("Sábados"). */
-  solo: Record<string, string>;
+  solo: Record<DiaSemana, string>;
   /** Conector de dos días seguidos. */
   y: string;
   /** Conector de tres o más días seguidos. */
@@ -94,7 +95,7 @@ export function resumirHorario(
   horario: Record<string, [string, string]>,
   idioma: Idioma,
 ): { dias: string; horas: string }[] {
-  const grupos: { keys: string[]; rango: [string, string] }[] = [];
+  const grupos: { keys: DiaSemana[]; rango: [string, string] }[] = [];
   let anteriorAbierto = false;
 
   for (const { key } of DIAS_SEMANA) {
