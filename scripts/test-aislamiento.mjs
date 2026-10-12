@@ -2,7 +2,8 @@
 // Crea dos tenants de prueba con una fila en cada tabla y un usuario cliente por
 // tenant; comprueba que el usuario de A no lee, inserta ni modifica nada de B, que no
 // puede tocar su propia marca/módulos/rol ni los registros del sistema, y qué ven un
-// usuario sin perfil, un master y un anónimo. Al final borra todo.
+// usuario sin perfil, un master y un anónimo, y que las tablas del login (códigos,
+// dispositivos y pedidos de recuperación) son solo del servidor. Al final borra todo.
 // Uso: npm run test:aislamiento
 import { createClient } from "@supabase/supabase-js";
 import { randomBytes, randomUUID } from "node:crypto";
@@ -56,6 +57,12 @@ function vacio(r) {
   if (r.error) mostrarError(r);
   else console.log(`    (devolvió ${r.data.length} fila(s))`);
   return false;
+}
+
+/** Tabla sin acceso para la API: permiso denegado (42501) o ninguna fila visible. */
+function sinAcceso(r) {
+  if (r.error && r.error.code === "42501") return true;
+  return vacio(r);
 }
 
 async function ok(promesa, que) {
@@ -253,6 +260,33 @@ try {
   const tenantsMaster = await usuarioMaster.from("tenants").select("id").in("id", [a.id, b.id]);
   mostrarError(tenantsMaster);
   verificar(!tenantsMaster.error && tenantsMaster.data.length === 2, "tenants: ve A y B");
+  console.log("\nTablas del login (solo el servidor, con la service role):");
+  const enDiezMinutos = () => new Date(Date.now() + 600_000).toISOString();
+  await ok(admin.from("codigos_login").insert({ user_id: a.userId, codigo_hash: "hash-de-prueba", expira_en: enDiezMinutos() }), "código de login");
+  await ok(admin.from("dispositivos_confiables").insert({ user_id: a.userId, token_hash: `hash-de-prueba-${sufijo}`, expira_en: enDiezMinutos() }), "dispositivo");
+  await ok(admin.from("pedidos_recuperacion").insert({ email_hash: `hash-de-prueba-${sufijo}`, ip: "127.0.0.1" }), "pedido de recuperación");
+  const filasNuevas = {
+    codigos_login: { user_id: a.userId, codigo_hash: "intruso", expira_en: enDiezMinutos() },
+    dispositivos_confiables: { user_id: a.userId, token_hash: `intruso-${sufijo}`, expira_en: enDiezMinutos() },
+    pedidos_recuperacion: { email_hash: `intruso-${sufijo}`, ip: "127.0.0.1" },
+  };
+  for (const [tabla, fila] of Object.entries(filasNuevas)) {
+    for (const [quien, cliente] of [["cliente A", usuarioA], ["master", usuarioMaster], ["anónimo", anon]]) {
+      verificar(sinAcceso(await cliente.from(tabla).select("*").limit(1)), `${tabla}: ${quien} no lee (ni las propias)`);
+      verificar(esperaError(await cliente.from(tabla).insert(fila), "42501"), `${tabla}: ${quien} no inserta`);
+      verificar(
+        bloqueado(await cliente.from(tabla).update({ creado_en: new Date().toISOString() }).not("id", "is", null).select("id")),
+        `${tabla}: ${quien} no modifica`,
+      );
+      verificar(bloqueado(await cliente.from(tabla).delete().not("id", "is", null).select("id")), `${tabla}: ${quien} no borra`);
+    }
+  }
+  const intactas = await Promise.all([
+    admin.from("codigos_login").select("id", { count: "exact", head: true }).eq("user_id", a.userId),
+    admin.from("dispositivos_confiables").select("id", { count: "exact", head: true }).eq("user_id", a.userId),
+    admin.from("pedidos_recuperacion").select("id", { count: "exact", head: true }).like("email_hash", `%-${sufijo}`),
+  ]);
+  verificar(intactas.every((r) => !r.error && r.count === 1), "tablas del login: las filas de prueba siguen intactas");
 
   console.log("\nVisitante anónimo:");
   for (const tabla of [
@@ -288,6 +322,11 @@ try {
   console.error(`\nError preparando la prueba: ${e.message}`);
   fallas++;
 } finally {
+  const { error: errorPedidos } = await admin.from("pedidos_recuperacion").delete().like("email_hash", `%-${sufijo}`);
+  if (errorPedidos) {
+    console.error(`✗ limpieza: pedidos_recuperacion: ${errorPedidos.message}`);
+    fallas++;
+  }
   for (const id of usuariosCreados) {
     const { error } = await admin.auth.admin.deleteUser(id);
     if (error) {
