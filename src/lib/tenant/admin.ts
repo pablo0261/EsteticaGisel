@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { tenantDelRequest } from "./actual";
@@ -8,8 +9,9 @@ import type { Tenant } from "./tipos";
 /**
  * Tenant del panel: exige sesión y un perfil autorizado para el tenant del host
  * (el cliente solo administra el suyo; el master, cualquiera). Lanza si no.
+ * Con cache(): layout y página comparten una sola evaluación por request.
  */
-export async function tenantDelAdmin(): Promise<Tenant> {
+export const tenantDelAdmin = cache(async (): Promise<Tenant> => {
   const tenant = await tenantDelRequest();
   if (!tenant) throw new Error("No autorizado");
 
@@ -27,4 +29,4 @@ export async function tenantDelAdmin(): Promise<Tenant> {
   if (!perfilAutorizado(perfil as Perfil | null, tenant.id)) throw new Error("No autorizado");
 
   return tenant;
-}
+});

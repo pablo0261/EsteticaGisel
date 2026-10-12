@@ -6,7 +6,11 @@ function autorizado(request: NextRequest): boolean {
   return auth === `Bearer ${process.env.CRON_SECRET}`;
 }
 
-/** Libera turnos pendiente_pago cuyo bloqueo de 15 min ya venció. */
+/**
+ * Libera turnos pendiente_pago cuyo bloqueo de 15 min ya venció.
+ * Es un job de sistema sobre todos los tenants: la excepción explícita a
+ * "todo acceso pasa por datosDelTenant".
+ */
 export async function GET(request: NextRequest) {
   if (!autorizado(request)) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });

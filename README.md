@@ -31,7 +31,7 @@ npm run migrar -- supabase/migrations/<archivo>.sql
 Requiere `.env.local` completo (se usa en el build para las `NEXT_PUBLIC_*` y en runtime para los secretos; no se copia a la imagen).
 
 ```bash
-docker compose up -d --build   # http://localhost:3000
+docker compose up -d --build   # http://gisel.localhost:3000
 docker compose logs -f
 docker compose down
 ```

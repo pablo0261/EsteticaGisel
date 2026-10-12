@@ -47,5 +47,3 @@ export function consultasDelTenant(db: SupabaseClient, tenantId: string) {
     },
   };
 }
-
-export type ConsultasDelTenant = ReturnType<typeof consultasDelTenant>;
