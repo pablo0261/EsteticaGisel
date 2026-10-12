@@ -5,10 +5,13 @@
 // el segundo factor: todo pasa por el servidor con la service role), la integridad
 // entre tenants en la base, qué ve un anónimo (solo las tablas públicas; ni las funciones
 // auxiliares por RPC), y que las tablas del login (códigos,
-// dispositivos, pedidos de recuperación e intentos de login) son solo del servidor. Al final borra todo.
+// dispositivos, pedidos de recuperación e intentos de login) son solo del servidor. Por
+// último revisa en el catálogo de Postgres (con SUPABASE_DB_URL) los privilegios de anon y
+// authenticated, RLS en todas las tablas y los privilegios por defecto. Al final borra todo.
 // Uso: npm run test:aislamiento
 import { createClient } from "@supabase/supabase-js";
 import { randomBytes, randomUUID } from "node:crypto";
+import pg from "pg";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const secret = process.env.SUPABASE_SECRET_KEY;
@@ -190,6 +193,95 @@ async function sinAccesoAutenticado(cliente, quien, a, b, filasParaInsertar) {
   );
 }
 
+/** Tablas con lectura pública: anon solo puede tener SELECT en estas (migraciones 0016 y 0017). */
+const TABLAS_PUBLICAS = ["servicios", "cursos", "testimonios", "tenants", "tenant_marca"];
+/** Única función que anon y authenticated pueden ejecutar: la usan las policies de lectura anónima. */
+const FUNCIONES_API = ["tenant_activo"];
+
+/**
+ * Privilegios en el catálogo de Postgres, no por la API: cubre también lo que la API no
+ * prueba (TRUNCATE, MAINTAIN, funciones nuevas) y lo que se cree después (privilegios por defecto).
+ */
+async function permisosDeLaBase() {
+  console.log("\nPermisos de la base (catálogo de Postgres):");
+  if (!process.env.SUPABASE_DB_URL) {
+    verificar(false, "falta SUPABASE_DB_URL para revisar el catálogo");
+    return;
+  }
+  const db = new pg.Client({ connectionString: process.env.SUPABASE_DB_URL, ssl: { rejectUnauthorized: false } });
+  await db.connect();
+  try {
+    const listar = (filas) => filas.map((f) => Object.values(f).join(" ")).join("; ");
+    const privilegiosDeTablas = (rol) =>
+      db.query(
+        `select c.relname as tabla, p.privilegio
+           from pg_class c
+           join pg_namespace n on n.oid = c.relnamespace
+           cross join unnest(array['SELECT','INSERT','UPDATE','DELETE','TRUNCATE','REFERENCES','TRIGGER','MAINTAIN']) as p(privilegio)
+          where n.nspname = 'public' and c.relkind in ('r','p','v','m','f')
+            and has_table_privilege($1, c.oid, p.privilegio)
+          order by 1, 2`,
+        [rol],
+      );
+
+    const anon = (await privilegiosDeTablas("anon")).rows;
+    const anonDeMas = anon.filter((f) => !(f.privilegio === "SELECT" && TABLAS_PUBLICAS.includes(f.tabla)));
+    verificar(anonDeMas.length === 0, "anon: solo SELECT en las tablas públicas");
+    if (anonDeMas.length) console.log(`    (${listar(anonDeMas)})`);
+
+    const autenticado = (await privilegiosDeTablas("authenticated")).rows;
+    verificar(autenticado.length === 0, "authenticated: ningún privilegio sobre las tablas de public");
+    if (autenticado.length) console.log(`    (${listar(autenticado)})`);
+
+    const sinRls = (
+      await db.query(
+        `select c.relname from pg_class c join pg_namespace n on n.oid = c.relnamespace
+          where n.nspname = 'public' and c.relkind in ('r','p') and not c.relrowsecurity order by 1`,
+      )
+    ).rows;
+    verificar(sinRls.length === 0, "todas las tablas de public tienen RLS activado");
+    if (sinRls.length) console.log(`    (${listar(sinRls)})`);
+
+    const funciones = (
+      await db.query(
+        `select p.oid::regprocedure::text as funcion, p.proname as nombre
+           from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+          where n.nspname = 'public'
+            and (has_function_privilege('anon', p.oid, 'EXECUTE') or has_function_privilege('authenticated', p.oid, 'EXECUTE'))
+          order by 1`,
+      )
+    ).rows;
+    const funcionesDeMas = funciones.filter((f) => !FUNCIONES_API.includes(f.nombre));
+    verificar(funcionesDeMas.length === 0, `anon y authenticated solo ejecutan ${FUNCIONES_API.join(", ")} en public`);
+    if (funcionesDeMas.length) console.log(`    (${funcionesDeMas.map((f) => f.funcion).join(", ")})`);
+
+    // Lo que postgres cree en public: ni anon, ni authenticated, ni PUBLIC (grantee 0)
+    // reciben nada por defecto. Las entradas globales (sin esquema) también cuentan.
+    const porDefecto = (
+      await db.query(
+        `select coalesce(n.nspname, '(global)') as esquema, d.defaclobjtype as tipo,
+                case a.grantee when 0 then 'PUBLIC' else pg_get_userbyid(a.grantee) end as rol, a.privilege_type as privilegio
+           from pg_default_acl d
+           left join pg_namespace n on n.oid = d.defaclnamespace
+           cross join aclexplode(d.defaclacl) a
+          where d.defaclrole = 'postgres'::regrole
+            and (n.nspname = 'public' or d.defaclnamespace = 0)
+            and (a.grantee = 0 or a.grantee in ('anon'::regrole, 'authenticated'::regrole))
+          order by 1, 2, 3`,
+      )
+    ).rows;
+    verificar(porDefecto.length === 0, "privilegios por defecto de postgres en public: nada para anon, authenticated ni PUBLIC");
+    if (porDefecto.length) console.log(`    (${listar(porDefecto)})`);
+    // Sin una entrada global para funciones rige el default de Postgres: EXECUTE para PUBLIC.
+    const globalFunciones = await db.query(
+      `select 1 from pg_default_acl where defaclrole = 'postgres'::regrole and defaclnamespace = 0 and defaclobjtype = 'f'`,
+    );
+    verificar(globalFunciones.rowCount === 1, "las funciones nuevas de postgres no nacen ejecutables por PUBLIC");
+  } finally {
+    await db.end();
+  }
+}
+
 try {
   const a = await crearTenant("a");
   const b = await crearTenant("b");
@@ -313,6 +405,8 @@ try {
   verificar(vacio(await anon.from("testimonios").select("id").eq("tenant_id", b.id)), "testimonios: no ve los de un tenant suspendido");
   verificar(vacio(await anon.from("tenants").select("id").eq("id", b.id)), "tenants: no ve un tenant suspendido");
   verificar(vacio(await anon.from("tenant_marca").select("tenant_id").eq("tenant_id", b.id)), "tenant_marca: no ve la de un tenant suspendido");
+
+  await permisosDeLaBase();
 } catch (e) {
   console.error(`\nError preparando la prueba: ${e.message}`);
   fallas++;
