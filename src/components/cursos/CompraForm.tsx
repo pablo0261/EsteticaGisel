@@ -28,7 +28,7 @@ export function CompraForm({ cursoId }: { cursoId: string }) {
       <label className="flex-1 font-sans text-sm text-texto-suave">
         <T
           es="Tu email (ahí te va a llegar el acceso)"
-          pt="Seu e-mail (o acesso será enviado para ele)"
+          pt="Seu e-mail (enviaremos o acesso para ele)"
         />
         <input
           name="clienteEmail"

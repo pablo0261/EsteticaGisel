@@ -19,7 +19,7 @@ function proximosDias(cantidad: number, zona: string, idioma: Idioma) {
       month: "short",
       timeZone: "UTC",
     });
-    return { fecha, etiqueta };
+    return { fecha, etiqueta: etiqueta.charAt(0).toUpperCase() + etiqueta.slice(1) };
   });
 }
 
@@ -44,7 +44,7 @@ export function SlotPicker({
             key={d.fecha}
             type="button"
             onClick={() => setFecha(d.fecha)}
-            className={`shrink-0 rounded-lg px-3 py-2 font-sans text-sm capitalize transition ${
+            className={`shrink-0 rounded-lg px-3 py-2 font-sans text-sm transition ${
               d.fecha === fecha
                 ? "bg-primario text-fondo"
                 : "bg-white/60 text-texto-suave hover:bg-fondo-oscuro"

@@ -1,7 +1,8 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Container } from "@/components/ui/Container";
 import { getCursoPublico } from "@/lib/data/cursos";
-import { tenantDeLaPagina } from "@/lib/tenant/actual";
+import { getTenantPorSlug, tenantDeLaPagina } from "@/lib/tenant/actual";
 import { precioEfectivo } from "@/lib/cursos/reglas";
 import { formatPrecio } from "@/lib/format";
 import { CompraForm } from "@/components/cursos/CompraForm";
@@ -10,6 +11,18 @@ import { VistaPreviaYoutube } from "@/components/cursos/VistaPreviaYoutube";
 import { traductor } from "@/lib/i18n/textos";
 
 const SEGUNDOS_PREVIEW = 30;
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ tenant: string; id: string }>;
+}): Promise<Metadata> {
+  const { tenant: slug, id } = await params;
+  const tenant = await getTenantPorSlug(slug);
+  if (!tenant?.modulos.cursos) return {};
+  const curso = await getCursoPublico(tenant.id, id);
+  return curso ? { title: curso.titulo } : {};
+}
 
 export default async function CursoDetallePage({
   params,

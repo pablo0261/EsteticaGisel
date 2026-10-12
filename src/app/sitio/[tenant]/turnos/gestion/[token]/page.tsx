@@ -67,6 +67,7 @@ async function TurnoDetalle({
   const fechaHoraTexto = new Date(turno.fecha_hora).toLocaleString(LOCALES[tenant.idioma], {
     dateStyle: "long",
     timeStyle: "short",
+    hourCycle: "h23",
     timeZone: tenant.zonaHoraria,
   });
   const t = traductor(tenant.idioma);

@@ -7,7 +7,7 @@ import { isGoogleConfigurado, crearEvento, borrarEvento } from "@/lib/google-cal
 import { tenantDelRequest } from "@/lib/tenant/actual";
 import { datosDelTenant } from "@/lib/tenant/datos";
 import { usaCredencialesGlobales } from "@/lib/tenant/credenciales-globales";
-import { IDIOMA_POR_DEFECTO, traductor } from "@/lib/i18n/textos";
+import { IDIOMA_POR_DEFECTO, traducir, traductor } from "@/lib/i18n/textos";
 import type { ConfiguracionNegocio, Turno } from "@/lib/data/types";
 import type { Tenant } from "@/lib/tenant/tipos";
 
@@ -48,7 +48,7 @@ type AccionResult = { ok: true } | { ok: false; error: string };
 
 export async function cancelarTurno(token: string): Promise<AccionResult> {
   const { tenant, t } = await contexto();
-  const ctx = tenant ? await getTurnoGestionable(tenant, token) : null;
+  const ctx = tenant?.modulos.turnos ? await getTurnoGestionable(tenant, token) : null;
   if (!tenant || !ctx || !ctx.permitido) {
     return {
       ok: false,
@@ -84,7 +84,7 @@ export async function reprogramarTurno(
   nuevoIso: string,
 ): Promise<AccionResult> {
   const { tenant, t } = await contexto();
-  const ctx = tenant ? await getTurnoGestionable(tenant, token) : null;
+  const ctx = tenant?.modulos.turnos ? await getTurnoGestionable(tenant, token) : null;
   if (!tenant || !ctx || !ctx.permitido) {
     return {
       ok: false,
@@ -122,7 +122,10 @@ export async function reprogramarTurno(
       ).toISOString();
       nuevoEventId = await crearEvento({
         titulo: `${ctx.turno.servicios.nombre} — ${ctx.turno.cliente_nombre}`,
-        descripcion: "Turno reprogramado.",
+        descripcion: traducir(tenant.idioma, {
+          es: "Turno reprogramado.",
+          pt: "Agendamento reagendado.",
+        }),
         inicioIso: nuevoIso,
         finIso: fin,
         clienteEmail: ctx.turno.cliente_email,

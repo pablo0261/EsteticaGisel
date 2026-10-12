@@ -14,7 +14,7 @@ export function CtaWhatsapp({ tenant }: { tenant: Tenant }) {
     <section className="bg-primario">
       <Container className="flex flex-col items-center gap-6 py-16 text-center sm:py-20">
         <h2 className="max-w-2xl font-serif text-4xl text-fondo sm:text-5xl">
-          {t({ es: "¿Lista para tu próximo turno?", pt: "Pronta para o seu próximo horário?" })}
+          {t({ es: "¿Lista para tu próximo turno?", pt: "Pronta para o seu próximo atendimento?" })}
         </h2>
         <p className="max-w-xl font-sans text-fondo/90">
           {whatsapp && reservaOnline

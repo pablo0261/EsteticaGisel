@@ -55,8 +55,8 @@ export async function reservarTurno(formData: FormData): Promise<ReservarTurnoRe
     return {
       ok: false,
       error: t({
-        es: `El número de WhatsApp no es válido. Ingresalo con código de área, ej: ${ejemplo}.`,
-        pt: `O número de WhatsApp não é válido. Informe com DDD, ex: ${ejemplo}.`,
+        es: `El número de WhatsApp no es válido. Ingresalo con código de área, ej.: ${ejemplo}.`,
+        pt: `O número de WhatsApp não é válido. Informe com o código de área, ex.: ${ejemplo}.`,
       }),
     };
   }
@@ -115,7 +115,7 @@ export async function reservarTurno(formData: FormData): Promise<ReservarTurnoRe
       ok: false,
       error: t({
         es: "Alguno de los servicios elegidos no está disponible.",
-        pt: "Algum dos serviços escolhidos não está disponível.",
+        pt: "Um dos serviços escolhidos não está mais disponível.",
       }),
     };
   }

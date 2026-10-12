@@ -156,7 +156,7 @@ export function ReservaForm({
               inputMode="tel"
               autoComplete="tel"
               required
-              placeholder={`${t({ es: "Ej:", pt: "Ex:" })} ${EJEMPLO_WHATSAPP[pais]}`}
+              placeholder={`${t({ es: "Ej.:", pt: "Ex.:" })} ${EJEMPLO_WHATSAPP[pais]}`}
               className="mt-1 w-full rounded-lg border border-primario/20 bg-fondo px-3 py-2 text-texto"
             />
           </label>
