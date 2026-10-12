@@ -1,14 +1,27 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { COOKIE_MFA, verificarMfa } from "@/lib/auth/cookie-mfa";
+import { decidirAcceso, rutaDelArea, rutaRelativa, type TipoArea } from "@/lib/auth/rutas";
+
+type Opciones = {
+  tipo: TipoArea;
+  /** Cabeceras que se reenvían a la app (el proxy ya les quitó las que el cliente no controla). */
+  cabeceras: Headers;
+  /** Ruta interna a la que se reescribe (área master). Sin ella, el request sigue en su ruta. */
+  reescribirA?: URL;
+};
 
 /**
- * Refresca la sesión de Supabase y protege /admin.
- * `headers` son las cabeceras que se reenvían a la app (el proxy les quita las que el
- * cliente no debe controlar, como x-tenant-slug); por defecto, las del request.
+ * Refresca la sesión de Supabase y protege el área (panel del cliente o master): exige
+ * sesión válida y la cookie mfa de esa sesión, salvo en las pantallas de ingreso
+ * (decidirAcceso).
  */
-export async function updateSession(request: NextRequest, headers?: Headers) {
-  const cabeceras = headers ?? request.headers;
-  let response = NextResponse.next({ request: { headers: cabeceras } });
+export async function protegerArea(request: NextRequest, { tipo, cabeceras, reescribirA }: Opciones) {
+  const continuar = () =>
+    reescribirA
+      ? NextResponse.rewrite(reescribirA, { request: { headers: cabeceras } })
+      : NextResponse.next({ request: { headers: cabeceras } });
+  let response = continuar();
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -17,38 +30,35 @@ export async function updateSession(request: NextRequest, headers?: Headers) {
       cookies: {
         getAll: () => request.cookies.getAll(),
         setAll: (cookiesToSet) => {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value),
-          );
-          // Con cabeceras propias, la cookie refrescada hay que copiarla también al header
-          // para que llegue a la app en este mismo request.
-          if (headers) headers.set("cookie", request.headers.get("cookie") ?? "");
-          response = NextResponse.next({ request: { headers: cabeceras } });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options),
-          );
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+          // La cookie refrescada también tiene que llegar a la app en este mismo request.
+          cabeceras.set("cookie", request.headers.get("cookie") ?? "");
+          response = continuar();
+          cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
         },
       },
     },
   );
 
+  // getUser() valida la sesión contra Supabase (detecta sesiones cerradas o revocadas);
+  // getClaims() da el session_id del JWT, al que está atada la cookie mfa.
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  const claims = user ? (await supabase.auth.getClaims()).data?.claims : undefined;
+  const haySesion = Boolean(user && claims && claims.sub === user.id);
+  const mfaValida =
+    haySesion &&
+    verificarMfa(process.env.MFA_SECRET, request.cookies.get(COOKIE_MFA)?.value, claims?.sub, claims?.session_id);
 
-  const path = request.nextUrl.pathname;
-  const isLogin = path === "/admin/login";
+  const decision = decidirAcceso(rutaRelativa(tipo, request.nextUrl.pathname), { haySesion, mfaValida });
+  if (decision.tipo === "seguir") return response;
 
-  if (!isLogin && !user) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/admin/login";
-    return NextResponse.redirect(url);
-  }
-  if (isLogin && user) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/admin";
-    return NextResponse.redirect(url);
-  }
-
-  return response;
+  const url = request.nextUrl.clone();
+  url.pathname = rutaDelArea(tipo, decision.a);
+  url.search = "";
+  const redireccion = NextResponse.redirect(url);
+  // Si Supabase refrescó la sesión, las cookies nuevas viajan también en la redirección.
+  response.cookies.getAll().forEach((cookie) => redireccion.cookies.set(cookie));
+  return redireccion;
 }
