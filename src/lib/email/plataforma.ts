@@ -35,9 +35,12 @@ export async function entregarEmailAuth(opts: {
   const transporte = nodemailer.createTransport({
     service: "gmail",
     auth: { user: usuario, pass: process.env.PLATFORM_GMAIL_APP_PASSWORD },
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 20_000,
   });
   await transporte.sendMail({
-    from: opts.remitente ? { name: opts.remitente, address: usuario } : process.env.PLATFORM_EMAIL_FROM || usuario,
+    from: opts.remitente ? { name: opts.remitente, address: usuario } : process.env.PLATFORM_EMAIL_FROM!,
     to: opts.para,
     subject: opts.email.asunto,
     html: opts.email.html,
