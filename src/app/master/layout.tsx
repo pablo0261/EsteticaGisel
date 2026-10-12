@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Container } from "@/components/ui/Container";
 import { cerrarSesion } from "@/lib/auth/acciones";
 import { masterVerificado } from "@/lib/auth/master";
@@ -40,7 +41,14 @@ export default async function MasterLayout({ children }: { children: React.React
     <div className="min-h-screen bg-fondo">
       <header className="border-b border-primario/15 bg-white/70">
         <Container className="flex h-16 items-center justify-between">
-          <span className="font-serif text-xl text-texto">Panel master</span>
+          <nav className="flex items-center gap-6">
+            <Link href="/" className="font-serif text-xl text-texto">
+              Panel master
+            </Link>
+            <Link href="/nuevo" className="font-sans text-sm text-texto-suave hover:text-primario">
+              Nuevo cliente
+            </Link>
+          </nav>
           <form id="form-salir" action={cerrarSesion}>
             <button className="font-sans text-sm text-primario hover:text-primario-oscuro">Salir</button>
           </form>

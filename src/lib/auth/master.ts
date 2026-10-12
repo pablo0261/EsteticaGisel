@@ -1,6 +1,5 @@
 import "server-only";
 import { cache } from "react";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { perfilDe } from "./servicio";
 import { sesionActual } from "./sesion";
 
@@ -18,15 +17,10 @@ export const masterVerificado = cache(async (): Promise<{ userId: string }> => {
   return { userId: sesion.userId };
 });
 
-export type TenantListado = { nombre: string; slug: string; estado: "activo" | "suspendido" };
-
-/** Clientes de la plataforma, para la home master (solo lectura hasta la etapa C). */
-export async function listarTenants(): Promise<TenantListado[]> {
-  await masterVerificado();
-  const { data, error } = await createAdminClient()
-    .from("tenants")
-    .select("nombre, slug, estado")
-    .order("nombre");
-  if (error) throw new Error(error.message);
-  return (data ?? []) as TenantListado[];
+/** Para páginas y layouts del master: sin acceso, el layout ya muestra el aviso (no se lanza). */
+export async function esMasterVerificado(): Promise<boolean> {
+  return masterVerificado().then(
+    () => true,
+    () => false,
+  );
 }
