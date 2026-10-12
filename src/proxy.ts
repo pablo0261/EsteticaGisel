@@ -49,10 +49,12 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   // Todo menos estáticos de Next y archivos con extensión (imágenes de public/);
-  // /sitio y /master aparte, para que el bloqueo también corra en rutas con extensión.
+  // /sitio y /master aparte, para que el bloqueo también corra en rutas con extensión;
+  // /admin también, para que el panel exija sesión aunque la ruta tenga un punto.
   matcher: [
     "/((?!_next/static|_next/image|favicon.ico|.*\\.[a-zA-Z0-9]+$).*)",
     "/sitio/:path*",
     "/master/:path*",
+    "/admin/:path*",
   ],
 };

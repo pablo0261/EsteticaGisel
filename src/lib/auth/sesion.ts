@@ -14,15 +14,19 @@ export type Sesion = {
 };
 
 /**
- * Sesión del request, cacheada por request. Usa getClaims(): valida la firma del JWT (con
- * claves asimétricas, sin ir a Supabase) y da el session_id. El proxy además valida la
- * sesión contra Supabase con getUser() en cada request a /admin y a app.
+ * Sesión del request, cacheada por request (una sola ida a Supabase).
+ * getClaims() valida la firma del JWT localmente y da el session_id, pero no detecta una
+ * sesión cerrada o revocada (el token sigue firmado hasta que vence). Por eso además se
+ * valida con getUser() contra Supabase: si la sesión ya no existe, no hay sesión. Así lo
+ * que se decide en el servidor (server actions, tenantDelAdmin) no depende solo del proxy.
  */
 export const sesionActual = cache(async (): Promise<Sesion | null> => {
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
   const claims = data?.claims;
   if (!claims) return null;
+  const { data: datosUsuario, error } = await supabase.auth.getUser();
+  if (error || datosUsuario.user?.id !== claims.sub) return null;
   const mfa = (await cookies()).get(COOKIE_MFA)?.value;
   return {
     userId: claims.sub,
