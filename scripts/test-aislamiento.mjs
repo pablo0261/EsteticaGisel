@@ -1,8 +1,9 @@
-// Verifica el aislamiento entre tenants contra la base real (RLS).
+// Verifica el aislamiento contra la base real (RLS y privilegios).
 // Crea dos tenants de prueba con una fila en cada tabla y un usuario cliente por
-// tenant; comprueba que el usuario de A no lee, inserta ni modifica nada de B, que no
-// puede tocar su propia marca/módulos/rol ni los registros del sistema, y qué ven un
-// usuario sin perfil, un master y un anónimo, y que las tablas del login (códigos,
+// tenant; comprueba que ningún usuario autenticado (cliente, sin perfil ni master) lee
+// ni escribe nada por la API pública, ni lo de su propio tenant (su token se obtiene sin
+// el segundo factor: todo pasa por el servidor con la service role), la integridad
+// entre tenants en la base, qué ve un anónimo, y que las tablas del login (códigos,
 // dispositivos y pedidos de recuperación) son solo del servidor. Al final borra todo.
 // Uso: npm run test:aislamiento
 import { createClient } from "@supabase/supabase-js";
@@ -140,59 +141,73 @@ async function contar(tabla, tenantId) {
   return r.count ?? 0;
 }
 
+/**
+ * Un usuario autenticado (con o sin perfil, cliente o master) no tiene acceso a ninguna
+ * tabla por la API: su token se obtiene solo con la contraseña, sin el segundo factor
+ * (migración 0012). No lee, inserta, modifica ni borra nada, ni lo de su propio tenant.
+ */
+async function sinAccesoAutenticado(cliente, quien, a, b, filasParaInsertar) {
+  for (const tabla of [...TABLAS_TENANT, "tenant_credenciales"]) {
+    const ids = [a.id, b.id];
+    verificar(sinAcceso(await cliente.from(tabla).select("tenant_id").eq("tenant_id", a.id)), `${tabla}: ${quien} no lee (ni las de A)`);
+    verificar(sinAcceso(await cliente.from(tabla).select("tenant_id").eq("tenant_id", b.id)), `${tabla}: ${quien} no lee las de B`);
+    verificar(esperaError(await cliente.from(tabla).insert(filasParaInsertar[tabla]), "42501"), `${tabla}: ${quien} no inserta (ni en A)`);
+    verificar(
+      bloqueado(await cliente.from(tabla).update({ tenant_id: b.id }).eq("tenant_id", a.id).select("tenant_id")),
+      `${tabla}: ${quien} no modifica (ni las de A)`,
+    );
+    verificar(bloqueado(await cliente.from(tabla).delete().in("tenant_id", ids).select("tenant_id")), `${tabla}: ${quien} no borra`);
+    verificar((await contar(tabla, a.id)) > 0 && (await contar(tabla, b.id)) > 0, `${tabla}: las filas de A y B siguen intactas`);
+  }
+
+  verificar(sinAcceso(await cliente.from("tenants").select("id")), `tenants: ${quien} no lee (ni el suyo)`);
+  verificar(esperaError(await cliente.from("tenants").insert({ slug: `test-x-${sufijo}`, nombre: "Intruso" }), "42501"), `tenants: ${quien} no crea tenants`);
+  verificar(
+    bloqueado(await cliente.from("tenants").update({ modulo_galeria: true }).in("id", [a.id, b.id]).select("id")),
+    `tenants: ${quien} no cambia módulos`,
+  );
+  verificar(bloqueado(await cliente.from("tenants").delete().in("id", [a.id, b.id]).select("id")), `tenants: ${quien} no borra tenants`);
+
+  verificar(sinAcceso(await cliente.from("perfiles").select("user_id")), `perfiles: ${quien} no lee (ni el propio)`);
+  verificar(
+    esperaError(await cliente.from("perfiles").insert({ user_id: randomUUID(), rol: "master", tenant_id: null }), "42501"),
+    `perfiles: ${quien} no crea perfiles`,
+  );
+  verificar(
+    bloqueado(await cliente.from("perfiles").update({ rol: "master", tenant_id: null }).in("user_id", [a.userId, b.userId]).select("user_id")),
+    `perfiles: ${quien} no cambia roles`,
+  );
+  verificar(
+    bloqueado(await cliente.from("perfiles").delete().in("user_id", [a.userId, b.userId]).select("user_id")),
+    `perfiles: ${quien} no borra perfiles`,
+  );
+
+  verificar(sinAcceso(await cliente.from("migraciones_aplicadas").select("nombre").limit(1)), `migraciones_aplicadas: ${quien} no lee`);
+  verificar(
+    esperaError(await cliente.from("migraciones_aplicadas").insert({ nombre: `aislamiento-${sufijo}` }), "42501"),
+    `migraciones_aplicadas: ${quien} no inserta`,
+  );
+}
+
 try {
   const a = await crearTenant("a");
   const b = await crearTenant("b");
   const usuarioA = await clienteLogueado(a.email, a.password);
   const anon = createClient(url, publishable, opciones);
 
-  console.log("\nUsuario cliente del tenant A, sobre datos de B:");
-  for (const tabla of TABLAS_TENANT) {
-    const propios = await usuarioA.from(tabla).select("tenant_id").eq("tenant_id", a.id);
-    verificar(!propios.error && propios.data.length > 0, `${tabla}: ve sus propias filas (control)`);
-    verificar(vacio(await usuarioA.from(tabla).select("tenant_id").eq("tenant_id", b.id)), `${tabla}: no ve filas de B`);
-    verificar(
-      bloqueado(await usuarioA.from(tabla).update({ tenant_id: a.id }).eq("tenant_id", b.id).select("tenant_id")),
-      `${tabla}: no modifica filas de B`,
-    );
-    verificar(
-      bloqueado(await usuarioA.from(tabla).delete().eq("tenant_id", b.id).select("tenant_id")),
-      `${tabla}: no borra filas de B`,
-    );
-    verificar((await contar(tabla, b.id)) > 0, `${tabla}: las filas de B siguen intactas`);
-
-    const antesA = await contar(tabla, a.id);
-    verificar(
-      bloqueado(await usuarioA.from(tabla).update({ tenant_id: b.id }).eq("tenant_id", a.id).select("tenant_id")),
-      `${tabla}: no mueve sus filas a B (WITH CHECK)`,
-    );
-    verificar((await contar(tabla, a.id)) === antesA, `${tabla}: las filas de A siguen en A`);
-
+  // Filas válidas (copias de las de A) para intentar insertarlas por la API.
+  const filasParaInsertar = {};
+  for (const tabla of [...TABLAS_TENANT, "tenant_credenciales"]) {
     const [fila] = await ok(admin.from(tabla).select("*").eq("tenant_id", a.id).limit(1), `leer ${tabla}`);
-    const copia = { ...fila, tenant_id: b.id };
+    const copia = { ...fila };
     for (const c of COLUMNAS_GENERADAS) delete copia[c];
-    // En pagos el trigger (BEFORE, corre antes que el WITH CHECK) frena primero: el
-    // cliente no ve turnos de B. El 42501 de pagos se prueba en "registros del sistema".
-    const codigo = tabla === "pagos" ? "P0001" : "42501";
-    verificar(esperaError(await usuarioA.from(tabla).insert(copia), codigo), `${tabla}: no puede insertar en B`);
+    filasParaInsertar[tabla] = copia;
   }
-  verificar(
-    esperaError(await usuarioA.from("tenants").insert({ slug: `test-x-${sufijo}`, nombre: "Intruso" }), "42501"),
-    "tenants: no puede crear tenants",
-  );
-  verificar(
-    esperaError(await usuarioA.from("perfiles").insert({ user_id: randomUUID(), rol: "master", tenant_id: null }), "42501"),
-    "perfiles: no puede crear perfiles",
-  );
 
-  console.log("\nRegistros del sistema (solo lectura para el cliente):");
-  verificar(
-    esperaError(
-      await usuarioA.from("pagos").insert({ tenant_id: a.id, tipo: "turno", referencia_id: a.turnoId, estado: "approved", monto: 1 }),
-      "42501",
-    ),
-    "pagos: el cliente no inserta ni en su propio tenant",
-  );
+  console.log("\nUsuario cliente del tenant A (sin acceso por la API, ni a lo propio):");
+  await sinAccesoAutenticado(usuarioA, "cliente A", a, b, filasParaInsertar);
+  const perfilA = await ok(admin.from("perfiles").select("rol, tenant_id").eq("user_id", a.userId).single(), "perfil A");
+  verificar(perfilA.rol === "cliente" && perfilA.tenant_id === a.id, "perfiles: el de A sigue siendo cliente de A");
 
   console.log("\nIntegridad en la base (aun con service role):");
   const turnoCruzado = await admin.from("turnos").insert({
@@ -214,52 +229,17 @@ try {
   mostrarError(pagoPropio);
   verificar(!pagoPropio.error, "pagos: sí puede apuntar a un turno propio (control)");
 
-  console.log("\nUsuario cliente del tenant A, sobre lo propio que no debe tocar:");
-  verificar(vacio(await usuarioA.from("tenant_credenciales").select("tenant_id")), "tenant_credenciales: no lee ni las propias");
-  const tenantsVisibles = await usuarioA.from("tenants").select("id");
-  verificar(
-    !tenantsVisibles.error && tenantsVisibles.data.length === 1 && tenantsVisibles.data[0].id === a.id,
-    "tenants: solo ve el suyo",
-  );
-  verificar(
-    bloqueado(await usuarioA.from("tenants").update({ modulo_galeria: true }).eq("id", a.id).select("id")),
-    "tenants: no cambia sus propios módulos",
-  );
-  verificar(
-    bloqueado(await usuarioA.from("tenant_marca").update({ color_primario: "#000000" }).eq("tenant_id", a.id).select("tenant_id")),
-    "tenant_marca: no cambia su propia marca",
-  );
-  const perfilesVisibles = await usuarioA.from("perfiles").select("user_id");
-  verificar(
-    !perfilesVisibles.error && perfilesVisibles.data.length === 1 && perfilesVisibles.data[0].user_id === a.userId,
-    "perfiles: solo ve el propio",
-  );
-  verificar(
-    bloqueado(await usuarioA.from("perfiles").update({ rol: "master", tenant_id: null }).eq("user_id", a.userId).select("user_id")),
-    "perfiles: no puede volverse master",
-  );
-
-  console.log("\nUsuario logueado sin perfil:");
+  console.log("\nUsuario logueado sin perfil (sin acceso por la API):");
   const sinPerfil = await crearUsuario("sin-perfil");
   const usuarioSinPerfil = await clienteLogueado(sinPerfil.email, sinPerfil.password);
-  for (const tabla of [...TABLAS_TENANT, "tenants", "perfiles"]) {
-    verificar(vacio(await usuarioSinPerfil.from(tabla).select("*")), `${tabla}: no ve nada`);
-  }
+  await sinAccesoAutenticado(usuarioSinPerfil, "sin perfil", a, b, filasParaInsertar);
 
-  console.log("\nUsuario master:");
+  console.log("\nUsuario master (sin acceso por la API: todo pasa por el servidor):");
   const master = await crearUsuario("master");
   await ok(admin.from("perfiles").insert({ user_id: master.userId, rol: "master", tenant_id: null }), "perfil master");
   const usuarioMaster = await clienteLogueado(master.email, master.password);
-  const serviciosMaster = await usuarioMaster.from("servicios").select("tenant_id").in("tenant_id", [a.id, b.id]);
-  mostrarError(serviciosMaster);
-  verificar(
-    !serviciosMaster.error && serviciosMaster.data.length >= 4 &&
-      serviciosMaster.data.some((s) => s.tenant_id === a.id) && serviciosMaster.data.some((s) => s.tenant_id === b.id),
-    "servicios: ve los de A y B (incluidos inactivos)",
-  );
-  const tenantsMaster = await usuarioMaster.from("tenants").select("id").in("id", [a.id, b.id]);
-  mostrarError(tenantsMaster);
-  verificar(!tenantsMaster.error && tenantsMaster.data.length === 2, "tenants: ve A y B");
+  await sinAccesoAutenticado(usuarioMaster, "master", a, b, filasParaInsertar);
+
   console.log("\nTablas del login (solo el servidor, con la service role):");
   const enDiezMinutos = () => new Date(Date.now() + 600_000).toISOString();
   await ok(admin.from("codigos_login").insert({ user_id: a.userId, codigo_hash: "hash-de-prueba", expira_en: enDiezMinutos() }), "código de login");
@@ -322,6 +302,8 @@ try {
   console.error(`\nError preparando la prueba: ${e.message}`);
   fallas++;
 } finally {
+  // Por si alguna inserción indebida hubiera pasado.
+  await admin.from("migraciones_aplicadas").delete().like("nombre", `aislamiento-%`);
   const { error: errorPedidos } = await admin.from("pedidos_recuperacion").delete().like("email_hash", `%-${sufijo}`);
   if (errorPedidos) {
     console.error(`✗ limpieza: pedidos_recuperacion: ${errorPedidos.message}`);
