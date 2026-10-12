@@ -7,11 +7,11 @@ import { isGoogleConfigurado, crearEvento, borrarEvento } from "@/lib/google-cal
 import { tenantDelRequest } from "@/lib/tenant/actual";
 import { datosDelTenant } from "@/lib/tenant/datos";
 import { usaCredencialesGlobales } from "@/lib/tenant/credenciales-globales";
+import { IDIOMA_POR_DEFECTO, traductor } from "@/lib/i18n/textos";
 import type { ConfiguracionNegocio, Turno } from "@/lib/data/types";
+import type { Tenant } from "@/lib/tenant/tipos";
 
-async function getTurnoGestionable(token: string) {
-  const tenant = await tenantDelRequest();
-  if (!tenant) return null;
+async function getTurnoGestionable(tenant: Tenant, token: string) {
   const db = datosDelTenant(tenant.id);
 
   const { data: fila } = await db
@@ -35,21 +35,34 @@ async function getTurnoGestionable(token: string) {
     ahoraIso: new Date().toISOString(),
   });
 
-  return { tenant, db, turno, permitido };
+  return { db, turno, permitido };
+}
+
+/** Tenant del host y la traducción a su idioma (español si no hay tenant). */
+async function contexto() {
+  const tenant = await tenantDelRequest();
+  return { tenant, t: traductor(tenant?.idioma ?? IDIOMA_POR_DEFECTO) };
 }
 
 type AccionResult = { ok: true } | { ok: false; error: string };
 
 export async function cancelarTurno(token: string): Promise<AccionResult> {
-  const ctx = await getTurnoGestionable(token);
-  if (!ctx || !ctx.permitido) {
-    return { ok: false, error: "Fuera del plazo permitido para cancelar." };
+  const { tenant, t } = await contexto();
+  const ctx = tenant ? await getTurnoGestionable(tenant, token) : null;
+  if (!tenant || !ctx || !ctx.permitido) {
+    return {
+      ok: false,
+      error: t({
+        es: "Fuera del plazo permitido para cancelar.",
+        pt: "Fora do prazo permitido para cancelar.",
+      }),
+    };
   }
 
   if (
     ctx.turno.google_calendar_event_id &&
     isGoogleConfigurado() &&
-    usaCredencialesGlobales(ctx.tenant.slug)
+    usaCredencialesGlobales(tenant.slug)
   ) {
     try {
       await borrarEvento(ctx.turno.google_calendar_event_id);
@@ -70,18 +83,36 @@ export async function reprogramarTurno(
   nuevaFecha: string,
   nuevoIso: string,
 ): Promise<AccionResult> {
-  const ctx = await getTurnoGestionable(token);
-  if (!ctx || !ctx.permitido) {
-    return { ok: false, error: "Fuera del plazo permitido para reprogramar." };
+  const { tenant, t } = await contexto();
+  const ctx = tenant ? await getTurnoGestionable(tenant, token) : null;
+  if (!tenant || !ctx || !ctx.permitido) {
+    return {
+      ok: false,
+      error: t({
+        es: "Fuera del plazo permitido para reprogramar.",
+        pt: "Fora do prazo permitido para reagendar.",
+      }),
+    };
   }
 
-  const disponibles = await getDisponibilidad(ctx.tenant.id, [ctx.turno.servicio_id], nuevaFecha);
+  const disponibles = await getDisponibilidad(
+    tenant.id,
+    tenant.zonaHoraria,
+    [ctx.turno.servicio_id],
+    nuevaFecha,
+  );
   if (!disponibles.some((s) => s.iso === nuevoIso)) {
-    return { ok: false, error: "Ese horario ya no está disponible." };
+    return {
+      ok: false,
+      error: t({
+        es: "Ese horario ya no está disponible.",
+        pt: "Esse horário não está mais disponível.",
+      }),
+    };
   }
 
   let nuevoEventId: string | null = null;
-  if (isGoogleConfigurado() && usaCredencialesGlobales(ctx.tenant.slug)) {
+  if (isGoogleConfigurado() && usaCredencialesGlobales(tenant.slug)) {
     try {
       if (ctx.turno.google_calendar_event_id) {
         await borrarEvento(ctx.turno.google_calendar_event_id);

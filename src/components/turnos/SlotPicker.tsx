@@ -2,33 +2,38 @@
 
 import { useEffect, useState } from "react";
 import { consultarDisponibilidad } from "@/app/sitio/[tenant]/turnos/disponibilidad-action";
+import { fechaHoy, sumarDias } from "@/lib/turnos/fechas";
+import { LOCALES, type Idioma } from "@/lib/i18n/textos";
+import { T, useIdioma } from "@/lib/i18n/cliente";
 import type { SlotDisponible } from "@/lib/data/turnos";
 
-function proximosDias(cantidad: number): { fecha: string; etiqueta: string }[] {
-  const dias = [];
-  const hoy = new Date();
-  for (let i = 0; i < cantidad; i++) {
-    const d = new Date(hoy);
-    d.setDate(hoy.getDate() + i);
-    const fecha = d.toISOString().slice(0, 10);
-    const etiqueta = d.toLocaleDateString("es-AR", {
+/** Próximos días desde hoy en la zona del negocio, con su etiqueta en el idioma del sitio. */
+function proximosDias(cantidad: number, zona: string, idioma: Idioma) {
+  const hoy = fechaHoy(zona);
+  return Array.from({ length: cantidad }, (_, i) => {
+    const fecha = sumarDias(hoy, i);
+    // Mediodía UTC de esa fecha, formateado en UTC: la etiqueta no depende del navegador.
+    const etiqueta = new Date(`${fecha}T12:00:00Z`).toLocaleDateString(LOCALES[idioma], {
       weekday: "short",
       day: "numeric",
       month: "short",
+      timeZone: "UTC",
     });
-    dias.push({ fecha, etiqueta });
-  }
-  return dias;
+    return { fecha, etiqueta };
+  });
 }
 
 export function SlotPicker({
   servicioIds,
+  zonaHoraria,
   onSelect,
 }: {
   servicioIds: string[];
+  zonaHoraria: string;
   onSelect: (fecha: string, iso: string) => void;
 }) {
-  const dias = proximosDias(14);
+  const idioma = useIdioma();
+  const dias = proximosDias(14, zonaHoraria, idioma);
   const [fecha, setFecha] = useState(dias[0].fecha);
 
   return (
@@ -86,12 +91,19 @@ function SlotsDelDia({
   }, [servicioIds.join(","), fecha]);
 
   if (slots === null) {
-    return <p className="font-sans text-sm text-texto-suave">Buscando horarios…</p>;
+    return (
+      <p className="font-sans text-sm text-texto-suave">
+        <T es="Buscando horarios…" pt="Buscando horários…" />
+      </p>
+    );
   }
   if (slots.length === 0) {
     return (
       <p className="font-sans text-sm text-texto-suave">
-        No hay horarios disponibles este día. Probá otra fecha.
+        <T
+          es="No hay horarios disponibles este día. Probá otra fecha."
+          pt="Não há horários disponíveis neste dia. Tente outra data."
+        />
       </p>
     );
   }

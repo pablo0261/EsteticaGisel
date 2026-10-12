@@ -10,5 +10,5 @@ export async function consultarDisponibilidad(
   if (servicioIds.length === 0 || !fecha) return [];
   const tenant = await tenantDelRequest();
   if (!tenant?.modulos.turnos) return [];
-  return getDisponibilidad(tenant.id, servicioIds, fecha);
+  return getDisponibilidad(tenant.id, tenant.zonaHoraria, servicioIds, fecha);
 }

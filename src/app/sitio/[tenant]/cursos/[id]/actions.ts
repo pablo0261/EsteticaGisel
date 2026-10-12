@@ -48,6 +48,7 @@ export async function comprarCurso(formData: FormData): Promise<ComprarCursoResu
     const pref = await crearPreferencia({
       titulo: curso.titulo,
       monto,
+      moneda: tenant.moneda,
       externalReference: `curso:${curso.id}`,
       clienteEmail,
       baseUrl: urlDelTenant(tenant.slug),

@@ -1,10 +1,10 @@
 import { datosDelTenant } from "@/lib/tenant/datos";
 import { calcularSlots, hhmmToMin, minToHhmm } from "@/lib/turnos/disponibilidad";
 import {
-  isoFechaHoraAR,
-  diaSemanaAR,
-  minutosDelDiaAR,
-  fechaHoyAR,
+  isoFechaHora,
+  diaSemana,
+  minutosDelDia,
+  fechaHoy,
   sumarDias,
 } from "@/lib/turnos/fechas";
 import type { ConfiguracionNegocio, Servicio, Turno } from "./types";
@@ -13,13 +13,14 @@ export type SlotDisponible = { hora: string; iso: string };
 
 /**
  * Calcula los horarios disponibles para uno o más servicios en una fecha
- * (YYYY-MM-DD), contra el horario de atención, la duración combinada de los
- * servicios elegidos (se reservan consecutivos, sin hueco entre ellos), el
- * margen de preparación y los turnos ya ocupados (confirmados o pendientes
- * no vencidos).
+ * (YYYY-MM-DD, en la zona horaria del negocio), contra el horario de atención, la
+ * duración combinada de los servicios elegidos (se reservan consecutivos, sin hueco
+ * entre ellos), el margen de preparación y los turnos ya ocupados (confirmados o
+ * pendientes no vencidos).
  */
 export async function getDisponibilidad(
   tenantId: string,
+  zonaHoraria: string,
   servicioIds: string[],
   fecha: string,
 ): Promise<SlotDisponible[]> {
@@ -52,13 +53,13 @@ export async function getDisponibilidad(
 
   const horario = (
     config.horario_atencion as Record<string, [string, string]>
-  )[diaSemanaAR(fecha)];
+  )[diaSemana(fecha)];
   if (!horario) return []; // día cerrado (ej. domingo)
 
   const { data: filasTurnos } = await db
     .select("turnos", "fecha_hora, duracion_minutos, estado, bloqueado_hasta")
-    .gte("fecha_hora", isoFechaHoraAR(fecha, 0))
-    .lt("fecha_hora", isoFechaHoraAR(sumarDias(fecha, 1), 0));
+    .gte("fecha_hora", isoFechaHora(fecha, 0, zonaHoraria))
+    .lt("fecha_hora", isoFechaHora(sumarDias(fecha, 1), 0, zonaHoraria));
   const turnos = filasTurnos as unknown as
     | Pick<Turno, "fecha_hora" | "duracion_minutos" | "estado" | "bloqueado_hasta">[]
     | null;
@@ -73,11 +74,11 @@ export async function getDisponibilidad(
           t.bloqueado_hasta > ahora),
     )
     .map((t) => {
-      const inicio = minutosDelDiaAR(t.fecha_hora);
+      const inicio = minutosDelDia(t.fecha_hora, zonaHoraria);
       return { inicio, fin: inicio + t.duracion_minutos };
     });
 
-  const desdeMin = fecha === fechaHoyAR() ? minutosDelDiaAR(ahora) : 0;
+  const desdeMin = fecha === fechaHoy(zonaHoraria) ? minutosDelDia(ahora, zonaHoraria) : 0;
 
   const slots = calcularSlots({
     aperturaMin: hhmmToMin(horario[0]),
@@ -89,7 +90,7 @@ export async function getDisponibilidad(
     desdeMin,
   });
 
-  return slots.map((m) => ({ hora: minToHhmm(m), iso: isoFechaHoraAR(fecha, m) }));
+  return slots.map((m) => ({ hora: minToHhmm(m), iso: isoFechaHora(fecha, m, zonaHoraria) }));
 }
 
 export type TurnoConServicio = {

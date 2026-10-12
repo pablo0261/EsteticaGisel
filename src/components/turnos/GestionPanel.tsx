@@ -4,16 +4,20 @@ import { useState, useTransition } from "react";
 import { SlotPicker } from "./SlotPicker";
 import { cancelarTurno, reprogramarTurno } from "@/app/sitio/[tenant]/turnos/gestion/[token]/actions";
 import { LoadingOverlay } from "@/components/ui/LoadingOverlay";
+import { T, useT } from "@/lib/i18n/cliente";
 
 export function GestionPanel({
   token,
   servicioId,
   permitido,
+  zonaHoraria,
 }: {
   token: string;
   servicioId: string;
   permitido: boolean;
+  zonaHoraria: string;
 }) {
+  const t = useT();
   const [modo, setModo] = useState<"inicial" | "reprogramando" | "cancelado" | "reprogramado">(
     "inicial",
   );
@@ -24,8 +28,10 @@ export function GestionPanel({
   if (!permitido) {
     return (
       <p className="rounded-lg bg-primario/10 px-4 py-3 font-sans text-sm text-primario-oscuro">
-        Está fuera del plazo permitido para cancelar o reprogramar online. Por
-        favor contactanos directamente.
+        <T
+          es="Está fuera del plazo permitido para cancelar o reprogramar online. Por favor contactanos directamente."
+          pt="Está fora do prazo permitido para cancelar ou reagendar online. Por favor, entre em contato diretamente."
+        />
       </p>
     );
   }
@@ -33,7 +39,10 @@ export function GestionPanel({
   if (modo === "cancelado") {
     return (
       <p className="rounded-lg bg-secundario/10 px-4 py-3 font-sans text-sm text-secundario-oscuro">
-        Tu turno fue cancelado. La seña no es reembolsable.
+        <T
+          es="Tu turno fue cancelado. La seña no es reembolsable."
+          pt="Seu agendamento foi cancelado. O sinal não é reembolsável."
+        />
       </p>
     );
   }
@@ -41,7 +50,7 @@ export function GestionPanel({
   if (modo === "reprogramado") {
     return (
       <p className="rounded-lg bg-secundario/10 px-4 py-3 font-sans text-sm text-secundario-oscuro">
-        ¡Listo! Tu turno fue reprogramado.
+        <T es="¡Listo! Tu turno fue reprogramado." pt="Pronto! Seu agendamento foi reagendado." />
       </p>
     );
   }
@@ -70,6 +79,7 @@ export function GestionPanel({
       <div className="flex flex-col gap-4">
         <SlotPicker
           servicioIds={[servicioId]}
+          zonaHoraria={zonaHoraria}
           onSelect={(fecha, iso) => setNuevoIso({ fecha, iso })}
         />
         {error && (
@@ -84,17 +94,20 @@ export function GestionPanel({
             onClick={onConfirmarReprogramacion}
             className="rounded-full bg-primario px-6 py-2 font-sans text-sm font-medium text-fondo transition hover:bg-primario-oscuro disabled:opacity-60"
           >
-            Confirmar nuevo horario
+            <T es="Confirmar nuevo horario" pt="Confirmar novo horário" />
           </button>
           <button
             type="button"
             onClick={() => setModo("inicial")}
             className="font-sans text-sm text-texto-suave hover:text-texto"
           >
-            Volver
+            <T es="Volver" pt="Voltar" />
           </button>
         </div>
-        <LoadingOverlay show={pending} label="Guardando cambios…" />
+        <LoadingOverlay
+          show={pending}
+          label={t({ es: "Guardando cambios…", pt: "Salvando alterações…" })}
+        />
       </div>
     );
   }
@@ -112,7 +125,7 @@ export function GestionPanel({
           onClick={() => setModo("reprogramando")}
           className="rounded-full border border-primario px-6 py-2 font-sans text-sm font-medium text-primario transition hover:bg-primario hover:text-fondo"
         >
-          Reprogramar
+          <T es="Reprogramar" pt="Reagendar" />
         </button>
         <button
           type="button"
@@ -120,10 +133,10 @@ export function GestionPanel({
           onClick={onCancelar}
           className="rounded-full px-6 py-2 font-sans text-sm font-medium text-primario-oscuro underline-offset-4 hover:underline disabled:opacity-60"
         >
-          Cancelar turno
+          <T es="Cancelar turno" pt="Cancelar agendamento" />
         </button>
       </div>
-      <LoadingOverlay show={pending} label="Cancelando…" />
+      <LoadingOverlay show={pending} label={t({ es: "Cancelando…", pt: "Cancelando…" })} />
     </div>
   );
 }

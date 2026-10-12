@@ -1,3 +1,5 @@
+import type { Moneda } from "@/lib/tenant/tipos";
+
 const MP_API = "https://api.mercadopago.com";
 
 export function isMpConfigurado(): boolean {
@@ -8,6 +10,8 @@ export function isMpConfigurado(): boolean {
 type CrearPreferenciaOpts = {
   titulo: string;
   monto: number;
+  /** Moneda del tenant (currency_id de Mercado Pago). */
+  moneda: Moneda;
   externalReference: string;
   clienteEmail: string;
   /** URL del sitio del tenant: retorno de Mercado Pago y webhook. */
@@ -19,8 +23,6 @@ type CrearPreferenciaOpts = {
 export async function crearPreferencia(
   opts: CrearPreferenciaOpts,
 ): Promise<{ id: string; initPoint: string }> {
-  const moneda = process.env.MP_CURRENCY || "ARS";
-
   const res = await fetch(`${MP_API}/checkout/preferences`, {
     method: "POST",
     headers: {
@@ -33,7 +35,7 @@ export async function crearPreferencia(
           title: opts.titulo,
           quantity: 1,
           unit_price: opts.monto,
-          currency_id: moneda,
+          currency_id: opts.moneda,
         },
       ],
       payer: { email: opts.clienteEmail },
