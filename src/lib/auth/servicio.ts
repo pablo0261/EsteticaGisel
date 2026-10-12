@@ -172,19 +172,40 @@ export async function revocarDispositivos(userId: string): Promise<void> {
   fallar("revocar dispositivos", error);
 }
 
+/**
+ * Cuenta las filas de una tabla de límites para una IP desde una fecha. null si la IP es
+ * desconocida: ese límite no se aplica (no se junta a todos en un mismo balde).
+ */
+async function contarPorIp(
+  tabla: "pedidos_recuperacion" | "intentos_login",
+  ip: string | null,
+  desde: string,
+  soloFallidos = false,
+): Promise<number | null> {
+  if (ip === null) return null;
+  let consulta = createAdminClient()
+    .from(tabla)
+    .select("id", { count: "exact", head: true })
+    .eq("ip", ip)
+    .gte("creado_en", desde);
+  if (soloFallidos) consulta = consulta.eq("exito", false);
+  const { count, error } = await consulta;
+  fallar(`${tabla} por IP`, error);
+  return count ?? 0;
+}
+
 /** Registra un pedido de recuperación si no supera los límites por hora. false = no enviar. */
-export async function registrarPedidoRecuperacion(email: string, ip: string): Promise<boolean> {
+export async function registrarPedidoRecuperacion(email: string, ip: string | null): Promise<boolean> {
   const db = createAdminClient();
   const ahora = Date.now();
   const desde = new Date(ahora - HORA_MS).toISOString();
   const emailHash = hashEmail(secretoMfa(), email);
   const [porEmail, porIp] = await Promise.all([
     db.from("pedidos_recuperacion").select("id", { count: "exact", head: true }).eq("email_hash", emailHash).gte("creado_en", desde),
-    db.from("pedidos_recuperacion").select("id", { count: "exact", head: true }).eq("ip", ip).gte("creado_en", desde),
+    contarPorIp("pedidos_recuperacion", ip, desde),
   ]);
   fallar("pedidos por email", porEmail.error);
-  fallar("pedidos por IP", porIp.error);
-  if (!recuperacionPermitida(porEmail.count ?? 0, porIp.count ?? 0)) return false;
+  if (!recuperacionPermitida(porEmail.count ?? 0, porIp)) return false;
 
   const { error } = await db
     .from("pedidos_recuperacion")
@@ -204,22 +225,19 @@ function hashEmailIntento(email: string): string {
 }
 
 /** ¿Se superó el límite de intentos fallidos de login (por email o por IP) en la ventana? */
-export async function loginBloqueado(email: string, ip: string): Promise<boolean> {
-  const db = createAdminClient();
+export async function loginBloqueado(email: string, ip: string | null): Promise<boolean> {
   const desde = new Date(Date.now() - VENTANA_LOGIN_MS).toISOString();
   const [porEmail, porIp] = await Promise.all([
-    db.from("intentos_login").select("id", { count: "exact", head: true })
+    createAdminClient().from("intentos_login").select("id", { count: "exact", head: true })
       .eq("email_hash", hashEmailIntento(email)).eq("exito", false).gte("creado_en", desde),
-    db.from("intentos_login").select("id", { count: "exact", head: true })
-      .eq("ip", ip).eq("exito", false).gte("creado_en", desde),
+    contarPorIp("intentos_login", ip, desde, true),
   ]);
   fallar("intentos de login por email", porEmail.error);
-  fallar("intentos de login por IP", porIp.error);
-  return !loginPermitido(porEmail.count ?? 0, porIp.count ?? 0);
+  return !loginPermitido(porEmail.count ?? 0, porIp);
 }
 
 /** Registra un intento de login (exitoso o no) y limpia los de más de un día. */
-export async function registrarIntentoLogin(email: string, ip: string, exito: boolean): Promise<void> {
+export async function registrarIntentoLogin(email: string, ip: string | null, exito: boolean): Promise<void> {
   const db = createAdminClient();
   const ahora = Date.now();
   const { error } = await db.from("intentos_login").insert({

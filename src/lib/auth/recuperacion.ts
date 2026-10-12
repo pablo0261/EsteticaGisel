@@ -27,8 +27,12 @@ export function hashEmailLogin(secreto: string | undefined, email: string): stri
   return hmacEmail(secreto, "login", email);
 }
 
-export function recuperacionPermitida(enLaHoraPorEmail: number, enLaHoraPorIp: number): boolean {
-  return enLaHoraPorEmail < MAX_RECUPERACIONES_POR_EMAIL && enLaHoraPorIp < MAX_RECUPERACIONES_POR_IP;
+/** enLaHoraPorIp null: IP desconocida, no se limita por IP (sí por email). */
+export function recuperacionPermitida(enLaHoraPorEmail: number, enLaHoraPorIp: number | null): boolean {
+  return (
+    enLaHoraPorEmail < MAX_RECUPERACIONES_POR_EMAIL &&
+    (enLaHoraPorIp === null || enLaHoraPorIp < MAX_RECUPERACIONES_POR_IP)
+  );
 }
 
 export type ProblemaContrasena = "contrasena_corta" | "contrasena_distinta";

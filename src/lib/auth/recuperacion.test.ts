@@ -70,6 +70,11 @@ describe("recuperacionPermitida", () => {
     expect(recuperacionPermitida(3, 0)).toBe(false);
     expect(recuperacionPermitida(0, 10)).toBe(false);
   });
+
+  it("sin IP conocida solo limita por email", () => {
+    expect(recuperacionPermitida(2, null)).toBe(true);
+    expect(recuperacionPermitida(3, null)).toBe(false);
+  });
 });
 
 describe("validarNuevaContrasena", () => {

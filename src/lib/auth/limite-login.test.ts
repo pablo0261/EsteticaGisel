@@ -14,4 +14,9 @@ describe("loginPermitido", () => {
     expect(loginPermitido(5, 0)).toBe(false);
     expect(loginPermitido(0, 20)).toBe(false);
   });
+
+  it("sin IP conocida solo limita por email", () => {
+    expect(loginPermitido(4, null)).toBe(true);
+    expect(loginPermitido(5, null)).toBe(false);
+  });
 });

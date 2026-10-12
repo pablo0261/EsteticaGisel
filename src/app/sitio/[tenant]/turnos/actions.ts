@@ -72,12 +72,12 @@ export async function reservarTurno(formData: FormData): Promise<ReservarTurnoRe
   }
 
   const db = datosDelTenant(tenant.id);
+  // Sin IP confiable (CABECERA_IP_CONFIABLE) no se limita por IP: no se junta a todos en un balde.
   const ip = await getClientIp();
   const haceUnaHora = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-  const { data: intentos } = await db
-    .select("intentos_reserva", "id")
-    .eq("ip", ip)
-    .gte("creado_en", haceUnaHora);
+  const { data: intentos } = ip
+    ? await db.select("intentos_reserva", "id").eq("ip", ip).gte("creado_en", haceUnaHora)
+    : { data: [] };
 
   if (!puedeReservar(intentos?.length ?? 0, MAXIMO_RESERVAS_POR_HORA)) {
     return {
@@ -171,7 +171,7 @@ export async function reservarTurno(formData: FormData): Promise<ReservarTurnoRe
     inicioActual = new Date(inicioActual.getTime() + servicio.duracion_minutos * 60000);
   }
 
-  await db.insert("intentos_reserva", { ip });
+  if (ip) await db.insert("intentos_reserva", { ip });
 
   try {
     const titulo = `${t({ es: "Seña", pt: "Sinal" })} — ${servicios.map((s) => s.nombre).join(" + ")}`;
