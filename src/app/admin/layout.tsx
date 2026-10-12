@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { cerrarSesion } from "@/lib/auth/acciones";
+import { sesionActual } from "@/lib/auth/sesion";
 import { tenantDelAdmin } from "@/lib/tenant/admin";
 import { tenantDelRequest } from "@/lib/tenant/actual";
 import { estiloMarca } from "@/lib/tenant/estilo";
-import { logout } from "./actions";
 import { Container } from "@/components/ui/Container";
 
 export const metadata = { title: "Panel" };
@@ -20,20 +20,17 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     </div>
   );
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  // Sin sesión: la /admin/login se muestra sola (sin el shell del panel).
-  if (!user) return conMarca(children);
+  // Sin la verificación en dos pasos completa, el proxy solo deja llegar a las pantallas
+  // de ingreso (login, código, contraseña): se muestran solas, sin el shell del panel.
+  const sesion = await sesionActual();
+  if (!sesion?.verificada) return conMarca(children);
 
   const tenant = await tenantDelAdmin().catch(() => null);
   if (!tenant) {
     return conMarca(
       <main className="flex min-h-screen flex-col items-center justify-center gap-4 bg-fondo px-6">
         <p className="font-sans text-texto-suave">Esta cuenta no tiene acceso a este sitio.</p>
-        <form action={logout}>
+        <form id="form-salir" action={cerrarSesion}>
           <button className="font-sans text-sm text-primario hover:text-primario-oscuro">Salir</button>
         </form>
       </main>,
@@ -68,7 +65,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               </Link>
             ))}
           </nav>
-          <form action={logout}>
+          <form id="form-salir" action={cerrarSesion}>
             <button className="font-sans text-sm text-primario hover:text-primario-oscuro">Salir</button>
           </form>
         </Container>
