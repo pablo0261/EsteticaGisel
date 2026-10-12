@@ -13,6 +13,11 @@ export type ColoresMarca = Pick<Marca, keyof typeof VARIABLES>;
 /** #rgb, #rgba, #rrggbb o #rrggbbaa. Cualquier otra cosa podría inyectar CSS en el style. */
 const HEX = /^#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
 
+/** ¿Es un color hex válido? (también lo usan los emails con la marca) */
+export function esColorHex(valor: string): boolean {
+  return HEX.test(valor.trim());
+}
+
 /**
  * Variables CSS con los 4 colores base del tenant, para el style del layout. globals.css
  * deriva de ellas las clases (bg-primario, text-texto-suave…). Un color inválido se omite
@@ -22,7 +27,7 @@ export function estiloMarca(colores: ColoresMarca): CSSProperties {
   const estilo: CSSProperties & Record<string, string> = {};
   for (const campo of Object.keys(VARIABLES) as (keyof ColoresMarca)[]) {
     const valor = colores[campo].trim();
-    if (HEX.test(valor)) estilo[VARIABLES[campo]] = valor;
+    if (esColorHex(valor)) estilo[VARIABLES[campo]] = valor;
   }
   return estilo;
 }
