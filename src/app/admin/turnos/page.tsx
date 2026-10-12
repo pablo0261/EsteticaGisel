@@ -1,7 +1,7 @@
 import { getTurnosAdmin } from "@/lib/data/turnos";
 import { tenantDelAdmin } from "@/lib/tenant/admin";
 import { cancelarTurnoAdmin, marcarCompletado } from "./actions";
-import { formatPrecioARS } from "@/lib/format";
+import { formatPrecio } from "@/lib/format";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { FormPendingOverlay } from "@/components/ui/FormPendingOverlay";
 
@@ -40,7 +40,7 @@ export default async function TurnosAdmin() {
           const fechaHoraTexto = new Date(t.fecha_hora).toLocaleString("es-AR", {
             dateStyle: "long",
             timeStyle: "short",
-            timeZone: "America/Argentina/Buenos_Aires",
+            timeZone: tenant.zonaHoraria,
           });
           const gestionable = t.estado === "pendiente_pago" || t.estado === "confirmado";
           return (
@@ -59,7 +59,7 @@ export default async function TurnosAdmin() {
               <div className="flex items-center gap-3">
                 {t.monto_sena != null && (
                   <span className="font-sans text-sm text-texto-suave">
-                    Seña {formatPrecioARS(t.monto_sena)}
+                    Seña {formatPrecio(t.monto_sena, tenant.moneda, tenant.idioma)}
                   </span>
                 )}
                 <span

@@ -1,7 +1,7 @@
 import { getServiciosAdmin } from "@/lib/data/servicios";
 import { tenantDelAdmin } from "@/lib/tenant/admin";
 import { createServicio, updateServicio, deleteServicio } from "./actions";
-import { formatPrecioARS, formatDuracion } from "@/lib/format";
+import { formatPrecio, formatDuracion } from "@/lib/format";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { FormPendingOverlay } from "@/components/ui/FormPendingOverlay";
 
@@ -86,7 +86,7 @@ export default async function ServiciosAdmin() {
               name="precio"
               type="number"
               defaultValue={s.precio}
-              title={formatPrecioARS(s.precio)}
+              title={formatPrecio(s.precio, tenant.moneda, tenant.idioma)}
               className="w-28 rounded-lg border border-primario/20 bg-fondo px-3 py-2"
             />
             <input

@@ -5,6 +5,7 @@ import { plantillaRecordatorioTurno } from "@/lib/email/plantillas";
 import { recordatorioQueCorresponde, type TipoRecordatorio } from "@/lib/turnos/recordatorios";
 import { datosDelTenant } from "@/lib/tenant/datos";
 import { urlDelTenant } from "@/lib/tenant/urls";
+import { LOCALES, type Idioma } from "@/lib/i18n/textos";
 
 function autorizado(request: NextRequest): boolean {
   const auth = request.headers.get("authorization");
@@ -33,7 +34,7 @@ export async function GET(request: NextRequest) {
   const { data: turnos } = await db
     .from("turnos")
     .select(
-      "id, tenant_id, cliente_email, fecha_hora, creado_en, token_gestion, servicios(nombre), recordatorios_enviados(tipo, canal), tenants(slug)",
+      "id, tenant_id, cliente_email, fecha_hora, creado_en, token_gestion, servicios(nombre), recordatorios_enviados(tipo, canal), tenants(slug, zona_horaria, idioma)",
     )
     .eq("estado", "confirmado")
     .gte("fecha_hora", ahora.toISOString())
@@ -52,22 +53,27 @@ export async function GET(request: NextRequest) {
     });
     if (!tipo) continue;
     const datos = datosDelTenant(turno.tenant_id);
+    const tenantTurno = turno.tenants as unknown as {
+      slug: string;
+      zona_horaria: string;
+      idioma: Idioma;
+    };
 
     // Se registra antes de enviar: la clave única evita duplicados si dos corridas se pisan.
     const { error: yaTomado } = await datos
       .insert("recordatorios_enviados", { turno_id: turno.id, tipo, canal: "email" });
     if (yaTomado) continue;
 
-    const fechaHoraTexto = new Date(turno.fecha_hora).toLocaleString("es-AR", {
+    const fechaHoraTexto = new Date(turno.fecha_hora).toLocaleString(LOCALES[tenantTurno.idioma], {
       dateStyle: "long",
       timeStyle: "short",
-      timeZone: "America/Argentina/Buenos_Aires",
+      timeZone: tenantTurno.zona_horaria,
     });
     const { subject, html } = plantillaRecordatorioTurno({
       servicio: (turno.servicios as unknown as { nombre: string }).nombre,
       fechaHoraTexto,
       faltaTexto: FALTA_TEXTO[tipo],
-      linkGestion: `${urlDelTenant((turno.tenants as unknown as { slug: string }).slug)}/turnos/gestion/${turno.token_gestion}`,
+      linkGestion: `${urlDelTenant(tenantTurno.slug)}/turnos/gestion/${turno.token_gestion}`,
     });
     try {
       await enviarEmail({ to: turno.cliente_email, subject, html });

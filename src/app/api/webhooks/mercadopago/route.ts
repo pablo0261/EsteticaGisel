@@ -9,6 +9,7 @@ import { calcularExpiracion } from "@/lib/cursos/reglas";
 import { datosDelTenant } from "@/lib/tenant/datos";
 import { urlDelTenant } from "@/lib/tenant/urls";
 import { usaCredencialesGlobales } from "@/lib/tenant/credenciales-globales";
+import { LOCALES, type Idioma } from "@/lib/i18n/textos";
 
 /**
  * Webhook de Mercado Pago. Nunca confía en el payload por sí solo:
@@ -67,7 +68,7 @@ async function procesarPagoTurno(turnoId: string, estadoPago: string, mpPaymentI
   // El pago llega sin tenant: se resuelve desde el turno (consulta de sistema por id).
   const { data: turno } = await createAdminClient()
     .from("turnos")
-    .select("*, servicios(nombre), tenants(slug)")
+    .select("*, servicios(nombre), tenants(slug, zona_horaria, idioma)")
     .eq("id", turnoId)
     .maybeSingle();
 
@@ -105,11 +106,10 @@ async function procesarPagoTurno(turnoId: string, estadoPago: string, mpPaymentI
   });
 
   if (isEmailConfigurado()) {
-    const fechaHoraTexto = new Date(turno.fecha_hora).toLocaleString("es-AR", {
-      dateStyle: "long",
-      timeStyle: "short",
-      timeZone: "America/Argentina/Buenos_Aires",
-    });
+    const fechaHoraTexto = new Date(turno.fecha_hora).toLocaleString(
+      LOCALES[turno.tenants.idioma as Idioma],
+      { dateStyle: "long", timeStyle: "short", timeZone: turno.tenants.zona_horaria },
+    );
     const { subject, html } = plantillaConfirmacionTurno({
       servicio: turno.servicios.nombre,
       fechaHoraTexto,
@@ -129,10 +129,11 @@ async function procesarPagoCurso(cursoId: string, pago: MpPayment) {
   // El pago llega sin tenant: se resuelve desde el curso (consulta de sistema por id).
   const { data: curso } = await createAdminClient()
     .from("cursos")
-    .select("tenant_id, titulo, dias_acceso, tenants(slug)")
+    .select("tenant_id, titulo, dias_acceso, tenants(slug, zona_horaria)")
     .eq("id", cursoId)
     .maybeSingle();
   if (!curso) return;
+  const tenantCurso = curso.tenants as unknown as { slug: string; zona_horaria: string };
   const db = datosDelTenant(curso.tenant_id);
 
   // Idempotencia: si este pago ya se procesó (reintento del webhook), no duplicar.
@@ -143,7 +144,11 @@ async function procesarPagoCurso(cursoId: string, pago: MpPayment) {
     .maybeSingle();
   if (pagoExistente) return;
 
-  const expiraEn = calcularExpiracion(new Date().toISOString(), curso.dias_acceso);
+  const expiraEn = calcularExpiracion(
+    new Date().toISOString(),
+    curso.dias_acceso,
+    tenantCurso.zona_horaria,
+  );
 
   const { data: acceso } = await db
     .insert("accesos_curso", {
@@ -164,10 +169,9 @@ async function procesarPagoCurso(cursoId: string, pago: MpPayment) {
   });
 
   if (isEmailConfigurado() && acceso) {
-    const slug = (curso.tenants as unknown as { slug: string }).slug;
     const { subject, html } = plantillaCompraCurso({
       curso: curso.titulo,
-      linkAcceso: `${urlDelTenant(slug)}/cursos/acceso/${acceso.token_acceso}`,
+      linkAcceso: `${urlDelTenant(tenantCurso.slug)}/cursos/acceso/${acceso.token_acceso}`,
     });
     try {
       await enviarEmail({ to: pago.payerEmail, subject, html });

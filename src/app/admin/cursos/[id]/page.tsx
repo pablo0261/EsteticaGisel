@@ -253,7 +253,7 @@ export default async function EditarCursoAdmin({
                 >
                   <span>
                     {a.cliente_email} · comprado el{" "}
-                    {new Date(a.comprado_en).toLocaleDateString("es-AR")}
+                    {new Date(a.comprado_en).toLocaleDateString("es-AR", { timeZone: tenant.zonaHoraria })}
                   </span>
                   <span
                     className={`rounded-full px-3 py-1 text-xs font-medium ${
@@ -261,7 +261,7 @@ export default async function EditarCursoAdmin({
                     }`}
                   >
                     {vigente ? "Vigente" : "Vencido"} hasta{" "}
-                    {new Date(a.expira_en).toLocaleDateString("es-AR")}
+                    {new Date(a.expira_en).toLocaleDateString("es-AR", { timeZone: tenant.zonaHoraria })}
                   </span>
                 </li>
               );

@@ -119,15 +119,3 @@ export function fechaEnZona(instante: Date, zona: string): string {
 export function fechaHoy(zona: string): string {
   return fechaEnZona(new Date(), zona);
 }
-
-// --- Temporal: API anterior con la zona de Argentina fija. La Task 10 la borra. ---
-const ZONA_AR = "America/Argentina/Buenos_Aires";
-/** @deprecated Usar isoFechaHora(fecha, minutos, zona). */
-export const isoFechaHoraAR = (fecha: string, minutos: number) =>
-  isoFechaHora(fecha, minutos, ZONA_AR);
-/** @deprecated Usar diaSemana(fecha). */
-export const diaSemanaAR = diaSemana;
-/** @deprecated Usar minutosDelDia(iso, zona). */
-export const minutosDelDiaAR = (iso: string) => minutosDelDia(iso, ZONA_AR);
-/** @deprecated Usar fechaHoy(zona). */
-export const fechaHoyAR = () => fechaHoy(ZONA_AR);

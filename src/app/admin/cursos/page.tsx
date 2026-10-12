@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getCursosAdmin } from "@/lib/data/cursos";
 import { tenantDelAdmin } from "@/lib/tenant/admin";
 import { createCurso } from "./actions";
-import { formatPrecioARS } from "@/lib/format";
+import { formatPrecio } from "@/lib/format";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { FormPendingOverlay } from "@/components/ui/FormPendingOverlay";
 import { InfoHint } from "@/components/ui/InfoHint";
@@ -89,7 +89,7 @@ export default async function CursosAdmin() {
                 {c.estado === "publicado" ? "Publicado" : "Borrador"}
               </p>
             </div>
-            <p className="font-sans text-primario-oscuro">{formatPrecioARS(c.precio)}</p>
+            <p className="font-sans text-primario-oscuro">{formatPrecio(c.precio, tenant.moneda, tenant.idioma)}</p>
           </Link>
         ))}
       </div>

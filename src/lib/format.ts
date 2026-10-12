@@ -27,7 +27,3 @@ export function formatDuracion(minutos: number): string {
   if (m === 0) return `${h}h`;
   return `${h}h ${m}min`;
 }
-
-// --- Temporal: la Task 10 lo borra, cuando ya no quedan usos. ---
-/** @deprecated Usar formatPrecio(monto, moneda, idioma). */
-export const formatPrecioARS = (monto: number) => formatPrecio(monto, "ARS", "es");
