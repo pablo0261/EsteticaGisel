@@ -14,6 +14,9 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 # Las NEXT_PUBLIC_* se inlinean en el bundle durante el build, así que el build
 # necesita las variables. Se montan como secret: no quedan en ninguna capa.
+# El build solo necesita las NEXT_PUBLIC_*, pero Next carga todo el .env.local en el
+# entorno del proceso de build. El resto no se inlinea (next.config no tiene "env") y ese
+# entorno no persiste en la imagen; los secretos de runtime llegan por env_file.
 RUN --mount=type=secret,id=env,target=/app/.env.local npm run build
 
 # --- runner: imagen final mínima ---

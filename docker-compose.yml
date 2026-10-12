@@ -9,6 +9,11 @@ services:
       - "3000:3000"
     # Secretos de runtime (server-side). Nunca se copian a la imagen.
     env_file: .env.local
+    # Secretos que solo usan los scripts (migraciones, alta del master): el contenedor los
+    # recibe vacíos. "environment" tiene prioridad sobre "env_file".
+    environment:
+      SUPABASE_DB_URL: ""
+      MASTER_PASSWORD: ""
     restart: unless-stopped
 
 secrets:
