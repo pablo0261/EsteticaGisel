@@ -3,7 +3,8 @@
 // tenant; comprueba que ningún usuario autenticado (cliente, sin perfil ni master) lee
 // ni escribe nada por la API pública, ni lo de su propio tenant (su token se obtiene sin
 // el segundo factor: todo pasa por el servidor con la service role), la integridad
-// entre tenants en la base, qué ve un anónimo, y que las tablas del login (códigos,
+// entre tenants en la base, qué ve un anónimo (solo las tablas públicas; ni las funciones
+// auxiliares por RPC), y que las tablas del login (códigos,
 // dispositivos, pedidos de recuperación e intentos de login) son solo del servidor. Al final borra todo.
 // Uso: npm run test:aislamiento
 import { createClient } from "@supabase/supabase-js";
@@ -275,11 +276,19 @@ try {
   verificar(intactas.every((r) => !r.error && r.count === 1), "tablas del login: las filas de prueba siguen intactas");
 
   console.log("\nVisitante anónimo:");
+  // Sin privilegio sobre las tablas privadas (migración 0016): permiso denegado, no 0 filas.
   for (const tabla of [
     "tenant_credenciales", "turnos", "pagos", "accesos_curso", "perfiles",
     "configuracion_negocio", "intentos_reserva", "recordatorios_enviados", "archivos_curso",
+    "migraciones_aplicadas",
   ]) {
-    verificar(vacio(await anon.from(tabla).select("*").limit(1)), `${tabla}: no es legible`);
+    verificar(esperaError(await anon.from(tabla).select("*").limit(1), "42501"), `${tabla}: no es legible (sin privilegio)`);
+  }
+  // Las funciones auxiliares sin uso no se pueden invocar por RPC (migración 0016).
+  for (const [quien, cliente] of [["anónimo", anon], ["cliente A", usuarioA], ["master", usuarioMaster]]) {
+    for (const fn of ["tenant_actual", "es_master"]) {
+      verificar(esperaError(await cliente.rpc(fn), "42501"), `rpc ${fn}: ${quien} no la invoca`);
+    }
   }
   const serviciosAnon = await anon.from("servicios").select("nombre").in("tenant_id", [a.id, b.id]);
   verificar(
