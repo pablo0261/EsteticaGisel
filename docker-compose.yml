@@ -7,7 +7,8 @@ services:
     image: estetica-gisel
     ports:
       - "3000:3000"
-    # Secretos de runtime (server-side). Nunca se copian a la imagen.
+    # Secretos de runtime (server-side). Nunca se copian a la imagen. Incluye los que la app
+    # necesita al correr: MFA_SECRET y CREDENCIALES_KEY (cifrado de credenciales de clientes).
     env_file: .env.local
     # Secretos que solo usan los scripts (migraciones, alta del master): el contenedor los
     # recibe vacíos. "environment" tiene prioridad sobre "env_file".

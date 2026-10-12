@@ -12,7 +12,8 @@ export type TablaTenant =
   | "intentos_reserva"
   | "recordatorios_enviados"
   | "testimonios"
-  | "tenant_marca";
+  | "tenant_marca"
+  | "tenant_credenciales";
 
 type Fila = Record<string, unknown>;
 
