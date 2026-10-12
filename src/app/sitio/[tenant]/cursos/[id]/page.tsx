@@ -3,10 +3,11 @@ import { Container } from "@/components/ui/Container";
 import { getCursoPublico } from "@/lib/data/cursos";
 import { tenantDeLaPagina } from "@/lib/tenant/actual";
 import { precioEfectivo } from "@/lib/cursos/reglas";
-import { formatPrecioARS } from "@/lib/format";
+import { formatPrecio } from "@/lib/format";
 import { CompraForm } from "@/components/cursos/CompraForm";
 import { youtubeId } from "@/lib/video/youtube";
 import { VistaPreviaYoutube } from "@/components/cursos/VistaPreviaYoutube";
+import { traductor } from "@/lib/i18n/textos";
 
 const SEGUNDOS_PREVIEW = 30;
 
@@ -20,6 +21,8 @@ export default async function CursoDetallePage({
   const { id } = await params;
   const curso = await getCursoPublico(tenant.id, id);
   if (!curso) notFound();
+  const t = traductor(tenant.idioma);
+  const formatear = (monto: number) => formatPrecio(monto, tenant.moneda, tenant.idioma);
 
   const precio = precioEfectivo({
     precio: curso.precio,
@@ -36,7 +39,9 @@ export default async function CursoDetallePage({
     <main className="min-h-screen bg-fondo px-6 pt-24 pb-20">
       <Container className="max-w-2xl">
         <p className="font-sans text-xs uppercase tracking-[0.35em] text-secundario">
-          {curso.categoria === "profesional" ? "Profesional" : "Público general"}
+          {curso.categoria === "profesional"
+            ? t({ es: "Profesional", pt: "Profissional" })
+            : t({ es: "Público general", pt: "Público geral" })}
         </p>
         <h1 className="mt-3 font-serif text-4xl text-texto sm:text-5xl">
           {curso.titulo}
@@ -53,7 +58,10 @@ export default async function CursoDetallePage({
               segundos={SEGUNDOS_PREVIEW}
             />
             <figcaption className="mt-2 font-sans text-sm text-texto-suave">
-              Vista previa de {SEGUNDOS_PREVIEW} segundos. El curso completo se habilita al comprarlo.
+              {t({
+                es: `Vista previa de ${SEGUNDOS_PREVIEW} segundos. El curso completo se habilita al comprarlo.`,
+                pt: `Prévia de ${SEGUNDOS_PREVIEW} segundos. O curso completo é liberado após a compra.`,
+              })}
             </figcaption>
           </figure>
         )}
@@ -61,14 +69,17 @@ export default async function CursoDetallePage({
         <p className="mt-6 font-sans text-2xl text-primario-oscuro">
           {enOferta && (
             <span className="mr-2 text-base text-texto-suave line-through">
-              {formatPrecioARS(curso.precio)}
+              {formatear(curso.precio)}
             </span>
           )}
-          {formatPrecioARS(precio)}
+          {formatear(precio)}
         </p>
 
         <p className="mt-2 font-sans text-sm text-texto-suave">
-          Acceso por {curso.dias_acceso} días desde la compra.
+          {t({
+            es: `Acceso por ${curso.dias_acceso} días desde la compra.`,
+            pt: `Acesso por ${curso.dias_acceso} dias a partir da compra.`,
+          })}
         </p>
 
         <div id="comprar" className="scroll-mt-28">

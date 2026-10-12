@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { youtubeMiniatura } from "@/lib/video/youtube";
+import { T, useT } from "@/lib/i18n/cliente";
 
 type YTPlayer = {
   playVideo(): void;
@@ -56,6 +57,7 @@ export function VistaPreviaYoutube({
   titulo: string;
   segundos: number;
 }) {
+  const t = useT();
   const contenedor = useRef<HTMLDivElement>(null);
   const player = useRef<YTPlayer | null>(null);
   const terminado = useRef(false);
@@ -122,7 +124,7 @@ export function VistaPreviaYoutube({
           type="button"
           onClick={iniciar}
           disabled={estado === "cargando"}
-          aria-label={`Ver vista previa: ${titulo}`}
+          aria-label={t({ es: `Ver vista previa: ${titulo}`, pt: `Ver prévia: ${titulo}` })}
           className="absolute inset-0 z-10"
         >
           <Image
@@ -149,15 +151,20 @@ export function VistaPreviaYoutube({
           <svg aria-hidden viewBox="0 0 24 24" className="h-9 w-9 fill-fondo">
             <path d="M18 8h-1V6a5 5 0 0 0-10 0v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2zM9 6a3 3 0 0 1 6 0v2H9V6z" />
           </svg>
-          <p className="font-serif text-2xl text-fondo">Seguí viendo el curso completo</p>
+          <p className="font-serif text-2xl text-fondo">
+            <T es="Seguí viendo el curso completo" pt="Continue assistindo ao curso completo" />
+          </p>
           <p className="font-sans text-sm text-fondo/70">
-            Se libera apenas se acredita el pago.
+            <T
+              es="Se libera apenas se acredita el pago."
+              pt="É liberado assim que o pagamento for confirmado."
+            />
           </p>
           <a
             href="#comprar"
             className="mt-1 inline-flex rounded-full bg-primario px-7 py-3 font-sans text-sm font-medium text-fondo transition hover:bg-primario-oscuro"
           >
-            Comprar el curso
+            <T es="Comprar el curso" pt="Comprar o curso" />
           </a>
         </div>
       ) : (
@@ -167,7 +174,11 @@ export function VistaPreviaYoutube({
           onClick={() =>
             estado === "reproduciendo" ? player.current?.pauseVideo() : player.current?.playVideo()
           }
-          aria-label={estado === "reproduciendo" ? "Pausar" : "Reanudar"}
+          aria-label={
+            estado === "reproduciendo"
+              ? t({ es: "Pausar", pt: "Pausar" })
+              : t({ es: "Reanudar", pt: "Retomar" })
+          }
           className="absolute inset-0 z-10 cursor-pointer"
         >
           {estado === "pausado" && (
