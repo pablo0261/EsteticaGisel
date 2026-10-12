@@ -22,7 +22,12 @@ const OPCIONES = {
   allowedMimeTypes: ["image/png", "image/jpeg", "image/webp"],
 };
 
-const { data: existente } = await supabase.storage.getBucket(ID);
+const { data: existente, error: errorLectura } = await supabase.storage.getBucket(ID);
+// Solo "no encontrado" significa que hay que crearlo; cualquier otro error (clave, red) corta.
+if (errorLectura && String(errorLectura.statusCode) !== "404") {
+  console.error(`❌ ${ID}: no se pudo leer el bucket: ${errorLectura.message}`);
+  process.exit(1);
+}
 const { error } = existente
   ? await supabase.storage.updateBucket(ID, OPCIONES)
   : await supabase.storage.createBucket(ID, OPCIONES);

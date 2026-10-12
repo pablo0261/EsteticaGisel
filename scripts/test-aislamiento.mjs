@@ -50,6 +50,18 @@ function bloqueado(r) {
   else console.log(`    (afectó ${r.data.length} fila(s))`);
   return false;
 }
+/**
+ * Subida a Storage denegada por autorización: Storage responde statusCode "403" con el
+ * mensaje de RLS ("new row violates row-level security policy"). Otro error (bucket
+ * inexistente, tipo no permitido, red) no prueba que la escritura esté cerrada.
+ */
+function denegadoPorStorage(r) {
+  if (r.error && String(r.error.statusCode) === "403" && /row-level security/i.test(r.error.message)) return true;
+  if (r.error) console.log(`    (error ${r.error.statusCode}: ${r.error.message})`);
+  else console.log("    (no dio error)");
+  return false;
+}
+
 /** La operación debe fallar con ese código de error exacto. */
 function esperaError(r, codigo) {
   if (r.error && r.error.code === codigo) return true;
@@ -467,7 +479,7 @@ try {
     const path = `${a.id}/intruso-${quien === "anónimo" ? "anon" : quien.replace(" ", "-")}-${sufijo}.png`;
     objetosSitios.push(path);
     const subida = await cliente.storage.from("sitios").upload(path, PNG, { contentType: "image/png" });
-    verificar(!!subida.error, `sitios: ${quien} no sube archivos`);
+    verificar(denegadoPorStorage(subida), `sitios: ${quien} no sube archivos (lo deniega RLS)`);
   }
   const pathControl = `${a.id}/control-${sufijo}.png`;
   objetosSitios.push(pathControl);
@@ -519,7 +531,11 @@ try {
     }
   }
   // Por si un alta indebida (o a medias) hubiera pasado.
-  await admin.from("tenants").delete().like("slug", `test-%-${sufijo}`);
+  const { error: errorRestos } = await admin.from("tenants").delete().like("slug", `test-%-${sufijo}`);
+  if (errorRestos) {
+    console.error(`✗ limpieza: tenants de prueba restantes: ${errorRestos.message}`);
+    fallas++;
+  }
 }
 
 console.log(fallas === 0 ? "\nAislamiento OK" : `\n${fallas} verificación(es) fallaron`);

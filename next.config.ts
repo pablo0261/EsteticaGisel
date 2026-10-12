@@ -27,6 +27,8 @@ const nextConfig: NextConfig = {
   experimental: {
     // El panel master sube una imagen por envío (hasta 2 MB, lo valida la action): margen
     // para el overhead del multipart. Por encima, Next corta el pedido con 413.
+    // Es global: vale para todas las server actions, también las públicas (reservas,
+    // login), que aceptan entonces cuerpos de hasta 3 MB.
     serverActions: { bodySizeLimit: "3mb" },
   },
   async headers() {
