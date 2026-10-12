@@ -3828,6 +3828,16 @@ La prueba automática cubre el flujo **sin JavaScript**. Esta lista cubre lo que
     - Los límites de 20 fallidos por IP y 50 por email (solo tienen tests unitarios).
     - En producción, configurar `CABECERA_IP_CONFIABLE` (por ejemplo `x-real-ip`, fijada por Caddy con `{remote_host}`). Sin ella el login se limita solo por email y un tercero puede trabar una cuenta 15 minutos.
     - Crear el master real: agregar `MASTER_EMAIL` y `MASTER_PASSWORD` (12 caracteres o más) al `.env.local`, correr `node --env-file=.env.local scripts/crear-master.mjs` dos veces (la segunda tiene que decir que ya existía y ya era master), repetir el punto 6 y borrar `MASTER_PASSWORD` del `.env.local`.
+11. **Agregado en la revisión final.** Configuración de Supabase y de producción (para Pablo):
+    - [ ] Supabase → Authentication → Sign In / Providers: desactivar **"Allow new users to sign up"**. Los usuarios los crea solo el servidor (script del master, alta de clientes en la etapa C); con el registro abierto cualquiera crea una cuenta con la clave publicable.
+    - [ ] Authentication → Providers → Email: activar **"Secure email change"** (el cambio de email se confirma en las dos direcciones).
+    - [ ] Authentication → Providers → Email: activar **"Secure password change"** (cambiar la contraseña exige un login reciente o reautenticación).
+    - [ ] Si el dashboard lo permite, desactivar el ingreso por magic link / OTP por email. La app ya no acepta esas sesiones como primer factor (exige `amr` = `password`), pero mejor que no se puedan emitir. Si no hay opción, queda cubierto por la app.
+    - [ ] Authentication → Rate Limits: subir el límite de inicios de sesión para producción. Si Supabase responde 429, el login muestra "El servicio está ocupado" y no cuenta el intento como fallido.
+    - [ ] Producción detrás de Caddy: `CABECERA_IP_CONFIABLE=x-real-ip`, con Caddy fijando `header_up X-Real-IP {remote_host}`. Sin ella, el contenedor avisa al arrancar (`[seguridad] CABECERA_IP_CONFIABLE está vacía`).
+    - [ ] `CRON_SECRET` configurado en producción: vacío, los endpoints `/api/cron/*` responden 401.
+    - [ ] Crear el master (punto 10) y después **borrar `MASTER_PASSWORD` del `.env.local`**. El contenedor ya la recibe vacía (igual que `SUPABASE_DB_URL`), pero no tiene que quedar en disco.
+    - Nota para el desarrollo: desde la migración 0017 una tabla nueva en `public` no es legible por anon. Si tiene lectura pública, la migración tiene que hacer `grant select ... to anon` y agregarla a `TABLAS_PUBLICAS` en `scripts/test-aislamiento.mjs`.
 
 - [ ] **Step 7: Commit**
 
