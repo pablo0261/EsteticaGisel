@@ -2,7 +2,7 @@
 // Lee MASTER_EMAIL y MASTER_PASSWORD del .env.local: la contraseña nunca va en
 // argumentos, código, migraciones ni repositorio.
 // Idempotente: si el usuario ya existe, no toca su contraseña y se asegura de que su
-// perfil sea master.
+// perfil sea master. Si ya tiene otro perfil (cliente), falla: no lo promueve.
 // Uso: node --env-file=.env.local scripts/crear-master.mjs
 import { createClient } from "@supabase/supabase-js";
 
@@ -61,8 +61,14 @@ try {
   if (errorPerfil) throw new Error(`leer perfil: ${errorPerfil.message}`);
   if (previo?.rol === "master") {
     console.log("= Su perfil ya era master.");
+  } else if (previo) {
+    // No se promueve una cuenta existente: un MASTER_EMAIL equivocado no puede convertir
+    // en master la cuenta de un cliente.
+    throw new Error(
+      `${email} ya tiene perfil "${previo.rol}": no se convierte en master. Usá otro MASTER_EMAIL ` +
+        "o cambiá el perfil a mano si de verdad corresponde.",
+    );
   } else {
-    if (previo) console.log(`! Tenía perfil "${previo.rol}": pasa a master.`);
     const { error } = await admin
       .from("perfiles")
       .upsert({ user_id: usuario.id, rol: "master", tenant_id: null }, { onConflict: "user_id" });

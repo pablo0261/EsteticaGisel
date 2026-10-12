@@ -1,5 +1,6 @@
 import "server-only";
 import nodemailer from "nodemailer";
+import { protocoloPlataforma } from "@/lib/auth/cookies";
 import { modoEnvio, type ModoEnvio } from "@/lib/auth/envio";
 import type { EmailAuth } from "./plantillas-auth";
 
@@ -11,13 +12,19 @@ export function plataformaConfigurada(): boolean {
 }
 
 export function modoEnvioActual(): ModoEnvio {
-  return modoEnvio({ configurado: plataformaConfigurada(), produccion: process.env.NODE_ENV === "production" });
+  return modoEnvio({
+    configurado: plataformaConfigurada(),
+    produccion: process.env.NODE_ENV === "production",
+    // Con los mismos valores por defecto que urlDelTenant.
+    protocolo: protocoloPlataforma(),
+    dominio: process.env.PLATFORM_DOMAIN || "localhost:3000",
+  });
 }
 
 /**
  * Envía un email de login o de contraseña desde la cuenta de la plataforma. En desarrollo
- * y sin cuenta, imprime avisoConsola en la consola del servidor y sigue. En producción sin
- * cuenta, lanza. remitente: nombre visible (el del tenant); sin él, PLATFORM_EMAIL_FROM.
+ * local y sin cuenta, imprime avisoConsola en la consola del servidor y sigue. En otro caso
+ * sin cuenta (modoEnvio), lanza. remitente: nombre visible (el del tenant); sin él, PLATFORM_EMAIL_FROM.
  */
 export async function entregarEmailAuth(opts: {
   para: string;

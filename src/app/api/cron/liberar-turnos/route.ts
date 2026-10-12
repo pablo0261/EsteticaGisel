@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { cronAutorizado } from "@/lib/cron/autorizacion";
 
 function autorizado(request: NextRequest): boolean {
-  const auth = request.headers.get("authorization");
-  return auth === `Bearer ${process.env.CRON_SECRET}`;
+  return cronAutorizado(request.headers.get("authorization"), process.env.CRON_SECRET);
 }
 
 /**

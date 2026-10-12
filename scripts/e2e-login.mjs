@@ -57,6 +57,8 @@ function destino(r) {
   return `${u.pathname}${u.search}`;
 }
 const resumen = (r) => `${r.status} ${r.location}`;
+/** Set-Cookie sin el valor (solo nombre y atributos), para mostrarlo si falla una verificación. */
+const atributosCookie = (linea) => linea.replace(/^([^=;]*)=[^;]*/, "$1=…");
 
 function idDeAccion(html, formId) {
   const inicio = html.indexOf(`id="${formId}"`);
@@ -222,9 +224,9 @@ async function pruebaDev() {
   r = await T.enviar("/admin/verificar", pagina.html, "form-verificar", { codigo: codigoNuevo, recordar: "on" });
   verificar(r.status === 303 && destino(r) === "/admin", "código correcto: entra al panel", resumen(r));
   const mfa = r.setCookie.find((c) => c.startsWith("mfa=")) ?? "";
-  verificar(/HttpOnly/i.test(mfa) && /SameSite=lax/i.test(mfa) && !/;\s*Secure/i.test(mfa), "cookie mfa httpOnly, SameSite=Lax y sin Secure en http", mfa);
+  verificar(/HttpOnly/i.test(mfa) && /SameSite=lax/i.test(mfa) && !/;\s*Secure/i.test(mfa), "cookie mfa httpOnly, SameSite=Lax y sin Secure en http", atributosCookie(mfa));
   const dispositivo = r.setCookie.find((c) => c.startsWith("dispositivo=")) ?? "";
-  verificar(/HttpOnly/i.test(dispositivo) && /Max-Age=2592000/i.test(dispositivo), "cookie dispositivo httpOnly por 30 días", dispositivo);
+  verificar(/HttpOnly/i.test(dispositivo) && /Max-Age=2592000/i.test(dispositivo), "cookie dispositivo httpOnly por 30 días", atributosCookie(dispositivo));
 
   r = await T.get("/admin");
   verificar(r.status === 200 && r.html.includes("Hola,"), "con sesión y código, el panel responde", String(r.status));

@@ -1,7 +1,13 @@
-import { listarTenants } from "@/lib/auth/master";
+import { listarTenants, masterVerificado } from "@/lib/auth/master";
 import { urlDelTenant } from "@/lib/tenant/urls";
 
 export default async function MasterInicio() {
+  // Sin acceso, el layout ya muestra "Esta cuenta no tiene acceso": la página no lanza.
+  const esMaster = await masterVerificado().then(
+    () => true,
+    () => false,
+  );
+  if (!esMaster) return null;
   const tenants = await listarTenants();
   return (
     <div>

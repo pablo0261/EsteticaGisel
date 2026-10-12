@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { cronAutorizado } from "@/lib/cron/autorizacion";
 import { isEmailConfigurado, enviarEmail } from "@/lib/email/gmail";
 import { plantillaRecordatorioTurno } from "@/lib/email/plantillas";
 import { recordatorioQueCorresponde, type TipoRecordatorio } from "@/lib/turnos/recordatorios";
@@ -8,8 +9,7 @@ import { urlDelTenant } from "@/lib/tenant/urls";
 import { LOCALES, type Idioma } from "@/lib/i18n/textos";
 
 function autorizado(request: NextRequest): boolean {
-  const auth = request.headers.get("authorization");
-  return auth === `Bearer ${process.env.CRON_SECRET}`;
+  return cronAutorizado(request.headers.get("authorization"), process.env.CRON_SECRET);
 }
 
 const FALTA_TEXTO: Record<TipoRecordatorio, string> = {
