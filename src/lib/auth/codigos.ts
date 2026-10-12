@@ -33,7 +33,8 @@ export type EstadoCodigo = "vigente" | "vencido" | "agotado" | "usado";
 
 export function estadoCodigo(fila: FilaCodigo, ahora: Date): EstadoCodigo {
   if (fila.usado_en) return "usado";
-  if (new Date(fila.expira_en).getTime() <= ahora.getTime()) return "vencido";
+  const expira = Date.parse(fila.expira_en);
+  if (!Number.isFinite(expira) || expira <= ahora.getTime()) return "vencido";
   if (fila.intentos >= MAX_INTENTOS) return "agotado";
   return "vigente";
 }

@@ -1,4 +1,5 @@
-import { createHash } from "node:crypto";
+import { createHmac } from "node:crypto";
+import { secretoMfaValido } from "./cookie-mfa";
 
 /** Recuperación de contraseña: límites por hora y validación de la contraseña nueva. */
 export const LARGO_MINIMO_CONTRASENA = 8;
@@ -12,8 +13,9 @@ export function normalizarEmail(entrada: string): string | null {
 }
 
 /** Para contar pedidos sin guardar emails en claro (también los de cuentas que no existen). */
-export function hashEmail(email: string): string {
-  return createHash("sha256").update(email).digest("hex");
+export function hashEmail(secreto: string | undefined, email: string): string {
+  if (!secretoMfaValido(secreto)) throw new Error("MFA_SECRET ausente o demasiado corto");
+  return createHmac("sha256", secreto).update(`recuperacion|${email}`).digest("hex");
 }
 
 export function recuperacionPermitida(enLaHoraPorEmail: number, enLaHoraPorIp: number): boolean {

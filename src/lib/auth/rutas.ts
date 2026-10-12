@@ -24,8 +24,11 @@ export function rutaDelArea(tipo: TipoArea, ruta: string): string {
 
 /** Ruta relativa al área: ("tenant", "/admin/login") → "/login"; ("tenant", "/admin") → "/". */
 export function rutaRelativa(tipo: TipoArea, pathname: string): string {
-  const relativa = pathname.slice(BASES[tipo].length);
-  return relativa === "" ? "/" : relativa;
+  const base = BASES[tipo];
+  if (base === "") return pathname;
+  if (pathname === base) return "/";
+  // Otro prefijo (/administrator) no se recorta: queda una ruta que exige la verificación completa.
+  return pathname.startsWith(`${base}/`) ? pathname.slice(base.length) : pathname;
 }
 
 export type Decision = { tipo: "seguir" } | { tipo: "redirigir"; a: string };

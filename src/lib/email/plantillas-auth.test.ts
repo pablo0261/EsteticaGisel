@@ -31,6 +31,7 @@ describe("plantillaCodigoLogin", () => {
   it("escapa el nombre del tenant en el HTML", () => {
     const email = plantillaCodigoLogin({ ...MARCA, nombre: "<i>Spa</i>" }, "123456");
     expect(email.html).not.toContain("<i>Spa</i>");
+    expect(email.html).toContain("&lt;i&gt;Spa&lt;/i&gt;");
   });
 });
 

@@ -11,9 +11,9 @@ export type OpcionesCookie = {
   maxAge: number;
 };
 
-/** httpOnly y SameSite=Lax siempre; Secure solo con https (en desarrollo es http). */
+/** httpOnly y SameSite=Lax siempre; Secure salvo que sea http explícito (en desarrollo es http). */
 export function opcionesCookieAuth(protocolo: string, maxAgeSegundos: number): OpcionesCookie {
-  return { httpOnly: true, secure: protocolo === "https", sameSite: "lax", path: "/", maxAge: maxAgeSegundos };
+  return { httpOnly: true, secure: protocolo.toLowerCase() !== "http", sameSite: "lax", path: "/", maxAge: maxAgeSegundos };
 }
 
 /** Mismo criterio que urlDelTenant: https salvo que el .env diga otra cosa. */

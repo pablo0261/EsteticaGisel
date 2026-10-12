@@ -26,6 +26,16 @@ describe("rutaRelativa", () => {
   });
 });
 
+describe("rutaRelativa con prefijos parecidos", () => {
+  it("no recorta /administrator ni /admin/login/ como si fueran rutas abiertas", () => {
+    expect(rutaRelativa("tenant", "/administrator")).toBe("/administrator");
+    const sinSesion = { haySesion: false, mfaValida: false };
+    expect(decidirAcceso(rutaRelativa("tenant", "/administrator"), sinSesion)).toEqual({ tipo: "redirigir", a: "/login" });
+    expect(decidirAcceso(rutaRelativa("tenant", "/admin/login/"), sinSesion)).toEqual({ tipo: "redirigir", a: "/login" });
+    expect(decidirAcceso(rutaRelativa("tenant", "/administrator/recuperar"), sinSesion)).toEqual({ tipo: "redirigir", a: "/login" });
+  });
+});
+
 describe("decidirAcceso", () => {
   const sinSesion = { haySesion: false, mfaValida: false };
   const sinCodigo = { haySesion: true, mfaValida: false };

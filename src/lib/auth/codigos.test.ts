@@ -88,6 +88,10 @@ describe("estadoCodigo", () => {
     expect(estadoCodigo({ ...vigente, expira_en: AHORA.toISOString() }, AHORA)).toBe("vencido");
   });
 
+  it("una fecha de vencimiento inválida cuenta como vencido", () => {
+    expect(estadoCodigo({ ...vigente, expira_en: "x" }, AHORA)).toBe("vencido");
+  });
+
   it("agotado con 5 intentos", () => {
     expect(estadoCodigo({ ...vigente, intentos: MAX_INTENTOS }, AHORA)).toBe("agotado");
   });

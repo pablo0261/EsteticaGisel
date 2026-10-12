@@ -24,11 +24,24 @@ describe("normalizarEmail", () => {
 });
 
 describe("hashEmail", () => {
-  it("SHA-256 en hex, sin el email en claro", () => {
-    const h = hashEmail("gisel@example.com");
+  const SECRETO = "s".repeat(43);
+
+  it("HMAC-SHA256 en hex, sin el email en claro", () => {
+    const h = hashEmail(SECRETO, "gisel@example.com");
     expect(h).toMatch(/^[0-9a-f]{64}$/);
-    expect(h).toBe(hashEmail("gisel@example.com"));
+    expect(h).toBe(hashEmail(SECRETO, "gisel@example.com"));
     expect(h).not.toContain("gisel");
+  });
+
+  it("depende del secreto y del email", () => {
+    const h = hashEmail(SECRETO, "gisel@example.com");
+    expect(hashEmail("t".repeat(43), "gisel@example.com")).not.toBe(h);
+    expect(hashEmail(SECRETO, "otra@example.com")).not.toBe(h);
+  });
+
+  it("sin secreto válido falla cerrado", () => {
+    expect(() => hashEmail(undefined, "gisel@example.com")).toThrow();
+    expect(() => hashEmail("corto", "gisel@example.com")).toThrow();
   });
 });
 
