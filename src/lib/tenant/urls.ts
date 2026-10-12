@@ -26,6 +26,11 @@ export function urlDelTenant(slug: string, cfg: ConfigUrl = configUrl()): string
   return `${cfg.protocolo}://${slug}.${cfg.dominio}`;
 }
 
+/** URL del panel master (links de los emails de login del master). */
+export function urlMaster(cfg: ConfigUrl = configUrl()): string {
+  return `${cfg.protocolo}://app.${cfg.dominio}`;
+}
+
 /** Link de WhatsApp con mensaje precargado, o null si el tenant no tiene número. */
 export function whatsappLink(
   numero: string | null,

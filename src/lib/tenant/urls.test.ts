@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { urlDelTenant, whatsappLink } from "./urls";
+import { urlDelTenant, urlMaster, whatsappLink } from "./urls";
 
 describe("urlDelTenant", () => {
   it("arma la URL del subdominio del tenant", () => {
@@ -58,5 +58,12 @@ describe("whatsappLink", () => {
   it("devuelve null si no hay número", () => {
     expect(whatsappLink(null)).toBeNull();
     expect(whatsappLink("")).toBeNull();
+  });
+});
+
+describe("urlMaster", () => {
+  it("es el subdominio app. de la plataforma", () => {
+    expect(urlMaster({ dominio: "tuproducto.com", protocolo: "https" })).toBe("https://app.tuproducto.com");
+    expect(urlMaster({ dominio: "localhost:3000", protocolo: "http" })).toBe("http://app.localhost:3000");
   });
 });
