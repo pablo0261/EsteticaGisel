@@ -34,7 +34,7 @@ export async function reservarTurno(formData: FormData): Promise<ReservarTurnoRe
     return { ok: false, error: "Completá todos los campos obligatorios." };
   }
 
-  const clienteWhatsApp = normalizarWhatsApp(clienteTelefono);
+  const clienteWhatsApp = normalizarWhatsApp(clienteTelefono, tenant.pais);
   if (!clienteWhatsApp) {
     return {
       ok: false,
