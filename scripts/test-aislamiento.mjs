@@ -79,6 +79,13 @@ async function ok(promesa, que) {
 
 const tenantsCreados = [];
 const usuariosCreados = [];
+/** Objetos de prueba del bucket sitios (se borran al final). */
+const objetosSitios = [];
+/** PNG de 1×1. */
+const PNG = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+  "base64",
+);
 
 async function crearUsuario(etiqueta) {
   const email = `aislamiento-${etiqueta}-${sufijo}@example.com`;
@@ -447,6 +454,32 @@ try {
   verificar(vacio(await anon.from("tenants").select("id").eq("id", b.id)), "tenants: no ve un tenant suspendido");
   verificar(vacio(await anon.from("tenant_marca").select("tenant_id").eq("tenant_id", b.id)), "tenant_marca: no ve la de un tenant suspendido");
 
+  console.log("\nBucket sitios (imágenes de la marca):");
+  const { data: bucket, error: errorBucket } = await admin.storage.getBucket("sitios");
+  mostrarError({ error: errorBucket });
+  verificar(bucket?.public === true, "sitios: existe y es público (lectura por URL)");
+  verificar(bucket?.file_size_limit === 2 * 1024 * 1024, "sitios: límite de 2 MB");
+  verificar(
+    JSON.stringify([...(bucket?.allowed_mime_types ?? [])].sort()) === JSON.stringify(["image/jpeg", "image/png", "image/webp"]),
+    "sitios: solo PNG, JPEG y WebP",
+  );
+  for (const [quien, cliente] of [["anónimo", anon], ["cliente A", usuarioA], ["master", usuarioMaster]]) {
+    const path = `${a.id}/intruso-${quien === "anónimo" ? "anon" : quien.replace(" ", "-")}-${sufijo}.png`;
+    objetosSitios.push(path);
+    const subida = await cliente.storage.from("sitios").upload(path, PNG, { contentType: "image/png" });
+    verificar(!!subida.error, `sitios: ${quien} no sube archivos`);
+  }
+  const pathControl = `${a.id}/control-${sufijo}.png`;
+  objetosSitios.push(pathControl);
+  await ok(admin.storage.from("sitios").upload(pathControl, PNG, { contentType: "image/png" }), "subir imagen de control");
+  const urlControl = `${url.replace(/\/+$/, "")}/storage/v1/object/public/sitios/${pathControl}`;
+  verificar((await fetch(urlControl)).status === 200, "sitios: la URL pública se lee sin sesión (control)");
+  const listado = await anon.storage.from("sitios").list(a.id);
+  verificar(!!listado.error || listado.data.length === 0, "sitios: un anónimo no lista la carpeta de un cliente");
+  await anon.storage.from("sitios").remove([pathControl]);
+  const sigue = await admin.storage.from("sitios").list(a.id, { search: `control-${sufijo}` });
+  verificar(!sigue.error && sigue.data.length === 1, "sitios: un anónimo no borra");
+
   await permisosDeLaBase();
 } catch (e) {
   console.error(`\nError preparando la prueba: ${e.message}`);
@@ -463,6 +496,13 @@ try {
   if (errorIntentos) {
     console.error(`✗ limpieza: intentos_login: ${errorIntentos.message}`);
     fallas++;
+  }
+  if (objetosSitios.length) {
+    const { error: errorObjetos } = await admin.storage.from("sitios").remove(objetosSitios);
+    if (errorObjetos) {
+      console.error(`✗ limpieza: sitios: ${errorObjetos.message}`);
+      fallas++;
+    }
   }
   for (const id of usuariosCreados) {
     const { error } = await admin.auth.admin.deleteUser(id);
