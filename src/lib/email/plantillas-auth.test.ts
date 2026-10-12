@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { MarcaEmail } from "./layout-marca";
-import { plantillaCodigoLogin, plantillaRecuperacion } from "./plantillas-auth";
+import { plantillaCodigoLogin, plantillaInvitacion, plantillaRecuperacion } from "./plantillas-auth";
 
 const MARCA: MarcaEmail = {
   nombre: "Estética Gisel",
@@ -50,5 +50,32 @@ describe("plantillaRecuperacion", () => {
     const email = plantillaRecuperacion({ ...MARCA, idioma: "pt" }, LINK);
     expect(email.asunto).toBe("Redefina sua senha de Estética Gisel");
     expect(email.html).toContain("Escolher nova senha");
+  });
+});
+
+describe("plantillaInvitacion", () => {
+  const LINK = "https://ana.tuproducto.com/admin/restablecer?token_hash=abc";
+
+  it("en español, con el link en el botón y en el texto plano", () => {
+    const email = plantillaInvitacion(MARCA, LINK);
+    expect(email.asunto).toBe("Tu acceso al panel de Estética Gisel");
+    expect(email.html).toContain("Definí tu contraseña");
+    expect(email.html).toContain(`href="${LINK}"`);
+    expect(email.html).toContain("vence en 1 hora");
+    expect(email.texto).toContain(LINK);
+  });
+
+  it("en portugués", () => {
+    const email = plantillaInvitacion({ ...MARCA, idioma: "pt", nombre: "Studio Demo" }, LINK);
+    expect(email.asunto).toBe("Seu acesso ao painel de Studio Demo");
+    expect(email.html).toContain("Defina sua senha");
+    expect(email.html).toContain("expira em 1 hora");
+    expect(email.html).not.toContain("Definí");
+  });
+
+  it("escapa el nombre del tenant y el link", () => {
+    const email = plantillaInvitacion({ ...MARCA, nombre: "<i>Spa</i>" }, `${LINK}&x="y"`);
+    expect(email.html).not.toContain("<i>Spa</i>");
+    expect(email.html).not.toContain('x="y"');
   });
 });

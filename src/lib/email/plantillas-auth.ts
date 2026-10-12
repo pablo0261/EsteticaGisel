@@ -64,3 +64,38 @@ export function plantillaRecuperacion(marca: MarcaEmail, link: string): EmailAut
     texto: [intro(marca.nombre), `${boton}: ${link}`, vence, aviso].join("\n\n"),
   };
 }
+
+/**
+ * Alta del usuario del cliente (spec 6.6): link para definir la contraseña. Es un link de
+ * recuperación de Supabase (mismo flujo que /admin/restablecer), con el mismo vencimiento.
+ */
+export function plantillaInvitacion(marca: MarcaEmail, link: string): EmailAuth {
+  const t = traductor(marca.idioma);
+  const { colorSecundario } = coloresSeguros(marca.colores);
+  const intro = (nombre: string) =>
+    t({
+      es: `Ya tenés acceso al panel de gestión de ${nombre}. Para entrar, elegí tu contraseña:`,
+      pt: `Você já tem acesso ao painel de gestão de ${nombre}. Para entrar, escolha sua senha:`,
+    });
+  const boton = t({ es: "Definir mi contraseña", pt: "Definir minha senha" });
+  // 1 hora: "Email OTP Expiration" por defecto de Supabase Auth (3600 s).
+  const vence = t({
+    es: "El link se puede usar una sola vez y vence en 1 hora. Si venció, pedí uno nuevo desde la pantalla de ingreso del panel.",
+    pt: "O link pode ser usado uma única vez e expira em 1 hora. Se expirou, peça um novo na tela de acesso do painel.",
+  });
+  const aviso = t({
+    es: "Si no esperabas este email, ignoralo.",
+    pt: "Se você não esperava este e-mail, ignore-o.",
+  });
+  return {
+    asunto: t({ es: `Tu acceso al panel de ${marca.nombre}`, pt: `Seu acesso ao painel de ${marca.nombre}` }),
+    html: layoutMarca(marca, {
+      titulo: t({ es: "Definí tu contraseña", pt: "Defina sua senha" }),
+      cuerpoHtml: `<p style="margin:0 0 20px;">${intro(escaparHtml(marca.nombre))}</p>
+        ${botonMarca(marca, boton, link)}
+        <p style="margin:20px 0 8px;">${vence}</p>
+        <p style="margin:0; font-size:13px; color:${colorSecundario};">${aviso}</p>`,
+    }),
+    texto: [intro(marca.nombre), `${boton}: ${link}`, vence, aviso].join("\n\n"),
+  };
+}
