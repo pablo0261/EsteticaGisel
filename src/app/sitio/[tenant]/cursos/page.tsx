@@ -8,6 +8,7 @@ import { precioEfectivo } from "@/lib/cursos/reglas";
 import { formatPrecioARS } from "@/lib/format";
 import { youtubeId, youtubeMiniatura } from "@/lib/video/youtube";
 import { tenantDeLaPagina } from "@/lib/tenant/actual";
+import { iniciales } from "@/lib/tenant/iniciales";
 
 export const metadata = { title: "Cursos" };
 
@@ -82,7 +83,7 @@ export default async function CursosPage({ params }: { params: Promise<{ tenant:
                         aria-hidden
                         className="absolute inset-0 flex items-center justify-center font-serif text-6xl text-white/40"
                       >
-                        GB
+                        {iniciales(tenant.nombre)}
                       </span>
                     )}
                   </div>

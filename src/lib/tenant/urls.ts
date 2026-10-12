@@ -1,14 +1,26 @@
-type ConfigUrl = { dominio: string; protocolo: string };
+type ConfigUrl = {
+  dominio: string;
+  protocolo: string;
+  tenantPorDefecto?: string;
+  urlTenantPorDefecto?: string;
+};
 
 function configUrl(): ConfigUrl {
   return {
     dominio: process.env.PLATFORM_DOMAIN || "localhost:3000",
     protocolo: process.env.PLATFORM_PROTOCOLO || "https",
+    tenantPorDefecto: process.env.TENANT_POR_DEFECTO,
+    urlTenantPorDefecto: process.env.URL_TENANT_POR_DEFECTO,
   };
 }
 
-/** URL pública del sitio de un tenant (links de emails, retorno de Mercado Pago). */
+/**
+ * URL pública del sitio de un tenant (links de emails, retorno de Mercado Pago).
+ * En demos, el tenant por defecto puede usar una URL fija (ej. un túnel).
+ */
 export function urlDelTenant(slug: string, cfg: ConfigUrl = configUrl()): string {
+  const override = cfg.urlTenantPorDefecto?.trim().replace(/\/+$/, "");
+  if (override && slug === cfg.tenantPorDefecto) return override;
   return `${cfg.protocolo}://${slug}.${cfg.dominio}`;
 }
 

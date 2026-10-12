@@ -10,6 +10,38 @@ describe("urlDelTenant", () => {
       "http://gisel.localhost:3000",
     );
   });
+
+  const base = { dominio: "tuproducto.com", protocolo: "https" };
+
+  it("usa la URL de override para el tenant por defecto (demos con túnel)", () => {
+    expect(
+      urlDelTenant("gisel", {
+        ...base,
+        tenantPorDefecto: "gisel",
+        urlTenantPorDefecto: "https://abc.trycloudflare.com",
+      }),
+    ).toBe("https://abc.trycloudflare.com");
+  });
+
+  it("ignora el override para otros tenants", () => {
+    expect(
+      urlDelTenant("ana", {
+        ...base,
+        tenantPorDefecto: "gisel",
+        urlTenantPorDefecto: "https://abc.trycloudflare.com",
+      }),
+    ).toBe("https://ana.tuproducto.com");
+  });
+
+  it("recorta espacios y la barra final del override", () => {
+    expect(
+      urlDelTenant("gisel", {
+        ...base,
+        tenantPorDefecto: "gisel",
+        urlTenantPorDefecto: "  https://abc.trycloudflare.com/ ",
+      }),
+    ).toBe("https://abc.trycloudflare.com");
+  });
 });
 
 describe("whatsappLink", () => {

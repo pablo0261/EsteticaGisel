@@ -1,16 +1,8 @@
 import { Container } from "@/components/ui/Container";
 import { Button } from "@/components/ui/Button";
 import { whatsappLink } from "@/lib/tenant/urls";
+import { iniciales } from "@/lib/tenant/iniciales";
 import type { Tenant } from "@/lib/tenant/tipos";
-
-function iniciales(nombre: string): string {
-  return nombre
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((p) => p.charAt(0).toUpperCase())
-    .join("");
-}
 
 export function Hero({ tenant }: { tenant: Tenant }) {
   const { marca, modulos } = tenant;

@@ -25,7 +25,7 @@ export function GestionPanel({
     return (
       <p className="rounded-lg bg-mauve/10 px-4 py-3 font-sans text-sm text-mauve-dark">
         Está fuera del plazo permitido para cancelar o reprogramar online. Por
-        favor contactá directamente a Gisel.
+        favor contactanos directamente.
       </p>
     );
   }

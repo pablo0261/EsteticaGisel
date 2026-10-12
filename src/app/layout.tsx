@@ -16,9 +16,7 @@ const jost = Jost({
 });
 
 export const metadata: Metadata = {
-  title: "Gisel Bigurrarena · Estética y Salud",
-  description:
-    "Centro de estética en Argentina. Tratamientos faciales, corporales, manos y pies. Reservá tu turno online y accedé a cursos de estética.",
+  title: "Turnos online",
 };
 
 export default function RootLayout({
