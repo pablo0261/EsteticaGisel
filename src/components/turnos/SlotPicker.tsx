@@ -41,8 +41,8 @@ export function SlotPicker({
             onClick={() => setFecha(d.fecha)}
             className={`shrink-0 rounded-lg px-3 py-2 font-sans text-sm capitalize transition ${
               d.fecha === fecha
-                ? "bg-mauve text-cream"
-                : "bg-white/60 text-ink-soft hover:bg-cream-dark"
+                ? "bg-primario text-fondo"
+                : "bg-white/60 text-texto-suave hover:bg-fondo-oscuro"
             }`}
           >
             {d.etiqueta}
@@ -86,11 +86,11 @@ function SlotsDelDia({
   }, [servicioIds.join(","), fecha]);
 
   if (slots === null) {
-    return <p className="font-sans text-sm text-ink-soft">Buscando horarios…</p>;
+    return <p className="font-sans text-sm text-texto-suave">Buscando horarios…</p>;
   }
   if (slots.length === 0) {
     return (
-      <p className="font-sans text-sm text-ink-soft">
+      <p className="font-sans text-sm text-texto-suave">
         No hay horarios disponibles este día. Probá otra fecha.
       </p>
     );
@@ -107,8 +107,8 @@ function SlotsDelDia({
           }}
           className={`rounded-lg border px-3 py-2 font-sans text-sm transition ${
             seleccionado === s.iso
-              ? "border-mauve bg-mauve text-cream"
-              : "border-mauve/20 bg-white/60 text-ink hover:border-mauve/40"
+              ? "border-primario bg-primario text-fondo"
+              : "border-primario/20 bg-white/60 text-texto hover:border-primario/40"
           }`}
         >
           {s.hora}

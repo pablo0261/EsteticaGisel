@@ -8,12 +8,12 @@ type Props = {
 };
 
 const base =
-  "inline-flex items-center justify-center rounded-full px-7 py-3 text-sm font-medium tracking-wide transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mauve";
+  "inline-flex items-center justify-center rounded-full px-7 py-3 text-sm font-medium tracking-wide transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primario";
 
 const variants = {
-  solid: "bg-mauve text-cream hover:bg-mauve-dark",
-  outline: "border border-mauve text-mauve hover:bg-mauve hover:text-cream",
-  onDark: "bg-cream text-ink hover:bg-cream-dark",
+  solid: "bg-primario text-fondo hover:bg-primario-oscuro",
+  outline: "border border-primario text-primario hover:bg-primario hover:text-fondo",
+  onDark: "bg-fondo text-texto hover:bg-fondo-oscuro",
 } as const;
 
 export function Button({ href, children, variant = "solid", className = "" }: Props) {

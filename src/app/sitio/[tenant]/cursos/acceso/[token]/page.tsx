@@ -23,14 +23,14 @@ export default async function AccesoCursoPage({
   const acceso = await getAccesoPorToken(tenant.id, token);
 
   return (
-    <main className="min-h-screen bg-cream px-6 pt-24 pb-20">
+    <main className="min-h-screen bg-fondo px-6 pt-24 pb-20">
       <Container className="max-w-2xl">
         {!acceso ? (
-          <p className="font-sans text-ink-soft">No encontramos ese acceso.</p>
+          <p className="font-sans text-texto-suave">No encontramos ese acceso.</p>
         ) : !accesoVigente(acceso.expira_en, new Date().toISOString()) ? (
           <div>
-            <h1 className="font-serif text-3xl text-ink">Tu acceso expiró</h1>
-            <p className="mt-3 font-sans text-ink-soft">
+            <h1 className="font-serif text-3xl text-texto">Tu acceso expiró</h1>
+            <p className="mt-3 font-sans text-texto-suave">
               El acceso a &ldquo;{acceso.cursos.titulo}&rdquo; venció el{" "}
               {new Date(acceso.expira_en).toLocaleDateString("es-AR")}.
             </p>
@@ -72,10 +72,10 @@ async function AccesoVigenteContenido({
 
   return (
     <div>
-      <p className="font-sans text-xs uppercase tracking-[0.35em] text-sage">
+      <p className="font-sans text-xs uppercase tracking-[0.35em] text-secundario">
         Acceso hasta {new Date(acceso.expira_en).toLocaleDateString("es-AR")}
       </p>
-      <h1 className="mt-3 font-serif text-4xl text-ink sm:text-5xl">{curso.titulo}</h1>
+      <h1 className="mt-3 font-serif text-4xl text-texto sm:text-5xl">{curso.titulo}</h1>
 
       {videoUrl ? (
         <video
@@ -87,7 +87,7 @@ async function AccesoVigenteContenido({
           <source src={videoUrl} />
         </video>
       ) : (
-        <p className="mt-6 font-sans text-ink-soft">
+        <p className="mt-6 font-sans text-texto-suave">
           El video de este curso todavía no está disponible.
         </p>
       )}
@@ -95,7 +95,7 @@ async function AccesoVigenteContenido({
       {descargaVideoUrl && (
         <a
           href={descargaVideoUrl}
-          className="mt-3 inline-block font-sans text-sm text-mauve underline"
+          className="mt-3 inline-block font-sans text-sm text-primario underline"
         >
           Descargar video
         </a>
@@ -103,11 +103,11 @@ async function AccesoVigenteContenido({
 
       {archivosConUrl.length > 0 && (
         <div className="mt-8">
-          <h2 className="font-serif text-2xl text-ink">Materiales</h2>
+          <h2 className="font-serif text-2xl text-texto">Materiales</h2>
           <ul className="mt-3 space-y-2">
             {archivosConUrl.map((a) => (
               <li key={a.id}>
-                <a href={a.url} className="font-sans text-sm text-mauve underline">
+                <a href={a.url} className="font-sans text-sm text-primario underline">
                   {a.nombre_archivo}
                 </a>
               </li>

@@ -9,11 +9,11 @@ export function Hero({ tenant }: { tenant: Tenant }) {
   const whatsapp = whatsappLink(marca.whatsapp);
 
   return (
-    <section className="relative flex min-h-screen items-center overflow-hidden bg-gradient-to-b from-cream via-cream to-cream-dark">
+    <section className="relative flex min-h-screen items-center overflow-hidden bg-gradient-to-b from-fondo via-fondo to-fondo-oscuro">
       {/* Watermark del monograma */}
       <span
         aria-hidden
-        className="pointer-events-none absolute -right-8 top-1/2 -translate-y-1/2 select-none font-serif text-[22rem] leading-none text-mauve/10 sm:text-[30rem]"
+        className="pointer-events-none absolute -right-8 top-1/2 -translate-y-1/2 select-none font-serif text-[22rem] leading-none text-primario/10 sm:text-[30rem]"
       >
         {iniciales(tenant.nombre)}
       </span>
@@ -21,19 +21,19 @@ export function Hero({ tenant }: { tenant: Tenant }) {
       <Container className="relative z-10 py-28">
         <div className="max-w-2xl">
           {marca.rubro && (
-            <p className="font-sans text-xs uppercase tracking-[0.35em] text-sage">{marca.rubro}</p>
+            <p className="font-sans text-xs uppercase tracking-[0.35em] text-secundario">{marca.rubro}</p>
           )}
-          <h1 className="mt-5 font-serif text-5xl leading-[1.05] text-ink sm:text-7xl">
+          <h1 className="mt-5 font-serif text-5xl leading-[1.05] text-texto sm:text-7xl">
             {marca.inicioTitulo}
             {marca.inicioDestacado && (
               <>
                 {" "}
-                <span className="text-mauve">{marca.inicioDestacado}</span>
+                <span className="text-primario">{marca.inicioDestacado}</span>
               </>
             )}
           </h1>
           {marca.inicioTexto && (
-            <p className="mt-6 max-w-xl font-sans text-lg leading-relaxed text-ink-soft">
+            <p className="mt-6 max-w-xl font-sans text-lg leading-relaxed text-texto-suave">
               {marca.inicioTexto}
             </p>
           )}

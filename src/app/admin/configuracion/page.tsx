@@ -13,7 +13,7 @@ export default async function ConfiguracionAdmin() {
 
   if (!config) {
     return (
-      <p className="font-sans text-ink-soft">
+      <p className="font-sans text-texto-suave">
         No se pudo leer la configuración. Aplicá la migración de la base
         (<code>supabase db push</code>) y recargá.
       </p>
@@ -21,22 +21,22 @@ export default async function ConfiguracionAdmin() {
   }
 
   const field = (name: string, label: string, value: number) => (
-    <label className="font-sans text-sm text-ink-soft">
+    <label className="font-sans text-sm text-texto-suave">
       {label}
       <input
         name={name}
         type="number"
         defaultValue={value}
         min={0}
-        className="mt-1 w-full rounded-lg border border-mauve/20 bg-cream px-3 py-2 text-ink outline-none focus:border-mauve"
+        className="mt-1 w-full rounded-lg border border-primario/20 bg-fondo px-3 py-2 text-texto outline-none focus:border-primario"
       />
     </label>
   );
 
   return (
     <div className="max-w-2xl">
-      <h1 className="font-serif text-4xl text-ink">Configuración</h1>
-      <p className="mt-2 font-sans text-sm text-ink-soft">
+      <h1 className="font-serif text-4xl text-texto">Configuración</h1>
+      <p className="mt-2 font-sans text-sm text-texto-suave">
         Estos valores controlan la lógica de turnos.
       </p>
       <form action={updateConfiguracion} className="mt-6 flex flex-col gap-8">
@@ -59,30 +59,30 @@ export default async function ConfiguracionAdmin() {
         </div>
 
         <div>
-          <h2 className="font-serif text-2xl text-ink">Horario de atención</h2>
+          <h2 className="font-serif text-2xl text-texto">Horario de atención</h2>
           <div className="mt-3 flex flex-col gap-2">
             {DIAS_SEMANA.map((d) => {
               const horario = config.horario_atencion[d.key];
               return (
                 <div
                   key={d.key}
-                  className="flex flex-wrap items-center gap-3 rounded-xl border border-mauve/15 bg-white/60 p-3"
+                  className="flex flex-wrap items-center gap-3 rounded-xl border border-primario/15 bg-white/60 p-3"
                 >
-                  <span className="w-24 font-sans text-sm text-ink">{d.label}</span>
+                  <span className="w-24 font-sans text-sm text-texto">{d.label}</span>
                   <input
                     name={`desde_${d.key}`}
                     type="time"
                     defaultValue={horario?.[0] ?? ""}
-                    className="rounded-lg border border-mauve/20 bg-cream px-3 py-2 text-sm text-ink"
+                    className="rounded-lg border border-primario/20 bg-fondo px-3 py-2 text-sm text-texto"
                   />
-                  <span className="font-sans text-sm text-ink-soft">a</span>
+                  <span className="font-sans text-sm text-texto-suave">a</span>
                   <input
                     name={`hasta_${d.key}`}
                     type="time"
                     defaultValue={horario?.[1] ?? ""}
-                    className="rounded-lg border border-mauve/20 bg-cream px-3 py-2 text-sm text-ink"
+                    className="rounded-lg border border-primario/20 bg-fondo px-3 py-2 text-sm text-texto"
                   />
-                  <label className="ml-auto flex items-center gap-1 font-sans text-sm text-ink-soft">
+                  <label className="ml-auto flex items-center gap-1 font-sans text-sm text-texto-suave">
                     <input
                       name={`cerrado_${d.key}`}
                       type="checkbox"
@@ -96,7 +96,7 @@ export default async function ConfiguracionAdmin() {
           </div>
         </div>
 
-        <SubmitButton className="self-start rounded-full bg-mauve px-7 py-3 text-sm font-medium text-cream transition hover:bg-mauve-dark disabled:opacity-60">
+        <SubmitButton className="self-start rounded-full bg-primario px-7 py-3 text-sm font-medium text-fondo transition hover:bg-primario-oscuro disabled:opacity-60">
           Guardar
         </SubmitButton>
         <FormPendingOverlay label="Guardando cambios…" />

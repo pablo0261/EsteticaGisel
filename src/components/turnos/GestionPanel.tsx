@@ -23,7 +23,7 @@ export function GestionPanel({
 
   if (!permitido) {
     return (
-      <p className="rounded-lg bg-mauve/10 px-4 py-3 font-sans text-sm text-mauve-dark">
+      <p className="rounded-lg bg-primario/10 px-4 py-3 font-sans text-sm text-primario-oscuro">
         Está fuera del plazo permitido para cancelar o reprogramar online. Por
         favor contactanos directamente.
       </p>
@@ -32,7 +32,7 @@ export function GestionPanel({
 
   if (modo === "cancelado") {
     return (
-      <p className="rounded-lg bg-sage/10 px-4 py-3 font-sans text-sm text-sage-dark">
+      <p className="rounded-lg bg-secundario/10 px-4 py-3 font-sans text-sm text-secundario-oscuro">
         Tu turno fue cancelado. La seña no es reembolsable.
       </p>
     );
@@ -40,7 +40,7 @@ export function GestionPanel({
 
   if (modo === "reprogramado") {
     return (
-      <p className="rounded-lg bg-sage/10 px-4 py-3 font-sans text-sm text-sage-dark">
+      <p className="rounded-lg bg-secundario/10 px-4 py-3 font-sans text-sm text-secundario-oscuro">
         ¡Listo! Tu turno fue reprogramado.
       </p>
     );
@@ -73,7 +73,7 @@ export function GestionPanel({
           onSelect={(fecha, iso) => setNuevoIso({ fecha, iso })}
         />
         {error && (
-          <p className="rounded-lg bg-mauve/10 px-3 py-2 font-sans text-sm text-mauve-dark">
+          <p className="rounded-lg bg-primario/10 px-3 py-2 font-sans text-sm text-primario-oscuro">
             {error}
           </p>
         )}
@@ -82,14 +82,14 @@ export function GestionPanel({
             type="button"
             disabled={!nuevoIso || pending}
             onClick={onConfirmarReprogramacion}
-            className="rounded-full bg-mauve px-6 py-2 font-sans text-sm font-medium text-cream transition hover:bg-mauve-dark disabled:opacity-60"
+            className="rounded-full bg-primario px-6 py-2 font-sans text-sm font-medium text-fondo transition hover:bg-primario-oscuro disabled:opacity-60"
           >
             Confirmar nuevo horario
           </button>
           <button
             type="button"
             onClick={() => setModo("inicial")}
-            className="font-sans text-sm text-ink-soft hover:text-ink"
+            className="font-sans text-sm text-texto-suave hover:text-texto"
           >
             Volver
           </button>
@@ -102,7 +102,7 @@ export function GestionPanel({
   return (
     <div className="flex flex-col gap-3">
       {error && (
-        <p className="rounded-lg bg-mauve/10 px-3 py-2 font-sans text-sm text-mauve-dark">
+        <p className="rounded-lg bg-primario/10 px-3 py-2 font-sans text-sm text-primario-oscuro">
           {error}
         </p>
       )}
@@ -110,7 +110,7 @@ export function GestionPanel({
         <button
           type="button"
           onClick={() => setModo("reprogramando")}
-          className="rounded-full border border-mauve px-6 py-2 font-sans text-sm font-medium text-mauve transition hover:bg-mauve hover:text-cream"
+          className="rounded-full border border-primario px-6 py-2 font-sans text-sm font-medium text-primario transition hover:bg-primario hover:text-fondo"
         >
           Reprogramar
         </button>
@@ -118,7 +118,7 @@ export function GestionPanel({
           type="button"
           disabled={pending}
           onClick={onCancelar}
-          className="rounded-full px-6 py-2 font-sans text-sm font-medium text-mauve-dark underline-offset-4 hover:underline disabled:opacity-60"
+          className="rounded-full px-6 py-2 font-sans text-sm font-medium text-primario-oscuro underline-offset-4 hover:underline disabled:opacity-60"
         >
           Cancelar turno
         </button>

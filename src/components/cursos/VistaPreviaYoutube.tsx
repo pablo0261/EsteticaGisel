@@ -114,7 +114,7 @@ export function VistaPreviaYoutube({
   }
 
   return (
-    <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-ink shadow-sm">
+    <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-texto shadow-sm">
       <div ref={contenedor} className="absolute inset-0 [&_iframe]:h-full [&_iframe]:w-full" />
 
       {estado === "listo" || estado === "cargando" ? (
@@ -132,10 +132,10 @@ export function VistaPreviaYoutube({
             sizes="(min-width: 672px) 672px, 100vw"
             className="object-cover"
           />
-          <span className="absolute inset-0 flex items-center justify-center bg-ink/10">
-            <span className="flex h-16 w-16 items-center justify-center rounded-full bg-cream/90 text-mauve-dark shadow-md">
+          <span className="absolute inset-0 flex items-center justify-center bg-texto/10">
+            <span className="flex h-16 w-16 items-center justify-center rounded-full bg-fondo/90 text-primario-oscuro shadow-md">
               {estado === "cargando" ? (
-                <span className="h-6 w-6 animate-spin rounded-full border-2 border-mauve-dark border-t-transparent" />
+                <span className="h-6 w-6 animate-spin rounded-full border-2 border-primario-oscuro border-t-transparent" />
               ) : (
                 <svg aria-hidden viewBox="0 0 24 24" className="ml-1 h-7 w-7 fill-current">
                   <path d="M8 5v14l11-7z" />
@@ -145,17 +145,17 @@ export function VistaPreviaYoutube({
           </span>
         </button>
       ) : estado === "terminado" ? (
-        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-ink/90 px-6 text-center">
-          <svg aria-hidden viewBox="0 0 24 24" className="h-9 w-9 fill-cream">
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-texto/90 px-6 text-center">
+          <svg aria-hidden viewBox="0 0 24 24" className="h-9 w-9 fill-fondo">
             <path d="M18 8h-1V6a5 5 0 0 0-10 0v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2zM9 6a3 3 0 0 1 6 0v2H9V6z" />
           </svg>
-          <p className="font-serif text-2xl text-cream">Seguí viendo el curso completo</p>
-          <p className="font-sans text-sm text-cream/70">
+          <p className="font-serif text-2xl text-fondo">Seguí viendo el curso completo</p>
+          <p className="font-sans text-sm text-fondo/70">
             Se libera apenas se acredita el pago.
           </p>
           <a
             href="#comprar"
-            className="mt-1 inline-flex rounded-full bg-mauve px-7 py-3 font-sans text-sm font-medium text-cream transition hover:bg-mauve-dark"
+            className="mt-1 inline-flex rounded-full bg-primario px-7 py-3 font-sans text-sm font-medium text-fondo transition hover:bg-primario-oscuro"
           >
             Comprar el curso
           </a>
@@ -171,8 +171,8 @@ export function VistaPreviaYoutube({
           className="absolute inset-0 z-10 cursor-pointer"
         >
           {estado === "pausado" && (
-            <span className="absolute inset-0 flex items-center justify-center bg-ink/40">
-              <span className="flex h-16 w-16 items-center justify-center rounded-full bg-cream/90 text-mauve-dark shadow-md">
+            <span className="absolute inset-0 flex items-center justify-center bg-texto/40">
+              <span className="flex h-16 w-16 items-center justify-center rounded-full bg-fondo/90 text-primario-oscuro shadow-md">
                 <svg aria-hidden viewBox="0 0 24 24" className="ml-1 h-7 w-7 fill-current">
                   <path d="M8 5v14l11-7z" />
                 </svg>

@@ -11,12 +11,12 @@ export async function Servicios({ tenant }: { tenant: Tenant }) {
   const reservaOnline = tenant.modulos.turnos;
 
   return (
-    <Section id="servicios" className="bg-cream">
+    <Section id="servicios" className="bg-fondo">
       <Container>
         <div className="max-w-2xl">
-          <p className="font-sans text-xs uppercase tracking-[0.35em] text-sage">Tratamientos</p>
-          <h2 className="mt-3 font-serif text-4xl text-ink sm:text-5xl">Servicios</h2>
-          <p className="mt-4 font-sans text-ink-soft">
+          <p className="font-sans text-xs uppercase tracking-[0.35em] text-secundario">Tratamientos</p>
+          <h2 className="mt-3 font-serif text-4xl text-texto sm:text-5xl">Servicios</h2>
+          <p className="mt-4 font-sans text-texto-suave">
             Cada servicio tiene su duración y precio.
             {reservaOnline && " Reservá online y asegurá tu turno."}
           </p>
@@ -26,19 +26,19 @@ export async function Servicios({ tenant }: { tenant: Tenant }) {
           {servicios.map((s) => (
             <article
               key={s.id}
-              className="flex flex-col rounded-2xl border border-mauve/15 bg-white/60 p-6 transition hover:border-mauve/40 hover:shadow-sm"
+              className="flex flex-col rounded-2xl border border-primario/15 bg-white/60 p-6 transition hover:border-primario/40 hover:shadow-sm"
             >
-              <h3 className="font-serif text-2xl text-ink">{s.nombre}</h3>
-              <p className="mt-1 font-sans text-sm uppercase tracking-wider text-sage">
+              <h3 className="font-serif text-2xl text-texto">{s.nombre}</h3>
+              <p className="mt-1 font-sans text-sm uppercase tracking-wider text-secundario">
                 {formatDuracion(s.duracion_minutos)}
               </p>
-              <p className="mt-4 font-sans text-lg text-mauve-dark">
+              <p className="mt-4 font-sans text-lg text-primario-oscuro">
                 {s.precio > 0 ? formatPrecioARS(s.precio) : "Consultar"}
               </p>
               {reservaOnline && (
                 <Link
                   href={`/turnos?servicio=${encodeURIComponent(s.nombre)}`}
-                  className="mt-6 inline-flex font-sans text-sm font-medium text-mauve transition hover:text-mauve-dark"
+                  className="mt-6 inline-flex font-sans text-sm font-medium text-primario transition hover:text-primario-oscuro"
                 >
                   Reservar turno →
                 </Link>

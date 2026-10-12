@@ -9,12 +9,12 @@ export function CtaWhatsapp({ tenant }: { tenant: Tenant }) {
   if (!whatsapp && !reservaOnline) return null;
 
   return (
-    <section className="bg-mauve">
+    <section className="bg-primario">
       <Container className="flex flex-col items-center gap-6 py-16 text-center sm:py-20">
-        <h2 className="max-w-2xl font-serif text-4xl text-cream sm:text-5xl">
+        <h2 className="max-w-2xl font-serif text-4xl text-fondo sm:text-5xl">
           ¿Lista para tu próximo turno?
         </h2>
-        <p className="max-w-xl font-sans text-cream/90">
+        <p className="max-w-xl font-sans text-fondo/90">
           {whatsapp && reservaOnline
             ? "Escribime por WhatsApp para cualquier consulta, o reservá directamente online."
             : whatsapp
@@ -31,7 +31,7 @@ export function CtaWhatsapp({ tenant }: { tenant: Tenant }) {
             <Button
               href="/turnos"
               variant="outline"
-              className="border-cream text-cream hover:bg-cream hover:text-mauve"
+              className="border-fondo text-fondo hover:bg-fondo hover:text-primario"
             >
               Reservar online
             </Button>

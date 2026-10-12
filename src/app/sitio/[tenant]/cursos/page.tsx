@@ -21,21 +21,21 @@ export default async function CursosPage({ params }: { params: Promise<{ tenant:
   const ahora = new Date().toISOString();
 
   return (
-    <main className="min-h-screen bg-cream pt-24 pb-20">
+    <main className="min-h-screen bg-fondo pt-24 pb-20">
       <Container>
-        <p className="font-sans text-xs uppercase tracking-[0.35em] text-sage">
+        <p className="font-sans text-xs uppercase tracking-[0.35em] text-secundario">
           Cursos
         </p>
-        <h1 className="mt-3 font-serif text-4xl text-ink sm:text-5xl">
+        <h1 className="mt-3 font-serif text-4xl text-texto sm:text-5xl">
           Cursos de estética
         </h1>
-        <p className="mt-4 max-w-xl font-sans text-ink-soft">
+        <p className="mt-4 max-w-xl font-sans text-texto-suave">
           Contenido en video para profesionales del rubro y para quienes
           quieren aprender a cuidarse en casa.
         </p>
 
         {cursos.length === 0 ? (
-          <p className="mt-8 font-sans text-ink-soft">
+          <p className="mt-8 font-sans text-texto-suave">
             Muy pronto vas a poder comprar y ver mis cursos online desde acá.
           </p>
         ) : (
@@ -55,9 +55,9 @@ export default async function CursosPage({ params }: { params: Promise<{ tenant:
                 <Link
                   key={c.id}
                   href={`/cursos/${c.id}`}
-                  className="group flex flex-col overflow-hidden rounded-2xl border border-mauve/15 bg-white/60 transition hover:border-mauve/40 hover:shadow-sm"
+                  className="group flex flex-col overflow-hidden rounded-2xl border border-primario/15 bg-white/60 transition hover:border-primario/40 hover:shadow-sm"
                 >
-                  <div className="relative aspect-video w-full overflow-hidden bg-gradient-to-br from-mauve-soft to-sage/30">
+                  <div className="relative aspect-video w-full overflow-hidden bg-gradient-to-br from-primario-suave to-secundario/30">
                     {videoId ? (
                       <>
                         <Image
@@ -67,14 +67,14 @@ export default async function CursosPage({ params }: { params: Promise<{ tenant:
                           sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
                           className="object-cover transition duration-300 group-hover:scale-105"
                         />
-                        <span className="absolute inset-0 flex items-center justify-center bg-ink/10">
-                          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-cream/90 text-mauve-dark shadow-md">
+                        <span className="absolute inset-0 flex items-center justify-center bg-texto/10">
+                          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-fondo/90 text-primario-oscuro shadow-md">
                             <svg aria-hidden viewBox="0 0 24 24" className="ml-1 h-6 w-6 fill-current">
                               <path d="M8 5v14l11-7z" />
                             </svg>
                           </span>
                         </span>
-                        <span className="absolute bottom-3 left-3 rounded-full bg-ink/70 px-3 py-1 font-sans text-xs text-cream">
+                        <span className="absolute bottom-3 left-3 rounded-full bg-texto/70 px-3 py-1 font-sans text-xs text-fondo">
                           Vista previa
                         </span>
                       </>
@@ -88,13 +88,13 @@ export default async function CursosPage({ params }: { params: Promise<{ tenant:
                     )}
                   </div>
                   <div className="flex flex-1 flex-col p-6">
-                    <p className="font-sans text-xs uppercase tracking-wider text-sage">
+                    <p className="font-sans text-xs uppercase tracking-wider text-secundario">
                       {c.categoria === "profesional" ? "Profesional" : "Público general"}
                     </p>
-                    <h2 className="mt-2 font-serif text-2xl text-ink">{c.titulo}</h2>
-                    <p className="mt-3 font-sans text-lg text-mauve-dark">
+                    <h2 className="mt-2 font-serif text-2xl text-texto">{c.titulo}</h2>
+                    <p className="mt-3 font-sans text-lg text-primario-oscuro">
                       {enOferta && (
-                        <span className="mr-2 text-sm text-ink-soft line-through">
+                        <span className="mr-2 text-sm text-texto-suave line-through">
                           {formatPrecioARS(c.precio)}
                         </span>
                       )}

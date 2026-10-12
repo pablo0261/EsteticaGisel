@@ -18,14 +18,14 @@ export default async function GestionTurnoPage({
   const turno = await getTurnoPorToken(tenant.id, token);
 
   return (
-    <main className="min-h-screen bg-cream px-6 pt-24 pb-20">
+    <main className="min-h-screen bg-fondo px-6 pt-24 pb-20">
       <Container className="max-w-lg">
         {!turno ? (
-          <p className="font-sans text-ink-soft">No encontramos ese turno.</p>
+          <p className="font-sans text-texto-suave">No encontramos ese turno.</p>
         ) : turno.estado === "cancelado" ? (
-          <p className="font-sans text-ink-soft">Este turno ya fue cancelado.</p>
+          <p className="font-sans text-texto-suave">Este turno ya fue cancelado.</p>
         ) : turno.estado !== "confirmado" ? (
-          <p className="font-sans text-ink-soft">
+          <p className="font-sans text-texto-suave">
             Este turno todavía no está confirmado. Si ya pagaste la seña, esperá la confirmación por
             email.
           </p>
@@ -61,13 +61,13 @@ async function TurnoDetalle({
 
   return (
     <div>
-      <p className="font-sans text-xs uppercase tracking-[0.35em] text-sage">
+      <p className="font-sans text-xs uppercase tracking-[0.35em] text-secundario">
         Tu turno
       </p>
-      <h1 className="mt-3 font-serif text-3xl text-ink sm:text-4xl">
+      <h1 className="mt-3 font-serif text-3xl text-texto sm:text-4xl">
         {turno.servicios.nombre}
       </h1>
-      <p className="mt-2 font-sans text-ink-soft">{fechaHoraTexto}</p>
+      <p className="mt-2 font-sans text-texto-suave">{fechaHoraTexto}</p>
 
       <div className="mt-6">
         <GestionPanel

@@ -15,10 +15,10 @@ const ESTADO_LABEL: Record<string, string> = {
 };
 
 const ESTADO_COLOR: Record<string, string> = {
-  pendiente_pago: "bg-sage/10 text-sage",
-  confirmado: "bg-mauve/15 text-mauve-dark",
-  cancelado: "bg-ink/5 text-ink-soft",
-  completado: "bg-sage/20 text-sage-dark",
+  pendiente_pago: "bg-secundario/10 text-secundario",
+  confirmado: "bg-primario/15 text-primario-oscuro",
+  cancelado: "bg-texto/5 text-texto-suave",
+  completado: "bg-secundario/20 text-secundario-oscuro",
 };
 
 export default async function TurnosAdmin() {
@@ -27,14 +27,14 @@ export default async function TurnosAdmin() {
 
   return (
     <div>
-      <h1 className="font-serif text-4xl text-ink">Turnos</h1>
-      <p className="mt-2 font-sans text-sm text-ink-soft">
+      <h1 className="font-serif text-4xl text-texto">Turnos</h1>
+      <p className="mt-2 font-sans text-sm text-texto-suave">
         Todos los turnos reservados, más recientes primero.
       </p>
 
       <div className="mt-6 space-y-3">
         {turnos.length === 0 && (
-          <p className="font-sans text-sm text-ink-soft">Todavía no hay turnos.</p>
+          <p className="font-sans text-sm text-texto-suave">Todavía no hay turnos.</p>
         )}
         {turnos.map((t) => {
           const fechaHoraTexto = new Date(t.fecha_hora).toLocaleString("es-AR", {
@@ -46,19 +46,19 @@ export default async function TurnosAdmin() {
           return (
             <div
               key={t.id}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-mauve/15 bg-white/60 p-4"
+              className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primario/15 bg-white/60 p-4"
             >
               <div>
-                <p className="font-serif text-lg text-ink">{t.servicios.nombre}</p>
-                <p className="font-sans text-sm text-ink-soft">{fechaHoraTexto}</p>
-                <p className="font-sans text-sm text-ink-soft">
+                <p className="font-serif text-lg text-texto">{t.servicios.nombre}</p>
+                <p className="font-sans text-sm text-texto-suave">{fechaHoraTexto}</p>
+                <p className="font-sans text-sm text-texto-suave">
                   {t.cliente_nombre} · {t.cliente_email}
                   {t.cliente_telefono ? ` · ${t.cliente_telefono}` : ""}
                 </p>
               </div>
               <div className="flex items-center gap-3">
                 {t.monto_sena != null && (
-                  <span className="font-sans text-sm text-ink-soft">
+                  <span className="font-sans text-sm text-texto-suave">
                     Seña {formatPrecioARS(t.monto_sena)}
                   </span>
                 )}
@@ -72,7 +72,7 @@ export default async function TurnosAdmin() {
                     {t.estado === "confirmado" && (
                       <form action={marcarCompletado}>
                         <input type="hidden" name="id" value={t.id} />
-                        <SubmitButton className="font-sans text-sm text-sage hover:text-sage-dark disabled:opacity-60">
+                        <SubmitButton className="font-sans text-sm text-secundario hover:text-secundario-oscuro disabled:opacity-60">
                           Marcar completado
                         </SubmitButton>
                         <FormPendingOverlay label="Guardando…" />
@@ -80,7 +80,7 @@ export default async function TurnosAdmin() {
                     )}
                     <form action={cancelarTurnoAdmin}>
                       <input type="hidden" name="id" value={t.id} />
-                      <SubmitButton className="font-sans text-sm text-mauve hover:text-mauve-dark disabled:opacity-60">
+                      <SubmitButton className="font-sans text-sm text-primario hover:text-primario-oscuro disabled:opacity-60">
                         Cancelar
                       </SubmitButton>
                       <FormPendingOverlay label="Cancelando…" />

@@ -12,41 +12,41 @@ export default async function LoginPage({
   const { error } = await searchParams;
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-cream px-6">
-      <div className="w-full max-w-sm rounded-2xl border border-mauve/15 bg-white/70 p-8">
-        <h1 className="font-serif text-3xl text-ink">Panel de gestión</h1>
-        <p className="mt-1 font-sans text-sm text-ink-soft">
+    <main className="flex min-h-screen items-center justify-center bg-fondo px-6">
+      <div className="w-full max-w-sm rounded-2xl border border-primario/15 bg-white/70 p-8">
+        <h1 className="font-serif text-3xl text-texto">Panel de gestión</h1>
+        <p className="mt-1 font-sans text-sm text-texto-suave">
           Ingresá para administrar tu sitio.
         </p>
 
         {error && (
-          <p className="mt-4 rounded-lg bg-mauve/10 px-3 py-2 font-sans text-sm text-mauve-dark">
+          <p className="mt-4 rounded-lg bg-primario/10 px-3 py-2 font-sans text-sm text-primario-oscuro">
             {error}
           </p>
         )}
 
         <form action={login} className="mt-6 flex flex-col gap-4">
-          <label className="font-sans text-sm text-ink-soft">
+          <label className="font-sans text-sm text-texto-suave">
             Email
             <input
               name="email"
               type="email"
               required
               autoComplete="email"
-              className="mt-1 w-full rounded-lg border border-mauve/20 bg-cream px-3 py-2 text-ink outline-none focus:border-mauve"
+              className="mt-1 w-full rounded-lg border border-primario/20 bg-fondo px-3 py-2 text-texto outline-none focus:border-primario"
             />
           </label>
-          <label className="font-sans text-sm text-ink-soft">
+          <label className="font-sans text-sm text-texto-suave">
             Contraseña
             <input
               name="password"
               type="password"
               required
               autoComplete="current-password"
-              className="mt-1 w-full rounded-lg border border-mauve/20 bg-cream px-3 py-2 text-ink outline-none focus:border-mauve"
+              className="mt-1 w-full rounded-lg border border-primario/20 bg-fondo px-3 py-2 text-texto outline-none focus:border-primario"
             />
           </label>
-          <SubmitButton className="mt-2 rounded-full bg-mauve px-7 py-3 font-sans text-sm font-medium text-cream transition hover:bg-mauve-dark disabled:opacity-60">
+          <SubmitButton className="mt-2 rounded-full bg-primario px-7 py-3 font-sans text-sm font-medium text-fondo transition hover:bg-primario-oscuro disabled:opacity-60">
             Ingresar
           </SubmitButton>
           <FormPendingOverlay label="Ingresando…" />

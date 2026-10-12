@@ -4,7 +4,10 @@ import { Nav } from "@/components/landing/Nav";
 import { Footer } from "@/components/landing/Footer";
 import { SitioSuspendido } from "@/components/landing/SitioSuspendido";
 import { getTenantPorSlug } from "@/lib/tenant/actual";
-import { whatsappLink } from "@/lib/tenant/urls";
+import { estiloMarca } from "@/lib/tenant/estilo";
+import { whatsappLink, MENSAJES_WHATSAPP } from "@/lib/tenant/urls";
+import { IdiomaProvider } from "@/lib/i18n/cliente";
+import { traducir } from "@/lib/i18n/textos";
 
 type Props = { children: React.ReactNode; params: Promise<{ tenant: string }> };
 
@@ -21,18 +24,29 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function SitioLayout({ children, params }: Props) {
   const tenant = await getTenantPorSlug((await params).tenant);
   if (!tenant) notFound();
-  if (tenant.estado === "suspendido") return <SitioSuspendido nombre={tenant.nombre} />;
 
   return (
-    <>
-      <Nav
-        nombre={tenant.nombre}
-        logoUrl={tenant.marca.logoUrl}
-        modulos={tenant.modulos}
-        whatsappUrl={whatsappLink(tenant.marca.whatsapp)}
-      />
-      {children}
-      <Footer tenant={tenant} />
-    </>
+    <IdiomaProvider idioma={tenant.idioma}>
+      {/* Colores de la marca: las clases (bg-primario, text-texto…) leen estas variables. */}
+      <div style={estiloMarca(tenant.marca)} className="flex flex-1 flex-col bg-fondo text-texto">
+        {tenant.estado === "suspendido" ? (
+          <SitioSuspendido nombre={tenant.nombre} idioma={tenant.idioma} />
+        ) : (
+          <>
+            <Nav
+              nombre={tenant.nombre}
+              logoUrl={tenant.marca.logoUrl}
+              modulos={tenant.modulos}
+              whatsappUrl={whatsappLink(
+                tenant.marca.whatsapp,
+                traducir(tenant.idioma, MENSAJES_WHATSAPP.consulta),
+              )}
+            />
+            {children}
+            <Footer tenant={tenant} />
+          </>
+        )}
+      </div>
+    </IdiomaProvider>
   );
 }

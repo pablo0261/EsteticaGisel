@@ -33,16 +33,16 @@ export default async function CursoDetallePage({
   const videoId = curso.preview_youtube_url ? youtubeId(curso.preview_youtube_url) : null;
 
   return (
-    <main className="min-h-screen bg-cream px-6 pt-24 pb-20">
+    <main className="min-h-screen bg-fondo px-6 pt-24 pb-20">
       <Container className="max-w-2xl">
-        <p className="font-sans text-xs uppercase tracking-[0.35em] text-sage">
+        <p className="font-sans text-xs uppercase tracking-[0.35em] text-secundario">
           {curso.categoria === "profesional" ? "Profesional" : "Público general"}
         </p>
-        <h1 className="mt-3 font-serif text-4xl text-ink sm:text-5xl">
+        <h1 className="mt-3 font-serif text-4xl text-texto sm:text-5xl">
           {curso.titulo}
         </h1>
         {curso.descripcion && (
-          <p className="mt-4 font-sans text-ink-soft">{curso.descripcion}</p>
+          <p className="mt-4 font-sans text-texto-suave">{curso.descripcion}</p>
         )}
 
         {videoId && (
@@ -52,22 +52,22 @@ export default async function CursoDetallePage({
               titulo={curso.titulo}
               segundos={SEGUNDOS_PREVIEW}
             />
-            <figcaption className="mt-2 font-sans text-sm text-ink-soft">
+            <figcaption className="mt-2 font-sans text-sm text-texto-suave">
               Vista previa de {SEGUNDOS_PREVIEW} segundos. El curso completo se habilita al comprarlo.
             </figcaption>
           </figure>
         )}
 
-        <p className="mt-6 font-sans text-2xl text-mauve-dark">
+        <p className="mt-6 font-sans text-2xl text-primario-oscuro">
           {enOferta && (
-            <span className="mr-2 text-base text-ink-soft line-through">
+            <span className="mr-2 text-base text-texto-suave line-through">
               {formatPrecioARS(curso.precio)}
             </span>
           )}
           {formatPrecioARS(precio)}
         </p>
 
-        <p className="mt-2 font-sans text-sm text-ink-soft">
+        <p className="mt-2 font-sans text-sm text-texto-suave">
           Acceso por {curso.dias_acceso} días desde la compra.
         </p>
 

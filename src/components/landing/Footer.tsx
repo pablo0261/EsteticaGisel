@@ -13,25 +13,25 @@ export async function Footer({ tenant }: { tenant: Tenant }) {
   const whatsapp = whatsappLink(marca.whatsapp);
 
   return (
-    <footer id="contacto" className="bg-sage-dark text-cream">
+    <footer id="contacto" className="bg-secundario-oscuro text-fondo">
       <Container className="py-16">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
           <div className="lg:col-span-1">
             <Logo src={marca.logoClaroUrl ?? marca.logoUrl} alt={tenant.nombre} />
             {marca.tagline && (
-              <p className="mt-4 max-w-xs font-sans text-sm text-cream/70">{marca.tagline}.</p>
+              <p className="mt-4 max-w-xs font-sans text-sm text-fondo/70">{marca.tagline}.</p>
             )}
           </div>
 
           {horarios.length > 0 && (
             <div>
-              <h3 className="font-sans text-sm font-semibold uppercase tracking-wider text-cream/90">
+              <h3 className="font-sans text-sm font-semibold uppercase tracking-wider text-fondo/90">
                 Horarios
               </h3>
-              <ul className="mt-4 space-y-2 font-sans text-sm text-cream/70">
+              <ul className="mt-4 space-y-2 font-sans text-sm text-fondo/70">
                 {horarios.map((h) => (
                   <li key={h.dias}>
-                    <span className="block text-cream/90">{h.dias}</span>
+                    <span className="block text-fondo/90">{h.dias}</span>
                     {h.horas}
                   </li>
                 ))}
@@ -40,20 +40,20 @@ export async function Footer({ tenant }: { tenant: Tenant }) {
           )}
 
           <div>
-            <h3 className="font-sans text-sm font-semibold uppercase tracking-wider text-cream/90">
+            <h3 className="font-sans text-sm font-semibold uppercase tracking-wider text-fondo/90">
               Contacto
             </h3>
-            <ul className="mt-4 space-y-2 font-sans text-sm text-cream/70">
+            <ul className="mt-4 space-y-2 font-sans text-sm text-fondo/70">
               {whatsapp && (
                 <li>
-                  <a href={whatsapp} className="transition hover:text-cream" target="_blank" rel="noopener noreferrer">
+                  <a href={whatsapp} className="transition hover:text-fondo" target="_blank" rel="noopener noreferrer">
                     WhatsApp
                   </a>
                 </li>
               )}
               {marca.emailContacto && (
                 <li>
-                  <a href={`mailto:${marca.emailContacto}`} className="transition hover:text-cream">
+                  <a href={`mailto:${marca.emailContacto}`} className="transition hover:text-fondo">
                     {marca.emailContacto}
                   </a>
                 </li>
@@ -62,7 +62,7 @@ export async function Footer({ tenant }: { tenant: Tenant }) {
                 <li>
                   <a
                     href={`https://instagram.com/${marca.instagram}`}
-                    className="transition hover:text-cream"
+                    className="transition hover:text-fondo"
                     target="_blank"
                     rel="noopener noreferrer"
                   >
@@ -76,15 +76,15 @@ export async function Footer({ tenant }: { tenant: Tenant }) {
 
           {tenant.modulos.turnos && (
             <div>
-              <h3 className="font-sans text-sm font-semibold uppercase tracking-wider text-cream/90">
+              <h3 className="font-sans text-sm font-semibold uppercase tracking-wider text-fondo/90">
                 Reservas
               </h3>
               {marca.notaReservas && (
-                <p className="mt-4 font-sans text-sm text-cream/70">{marca.notaReservas}</p>
+                <p className="mt-4 font-sans text-sm text-fondo/70">{marca.notaReservas}</p>
               )}
               <Link
                 href="/turnos"
-                className="mt-4 inline-flex font-sans text-sm font-medium text-cream underline-offset-4 hover:underline"
+                className="mt-4 inline-flex font-sans text-sm font-medium text-fondo underline-offset-4 hover:underline"
               >
                 Reservar turno →
               </Link>
@@ -92,7 +92,7 @@ export async function Footer({ tenant }: { tenant: Tenant }) {
           )}
         </div>
 
-        <div className="mt-12 border-t border-cream/15 pt-6 font-sans text-xs text-cream/50">
+        <div className="mt-12 border-t border-fondo/15 pt-6 font-sans text-xs text-fondo/50">
           © {tenant.nombre}
           {marca.rubro && ` · ${marca.rubro}`}. Todos los derechos reservados.
         </div>

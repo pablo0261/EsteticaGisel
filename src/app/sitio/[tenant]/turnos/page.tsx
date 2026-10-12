@@ -21,18 +21,18 @@ export default async function TurnosPage({ params }: { params: Promise<{ tenant:
   const whatsapp = whatsappLink(tenant.marca.whatsapp, "¡Hola! Quería consultar por un turno.");
 
   return (
-    <main className="min-h-screen bg-cream pt-24 pb-20">
+    <main className="min-h-screen bg-fondo pt-24 pb-20">
       <Container className="max-w-2xl">
-        <p className="font-sans text-xs uppercase tracking-[0.35em] text-sage">Turnos</p>
-        <h1 className="mt-3 font-serif text-4xl text-ink sm:text-5xl">Reservá tu turno</h1>
+        <p className="font-sans text-xs uppercase tracking-[0.35em] text-secundario">Turnos</p>
+        <h1 className="mt-3 font-serif text-4xl text-texto sm:text-5xl">Reservá tu turno</h1>
 
         {servicios.length === 0 ? (
-          <p className="mt-6 font-sans text-ink-soft">
+          <p className="mt-6 font-sans text-texto-suave">
             Todavía no hay servicios cargados para reservar online.
             {whatsapp && (
               <>
                 {" "}Escribinos por{" "}
-                <a href={whatsapp} className="text-mauve underline" target="_blank" rel="noopener noreferrer">
+                <a href={whatsapp} className="text-primario underline" target="_blank" rel="noopener noreferrer">
                   WhatsApp
                 </a>{" "}
                 para coordinar tu turno.

@@ -41,7 +41,7 @@ export function Nav({
   return (
     <header
       className={`fixed inset-x-0 top-0 z-50 transition-colors duration-300 ${
-        solid ? "bg-cream/95 shadow-sm backdrop-blur" : "bg-transparent"
+        solid ? "bg-fondo/95 shadow-sm backdrop-blur" : "bg-transparent"
       }`}
     >
       <Container className="flex h-16 items-center justify-between sm:h-20">
@@ -54,7 +54,7 @@ export function Nav({
             <Link
               key={l.href}
               href={l.href}
-              className="font-sans text-sm text-ink transition hover:text-mauve"
+              className="font-sans text-sm text-texto transition hover:text-primario"
             >
               {l.label}
             </Link>
@@ -64,7 +64,7 @@ export function Nav({
 
         <button
           type="button"
-          className="flex h-10 w-10 items-center justify-center text-ink md:hidden"
+          className="flex h-10 w-10 items-center justify-center text-texto md:hidden"
           onClick={() => setOpen((v) => !v)}
           aria-label={open ? "Cerrar menú" : "Abrir menú"}
           aria-expanded={open}
@@ -80,14 +80,14 @@ export function Nav({
       </Container>
 
       {open && (
-        <nav className="border-t border-mauve/15 bg-cream md:hidden">
+        <nav className="border-t border-primario/15 bg-fondo md:hidden">
           <Container className="flex flex-col gap-1 py-4">
             {links.map((l) => (
               <Link
                 key={l.href}
                 href={l.href}
                 onClick={() => setOpen(false)}
-                className="rounded-lg px-2 py-3 font-sans text-base text-ink transition hover:bg-cream-dark"
+                className="rounded-lg px-2 py-3 font-sans text-base text-texto transition hover:bg-fondo-oscuro"
               >
                 {l.label}
               </Link>

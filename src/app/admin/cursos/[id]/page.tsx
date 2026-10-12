@@ -28,60 +28,60 @@ export default async function EditarCursoAdmin({
 
   return (
     <div className="max-w-2xl">
-      <h1 className="font-serif text-4xl text-ink">{curso.titulo}</h1>
+      <h1 className="font-serif text-4xl text-texto">{curso.titulo}</h1>
 
-      <form action={updateCurso} className="mt-6 flex flex-col gap-4 rounded-2xl border border-mauve/15 bg-white/60 p-5">
+      <form action={updateCurso} className="mt-6 flex flex-col gap-4 rounded-2xl border border-primario/15 bg-white/60 p-5">
         <input type="hidden" name="id" value={curso.id} />
 
-        <label className="font-sans text-sm text-ink-soft">
+        <label className="font-sans text-sm text-texto-suave">
           Título
           <input
             name="titulo"
             defaultValue={curso.titulo}
             required
-            className="mt-1 w-full rounded-lg border border-mauve/20 bg-cream px-3 py-2 text-ink"
+            className="mt-1 w-full rounded-lg border border-primario/20 bg-fondo px-3 py-2 text-texto"
           />
         </label>
 
-        <label className="font-sans text-sm text-ink-soft">
+        <label className="font-sans text-sm text-texto-suave">
           Descripción
           <textarea
             name="descripcion"
             defaultValue={curso.descripcion ?? ""}
             rows={3}
-            className="mt-1 w-full rounded-lg border border-mauve/20 bg-cream px-3 py-2 text-ink"
+            className="mt-1 w-full rounded-lg border border-primario/20 bg-fondo px-3 py-2 text-texto"
           />
         </label>
 
-        <label className="font-sans text-sm text-ink-soft">
+        <label className="font-sans text-sm text-texto-suave">
           Vista previa (link de YouTube, se muestran los primeros 30 s)
           <input
             name="preview_youtube_url"
             type="url"
             defaultValue={curso.preview_youtube_url ?? ""}
             placeholder="https://www.youtube.com/watch?v=..."
-            className="mt-1 w-full rounded-lg border border-mauve/20 bg-cream px-3 py-2 text-ink"
+            className="mt-1 w-full rounded-lg border border-primario/20 bg-fondo px-3 py-2 text-texto"
           />
         </label>
 
         <div className="flex gap-4">
-          <label className="flex-1 font-sans text-sm text-ink-soft">
+          <label className="flex-1 font-sans text-sm text-texto-suave">
             Categoría
             <select
               name="categoria"
               defaultValue={curso.categoria}
-              className="mt-1 w-full rounded-lg border border-mauve/20 bg-cream px-3 py-2 text-ink"
+              className="mt-1 w-full rounded-lg border border-primario/20 bg-fondo px-3 py-2 text-texto"
             >
               <option value="publico_general">Público general</option>
               <option value="profesional">Profesional</option>
             </select>
           </label>
-          <label className="flex-1 font-sans text-sm text-ink-soft">
+          <label className="flex-1 font-sans text-sm text-texto-suave">
             Estado
             <select
               name="estado"
               defaultValue={curso.estado}
-              className="mt-1 w-full rounded-lg border border-mauve/20 bg-cream px-3 py-2 text-ink"
+              className="mt-1 w-full rounded-lg border border-primario/20 bg-fondo px-3 py-2 text-texto"
             >
               <option value="borrador">Borrador</option>
               <option value="publicado">Publicado</option>
@@ -90,36 +90,36 @@ export default async function EditarCursoAdmin({
         </div>
 
         <div className="flex gap-4">
-          <label className="flex-1 font-sans text-sm text-ink-soft">
+          <label className="flex-1 font-sans text-sm text-texto-suave">
             Precio
             <input
               name="precio"
               type="number"
               defaultValue={curso.precio}
-              className="mt-1 w-full rounded-lg border border-mauve/20 bg-cream px-3 py-2 text-ink"
+              className="mt-1 w-full rounded-lg border border-primario/20 bg-fondo px-3 py-2 text-texto"
             />
           </label>
-          <label className="flex-1 font-sans text-sm text-ink-soft">
+          <label className="flex-1 font-sans text-sm text-texto-suave">
             Días de acceso
             <input
               name="dias_acceso"
               type="number"
               defaultValue={curso.dias_acceso}
-              className="mt-1 w-full rounded-lg border border-mauve/20 bg-cream px-3 py-2 text-ink"
+              className="mt-1 w-full rounded-lg border border-primario/20 bg-fondo px-3 py-2 text-texto"
             />
           </label>
-          <label className="flex-1 font-sans text-sm text-ink-soft">
+          <label className="flex-1 font-sans text-sm text-texto-suave">
             Orden
             <input
               name="orden"
               type="number"
               defaultValue={curso.orden}
-              className="mt-1 w-full rounded-lg border border-mauve/20 bg-cream px-3 py-2 text-ink"
+              className="mt-1 w-full rounded-lg border border-primario/20 bg-fondo px-3 py-2 text-texto"
             />
           </label>
         </div>
 
-        <label className="flex items-center gap-2 font-sans text-sm text-ink-soft">
+        <label className="flex items-center gap-2 font-sans text-sm text-texto-suave">
           <input
             name="permitir_descarga"
             type="checkbox"
@@ -128,50 +128,50 @@ export default async function EditarCursoAdmin({
           Permitir descarga del video (si no, solo streaming protegido)
         </label>
 
-        <div className="rounded-xl border border-mauve/10 bg-cream p-4">
-          <label className="flex items-center gap-2 font-sans text-sm font-medium text-ink">
+        <div className="rounded-xl border border-primario/10 bg-fondo p-4">
+          <label className="flex items-center gap-2 font-sans text-sm font-medium text-texto">
             <input name="oferta_activa" type="checkbox" defaultChecked={curso.oferta_activa} />
             Oferta activa
           </label>
           <div className="mt-3 flex flex-wrap gap-4">
-            <label className="font-sans text-sm text-ink-soft">
+            <label className="font-sans text-sm text-texto-suave">
               Precio de oferta
               <input
                 name="precio_oferta"
                 type="number"
                 defaultValue={curso.precio_oferta ?? ""}
-                className="mt-1 w-40 rounded-lg border border-mauve/20 bg-white px-3 py-2 text-ink"
+                className="mt-1 w-40 rounded-lg border border-primario/20 bg-white px-3 py-2 text-texto"
               />
             </label>
-            <label className="font-sans text-sm text-ink-soft">
+            <label className="font-sans text-sm text-texto-suave">
               Desde
               <input
                 name="oferta_desde"
                 type="datetime-local"
                 defaultValue={curso.oferta_desde?.slice(0, 16) ?? ""}
-                className="mt-1 rounded-lg border border-mauve/20 bg-white px-3 py-2 text-ink"
+                className="mt-1 rounded-lg border border-primario/20 bg-white px-3 py-2 text-texto"
               />
             </label>
-            <label className="font-sans text-sm text-ink-soft">
+            <label className="font-sans text-sm text-texto-suave">
               Hasta
               <input
                 name="oferta_hasta"
                 type="datetime-local"
                 defaultValue={curso.oferta_hasta?.slice(0, 16) ?? ""}
-                className="mt-1 rounded-lg border border-mauve/20 bg-white px-3 py-2 text-ink"
+                className="mt-1 rounded-lg border border-primario/20 bg-white px-3 py-2 text-texto"
               />
             </label>
           </div>
         </div>
 
-        <SubmitButton className="self-start rounded-full bg-mauve px-7 py-3 text-sm font-medium text-cream transition hover:bg-mauve-dark disabled:opacity-60">
+        <SubmitButton className="self-start rounded-full bg-primario px-7 py-3 text-sm font-medium text-fondo transition hover:bg-primario-oscuro disabled:opacity-60">
           Guardar
         </SubmitButton>
         <FormPendingOverlay label="Guardando cambios…" />
       </form>
 
-      <div className="mt-6 rounded-2xl border border-mauve/15 bg-white/60 p-5">
-        <h2 className="font-serif text-2xl text-ink">Video</h2>
+      <div className="mt-6 rounded-2xl border border-primario/15 bg-white/60 p-5">
+        <h2 className="font-serif text-2xl text-texto">Video</h2>
         <div className="mt-2">
           <InfoHint>
             Subilo en <strong>MP4 (H.264)</strong>, comprimido a 720p si podés —
@@ -182,40 +182,40 @@ export default async function EditarCursoAdmin({
           </InfoHint>
         </div>
         {curso.video_storage_path ? (
-          <p className="mt-2 font-sans text-sm text-ink-soft">
+          <p className="mt-2 font-sans text-sm text-texto-suave">
             Video cargado.{" "}
             <a
               href={`/admin/cursos/${curso.id}/video-preview`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-mauve underline"
+              className="text-primario underline"
             >
               Ver (link temporal)
             </a>
           </p>
         ) : (
-          <p className="mt-2 font-sans text-sm text-ink-soft">Todavía no se subió video.</p>
+          <p className="mt-2 font-sans text-sm text-texto-suave">Todavía no se subió video.</p>
         )}
         <form action={subirVideoCurso} className="mt-3 flex items-center gap-3">
           <input type="hidden" name="cursoId" value={curso.id} />
           <input name="video" type="file" accept="video/*" required className="font-sans text-sm" />
-          <SubmitButton className="rounded-full bg-sage px-4 py-2 text-sm text-cream transition hover:bg-sage-dark disabled:opacity-60">
+          <SubmitButton className="rounded-full bg-secundario px-4 py-2 text-sm text-fondo transition hover:bg-secundario-oscuro disabled:opacity-60">
             Subir
           </SubmitButton>
           <FormPendingOverlay label="Subiendo video…" />
         </form>
       </div>
 
-      <div className="mt-6 rounded-2xl border border-mauve/15 bg-white/60 p-5">
-        <h2 className="font-serif text-2xl text-ink">Archivos adicionales</h2>
+      <div className="mt-6 rounded-2xl border border-primario/15 bg-white/60 p-5">
+        <h2 className="font-serif text-2xl text-texto">Archivos adicionales</h2>
         <ul className="mt-3 space-y-2">
           {archivos.map((a) => (
-            <li key={a.id} className="flex items-center justify-between font-sans text-sm text-ink-soft">
+            <li key={a.id} className="flex items-center justify-between font-sans text-sm text-texto-suave">
               {a.nombre_archivo}
               <form action={eliminarArchivoAdicional}>
                 <input type="hidden" name="id" value={a.id} />
                 <input type="hidden" name="cursoId" value={curso.id} />
-                <SubmitButton className="text-mauve hover:text-mauve-dark disabled:opacity-60">
+                <SubmitButton className="text-primario hover:text-primario-oscuro disabled:opacity-60">
                   Eliminar
                 </SubmitButton>
                 <FormPendingOverlay label="Eliminando…" />
@@ -223,23 +223,23 @@ export default async function EditarCursoAdmin({
             </li>
           ))}
           {archivos.length === 0 && (
-            <li className="font-sans text-sm text-ink-soft">Sin archivos adicionales.</li>
+            <li className="font-sans text-sm text-texto-suave">Sin archivos adicionales.</li>
           )}
         </ul>
         <form action={subirArchivoAdicional} className="mt-3 flex items-center gap-3">
           <input type="hidden" name="cursoId" value={curso.id} />
           <input name="archivo" type="file" accept=".pdf,.ppt,.pptx" required className="font-sans text-sm" />
-          <SubmitButton className="rounded-full bg-sage px-4 py-2 text-sm text-cream transition hover:bg-sage-dark disabled:opacity-60">
+          <SubmitButton className="rounded-full bg-secundario px-4 py-2 text-sm text-fondo transition hover:bg-secundario-oscuro disabled:opacity-60">
             Subir
           </SubmitButton>
           <FormPendingOverlay label="Subiendo archivo…" />
         </form>
       </div>
 
-      <div className="mt-6 rounded-2xl border border-mauve/15 bg-white/60 p-5">
-        <h2 className="font-serif text-2xl text-ink">Compras</h2>
+      <div className="mt-6 rounded-2xl border border-primario/15 bg-white/60 p-5">
+        <h2 className="font-serif text-2xl text-texto">Compras</h2>
         {accesos.length === 0 ? (
-          <p className="mt-2 font-sans text-sm text-ink-soft">
+          <p className="mt-2 font-sans text-sm text-texto-suave">
             Todavía no hay compras de este curso.
           </p>
         ) : (
@@ -249,7 +249,7 @@ export default async function EditarCursoAdmin({
               return (
                 <li
                   key={a.id}
-                  className="flex flex-wrap items-center justify-between gap-2 font-sans text-sm text-ink-soft"
+                  className="flex flex-wrap items-center justify-between gap-2 font-sans text-sm text-texto-suave"
                 >
                   <span>
                     {a.cliente_email} · comprado el{" "}
@@ -257,7 +257,7 @@ export default async function EditarCursoAdmin({
                   </span>
                   <span
                     className={`rounded-full px-3 py-1 text-xs font-medium ${
-                      vigente ? "bg-sage/15 text-sage-dark" : "bg-ink/5 text-ink-soft"
+                      vigente ? "bg-secundario/15 text-secundario-oscuro" : "bg-texto/5 text-texto-suave"
                     }`}
                   >
                     {vigente ? "Vigente" : "Vencido"} hasta{" "}
@@ -272,7 +272,7 @@ export default async function EditarCursoAdmin({
 
       <form action={deleteCurso} className="mt-6">
         <input type="hidden" name="id" value={curso.id} />
-        <SubmitButton className="font-sans text-sm text-mauve hover:text-mauve-dark disabled:opacity-60">
+        <SubmitButton className="font-sans text-sm text-primario hover:text-primario-oscuro disabled:opacity-60">
           Eliminar este curso
         </SubmitButton>
         <FormPendingOverlay label="Eliminando curso…" />

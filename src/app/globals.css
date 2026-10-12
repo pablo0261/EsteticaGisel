@@ -1,24 +1,45 @@
 @import "tailwindcss";
 
-@theme {
-  /* Paleta de marca (extraída del logo) */
-  --color-mauve: #c0899a;
-  --color-mauve-dark: #a66f82;
-  --color-mauve-soft: #d8b3bf;
-  --color-sage: #4e5340;
-  --color-sage-dark: #3b3f31;
-  --color-cream: #f6f1ea;
-  --color-cream-dark: #ece3d8;
-  --color-ink: #1a1a1a;
-  --color-ink-soft: #55514e;
+/*
+ * Colores de la marca del tenant. Los layouts del sitio y del panel los redefinen con
+ * style (estiloMarca). Los valores por defecto son la paleta de Gisel, para que las
+ * páginas sin tenant se vean igual que antes.
+ */
+:root {
+  color-scheme: light;
+  --marca-primario: #c0899a;
+  --marca-secundario: #4e5340;
+  --marca-fondo: #f6f1ea;
+  --marca-texto: #1a1a1a;
+}
 
+/*
+ * "inline": cada clase lleva el valor (var(--marca-…) o el color-mix) y no var(--color-…).
+ * Así el color-mix se resuelve en cada elemento con las variables de su tenant. Sin inline
+ * se resolvería una sola vez en :root, con los colores por defecto.
+ * En cada comentario: el resultado con la paleta de Gisel y el valor fijo que reemplaza.
+ */
+@theme inline {
+  --color-primario: var(--marca-primario);
+  /* #a37483 (antes #a66f82) */
+  --color-primario-oscuro: color-mix(in srgb, var(--marca-primario) 85%, black);
+  /* #d7b5bf (antes #d8b3bf) */
+  --color-primario-suave: color-mix(in srgb, var(--marca-primario) 63%, white);
+  --color-secundario: var(--marca-secundario);
+  /* #3b3f31 (igual que antes) */
+  --color-secundario-oscuro: color-mix(in srgb, var(--marca-secundario) 76%, black);
+  --color-fondo: var(--marca-fondo);
+  /* #eae5de (antes #ece3d8) */
+  --color-fondo-oscuro: color-mix(in srgb, var(--marca-fondo) 95%, black);
+  --color-texto: var(--marca-texto);
+  /* #535250 (antes #55514e): el texto atenuado hacia el fondo */
+  --color-texto-suave: color-mix(in srgb, var(--marca-texto) 74%, var(--marca-fondo));
+}
+
+@theme {
   /* Tipografía */
   --font-serif: var(--font-cormorant), Georgia, "Times New Roman", serif;
   --font-sans: var(--font-jost), system-ui, -apple-system, sans-serif;
-}
-
-:root {
-  color-scheme: light;
 }
 
 html {
@@ -26,8 +47,8 @@ html {
 }
 
 body {
-  background-color: var(--color-cream);
-  color: var(--color-ink);
+  background-color: var(--marca-fondo);
+  color: var(--marca-texto);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;

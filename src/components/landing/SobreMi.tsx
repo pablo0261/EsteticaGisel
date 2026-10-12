@@ -10,10 +10,10 @@ export function SobreMi({ nombre, marca }: { nombre: string; marca: Marca }) {
     .filter(Boolean);
 
   return (
-    <Section id="sobre-mi" className="bg-cream-dark">
+    <Section id="sobre-mi" className="bg-fondo-oscuro">
       <Container>
         <div className="grid items-center gap-12 lg:grid-cols-2">
-          <div className="relative aspect-[4/5] w-full overflow-hidden rounded-3xl bg-gradient-to-br from-mauve-soft to-sage/30">
+          <div className="relative aspect-[4/5] w-full overflow-hidden rounded-3xl bg-gradient-to-br from-primario-suave to-secundario/30">
             {marca.fotoPerfilUrl && (
               <Image
                 src={marca.fotoPerfilUrl}
@@ -26,11 +26,11 @@ export function SobreMi({ nombre, marca }: { nombre: string; marca: Marca }) {
           </div>
 
           <div>
-            <p className="font-sans text-xs uppercase tracking-[0.35em] text-sage">Sobre mí</p>
-            <h2 className="mt-3 font-serif text-4xl text-ink sm:text-5xl">
+            <p className="font-sans text-xs uppercase tracking-[0.35em] text-secundario">Sobre mí</p>
+            <h2 className="mt-3 font-serif text-4xl text-texto sm:text-5xl">
               {marca.sobreMiTitulo ?? nombre}
             </h2>
-            <div className="mt-6 space-y-4 font-sans text-ink-soft">
+            <div className="mt-6 space-y-4 font-sans text-texto-suave">
               {parrafos.map((p) => (
                 <p key={p}>{p}</p>
               ))}
