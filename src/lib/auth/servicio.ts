@@ -224,16 +224,31 @@ function hashEmailIntento(email: string): string {
   return hashEmailLogin(secretoMfa(), email.trim().toLowerCase());
 }
 
-/** ¿Se superó el límite de intentos fallidos de login (por email o por IP) en la ventana? */
+/**
+ * ¿Se superó el límite de intentos fallidos de login en la ventana? Con IP conocida cuenta
+ * por (email, IP), por IP y por email; sin IP, solo por email (ver loginPermitido).
+ */
 export async function loginBloqueado(email: string, ip: string | null): Promise<boolean> {
   const desde = new Date(Date.now() - VENTANA_LOGIN_MS).toISOString();
-  const [porEmail, porIp] = await Promise.all([
-    createAdminClient().from("intentos_login").select("id", { count: "exact", head: true })
-      .eq("email_hash", hashEmailIntento(email)).eq("exito", false).gte("creado_en", desde),
+  const emailHash = hashEmailIntento(email);
+  const fallidosDelEmail = () =>
+    createAdminClient()
+      .from("intentos_login")
+      .select("id", { count: "exact", head: true })
+      .eq("email_hash", emailHash)
+      .eq("exito", false)
+      .gte("creado_en", desde);
+  const [porEmail, porEmailEIp, porIp] = await Promise.all([
+    fallidosDelEmail(),
+    ip === null ? null : fallidosDelEmail().eq("ip", ip),
     contarPorIp("intentos_login", ip, desde, true),
   ]);
   fallar("intentos de login por email", porEmail.error);
-  return !loginPermitido(porEmail.count ?? 0, porIp);
+  fallar("intentos de login por email e IP", porEmailEIp?.error ?? null);
+  return !loginPermitido({
+    porEmail: porEmail.count ?? 0,
+    ip: porEmailEIp && porIp !== null ? { porEmailEIp: porEmailEIp.count ?? 0, porIp } : null,
+  });
 }
 
 /** Registra un intento de login (exitoso o no) y limpia los de más de un día. */
