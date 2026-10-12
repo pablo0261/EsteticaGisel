@@ -5,6 +5,7 @@ import { precioEfectivo } from "@/lib/cursos/reglas";
 import { isMpConfigurado, crearPreferencia } from "@/lib/mercadopago/client";
 import { tenantDelRequest } from "@/lib/tenant/actual";
 import { urlDelTenant } from "@/lib/tenant/urls";
+import { usaCredencialesGlobales } from "@/lib/tenant/credenciales-globales";
 
 export type ComprarCursoResult =
   | { ok: true; initPoint: string }
@@ -22,7 +23,7 @@ export async function comprarCurso(formData: FormData): Promise<ComprarCursoResu
   if (!clienteEmail) {
     return { ok: false, error: "Ingresá tu email para continuar." };
   }
-  if (!isMpConfigurado()) {
+  if (!isMpConfigurado() || !usaCredencialesGlobales(tenant.slug)) {
     return {
       ok: false,
       error: "La compra online todavía no está habilitada. Escribinos por WhatsApp.",

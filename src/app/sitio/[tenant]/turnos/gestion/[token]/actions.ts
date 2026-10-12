@@ -6,6 +6,7 @@ import { puedeCancelar } from "@/lib/turnos/reglas";
 import { isGoogleConfigurado, crearEvento, borrarEvento } from "@/lib/google-calendar/client";
 import { tenantDelRequest } from "@/lib/tenant/actual";
 import { datosDelTenant } from "@/lib/tenant/datos";
+import { usaCredencialesGlobales } from "@/lib/tenant/credenciales-globales";
 import type { ConfiguracionNegocio, Turno } from "@/lib/data/types";
 
 async function getTurnoGestionable(token: string) {
@@ -45,7 +46,11 @@ export async function cancelarTurno(token: string): Promise<AccionResult> {
     return { ok: false, error: "Fuera del plazo permitido para cancelar." };
   }
 
-  if (ctx.turno.google_calendar_event_id && isGoogleConfigurado()) {
+  if (
+    ctx.turno.google_calendar_event_id &&
+    isGoogleConfigurado() &&
+    usaCredencialesGlobales(ctx.tenant.slug)
+  ) {
     try {
       await borrarEvento(ctx.turno.google_calendar_event_id);
     } catch {
@@ -76,7 +81,7 @@ export async function reprogramarTurno(
   }
 
   let nuevoEventId: string | null = null;
-  if (isGoogleConfigurado()) {
+  if (isGoogleConfigurado() && usaCredencialesGlobales(ctx.tenant.slug)) {
     try {
       if (ctx.turno.google_calendar_event_id) {
         await borrarEvento(ctx.turno.google_calendar_event_id);

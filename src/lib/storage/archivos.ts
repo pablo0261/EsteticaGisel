@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { nombreSeguro } from "./nombre-seguro";
 
 export const BUCKET_ARCHIVOS = "cursos-archivos";
 
@@ -7,7 +8,7 @@ export async function subirArchivoCurso(
   archivo: Buffer,
   nombreArchivo: string,
 ): Promise<string> {
-  const path = `${carpeta}/${Date.now()}-${nombreArchivo}`;
+  const path = `${carpeta}/${Date.now()}-${nombreSeguro(nombreArchivo)}`;
   const db = createAdminClient();
   const { error } = await db.storage
     .from(BUCKET_ARCHIVOS)

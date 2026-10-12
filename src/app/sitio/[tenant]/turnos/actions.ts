@@ -8,6 +8,7 @@ import { isMpConfigurado, crearPreferencia } from "@/lib/mercadopago/client";
 import { tenantDelRequest } from "@/lib/tenant/actual";
 import { datosDelTenant } from "@/lib/tenant/datos";
 import { urlDelTenant } from "@/lib/tenant/urls";
+import { usaCredencialesGlobales } from "@/lib/tenant/credenciales-globales";
 import type { ConfiguracionNegocio, Servicio } from "@/lib/data/types";
 
 export type ReservarTurnoResult =
@@ -41,7 +42,7 @@ export async function reservarTurno(formData: FormData): Promise<ReservarTurnoRe
     };
   }
 
-  if (!isMpConfigurado()) {
+  if (!isMpConfigurado() || !usaCredencialesGlobales(tenant.slug)) {
     return {
       ok: false,
       error:

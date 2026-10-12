@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
   const error = request.nextUrl.searchParams.get("error");
 
   if (error) {
-    return htmlResponse(`<p>Google devolvió un error: <code>${error}</code></p>`);
+    return htmlResponse(`<p>Google devolvió un error: <code>${escapeHtml(error)}</code></p>`);
   }
   if (!code) {
     return htmlResponse("<p>Falta el parámetro <code>code</code>.</p>", 400);
@@ -29,12 +29,21 @@ export async function GET(request: NextRequest) {
     return htmlResponse(`
       <p>✅ Autorización exitosa. Copiá este valor en <code>.env.local</code> como
       <code>GOOGLE_REFRESH_TOKEN</code>:</p>
-      <pre style="background:#f6f1ea;padding:16px;border-radius:8px;word-break:break-all;">${refreshToken}</pre>
+      <pre style="background:#f6f1ea;padding:16px;border-radius:8px;word-break:break-all;">${escapeHtml(refreshToken)}</pre>
       <p>Después reiniciá el servidor (<code>npm run dev</code>).</p>
     `);
   } catch (e) {
-    return htmlResponse(`<p>Error al canjear el code: ${(e as Error).message}</p>`, 500);
+    return htmlResponse(`<p>Error al canjear el code: ${escapeHtml((e as Error).message)}</p>`, 500);
   }
+}
+
+function escapeHtml(texto: string): string {
+  return texto
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 function htmlResponse(bodyHtml: string, status = 200) {

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { isGoogleConfigurado, borrarEvento } from "@/lib/google-calendar/client";
 import { tenantDelAdmin } from "@/lib/tenant/admin";
 import { datosDelTenant } from "@/lib/tenant/datos";
+import { usaCredencialesGlobales } from "@/lib/tenant/credenciales-globales";
 import type { Turno } from "@/lib/data/types";
 
 export async function cancelarTurnoAdmin(formData: FormData) {
@@ -17,7 +18,11 @@ export async function cancelarTurnoAdmin(formData: FormData) {
     .maybeSingle();
   const turno = fila as unknown as Pick<Turno, "google_calendar_event_id"> | null;
 
-  if (turno?.google_calendar_event_id && isGoogleConfigurado()) {
+  if (
+    turno?.google_calendar_event_id &&
+    isGoogleConfigurado() &&
+    usaCredencialesGlobales(tenant.slug)
+  ) {
     try {
       await borrarEvento(turno.google_calendar_event_id);
     } catch {

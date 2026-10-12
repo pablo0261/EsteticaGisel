@@ -8,6 +8,7 @@ import { plantillaConfirmacionTurno, plantillaCompraCurso } from "@/lib/email/pl
 import { calcularExpiracion } from "@/lib/cursos/reglas";
 import { datosDelTenant } from "@/lib/tenant/datos";
 import { urlDelTenant } from "@/lib/tenant/urls";
+import { usaCredencialesGlobales } from "@/lib/tenant/credenciales-globales";
 
 /**
  * Webhook de Mercado Pago. Nunca confía en el payload por sí solo:
@@ -74,7 +75,7 @@ async function procesarPagoTurno(turnoId: string, estadoPago: string, mpPaymentI
   const db = datosDelTenant(turno.tenant_id);
 
   let eventId: string | null = null;
-  if (isGoogleConfigurado()) {
+  if (isGoogleConfigurado() && usaCredencialesGlobales(turno.tenants.slug)) {
     try {
       const fin = new Date(
         new Date(turno.fecha_hora).getTime() + turno.duracion_minutos * 60000,
