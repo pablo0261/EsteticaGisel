@@ -1,4 +1,6 @@
-export type Idioma = "es" | "pt";
+import type { Idioma } from "@/lib/i18n/textos";
+
+export type { Idioma };
 export type Pais = "AR" | "BR";
 export type Moneda = "ARS" | "BRL";
 

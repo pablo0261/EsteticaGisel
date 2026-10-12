@@ -1,3 +1,5 @@
+import type { Textos } from "@/lib/i18n/textos";
+
 type ConfigUrl = {
   dominio: string;
   protocolo: string;
@@ -33,3 +35,9 @@ export function whatsappLink(
   if (!digitos) return null;
   return `https://wa.me/${digitos}?text=${encodeURIComponent(mensaje)}`;
 }
+
+/** Mensajes precargados de los links de WhatsApp del sitio. */
+export const MENSAJES_WHATSAPP = {
+  consulta: { es: "¡Hola! Quería hacer una consulta.", pt: "Olá! Gostaria de fazer uma consulta." },
+  turno: { es: "¡Hola! Quería consultar por un turno.", pt: "Olá! Gostaria de agendar um horário." },
+} satisfies Record<string, Textos>;
