@@ -21,7 +21,12 @@ export async function proxy(request: NextRequest) {
     return new NextResponse("No encontrado", { status: 404 });
   }
 
-  if (path === "/admin" || path.startsWith("/admin/")) return updateSession(request);
+  if (path === "/admin" || path.startsWith("/admin/")) {
+    // x-tenant-slug solo lo fija el proxy: se descarta el que mande el cliente.
+    const cabecerasAdmin = new Headers(request.headers);
+    cabecerasAdmin.delete(CABECERA_TENANT);
+    return updateSession(request, cabecerasAdmin);
+  }
 
   const url = request.nextUrl.clone();
   url.pathname = `/sitio/${destino.slug}${path === "/" ? "" : path}`;

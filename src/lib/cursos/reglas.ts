@@ -1,5 +1,3 @@
-import { fechaEnZona, isoFechaHora, minutosDelDia } from "@/lib/turnos/fechas";
-
 /** Precio a cobrar: el de oferta si está activa y dentro de su ventana de fechas. */
 export function precioEfectivo(opts: {
   precio: number;
@@ -18,14 +16,9 @@ export function precioEfectivo(opts: {
   return opts.precioOferta;
 }
 
-/** Fecha de expiración = fecha de compra + días de acceso, expresada en la zona del negocio. */
-export function calcularExpiracion(
-  fechaCompraIso: string,
-  diasAcceso: number,
-  zona: string,
-): string {
-  const vence = new Date(new Date(fechaCompraIso).getTime() + diasAcceso * 24 * 60 * 60 * 1000);
-  return isoFechaHora(fechaEnZona(vence, zona), minutosDelDia(vence.toISOString(), zona), zona);
+/** Fecha de expiración = instante de compra + días de acceso × 24 h, en ISO UTC. */
+export function calcularExpiracion(fechaCompraIso: string, diasAcceso: number): string {
+  return new Date(new Date(fechaCompraIso).getTime() + diasAcceso * 86400000).toISOString();
 }
 
 /** ¿El acceso sigue vigente? */

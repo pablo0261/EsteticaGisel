@@ -75,16 +75,12 @@ describe("precioEfectivo", () => {
 });
 
 describe("calcularExpiracion", () => {
-  it("suma los días de acceso a la fecha de compra", () => {
-    expect(
-      calcularExpiracion("2026-07-10T12:00:00-03:00", 7, "America/Argentina/Buenos_Aires"),
-    ).toBe("2026-07-17T12:00:00-03:00");
+  it("suma los días de acceso (×24 h) al instante de compra, en UTC", () => {
+    expect(calcularExpiracion("2026-07-10T12:00:00-03:00", 7)).toBe("2026-07-17T15:00:00.000Z");
   });
 
-  it("expresa el vencimiento en la zona del negocio", () => {
-    expect(calcularExpiracion("2026-07-10T12:00:00-03:00", 7, "America/Manaus")).toBe(
-      "2026-07-17T11:00:00-04:00",
-    );
+  it("conserva los segundos y milisegundos del instante de compra", () => {
+    expect(calcularExpiracion("2026-07-10T12:00:45.123Z", 1)).toBe("2026-07-11T12:00:45.123Z");
   });
 });
 

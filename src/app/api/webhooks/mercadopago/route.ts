@@ -129,11 +129,11 @@ async function procesarPagoCurso(cursoId: string, pago: MpPayment) {
   // El pago llega sin tenant: se resuelve desde el curso (consulta de sistema por id).
   const { data: curso } = await createAdminClient()
     .from("cursos")
-    .select("tenant_id, titulo, dias_acceso, tenants(slug, zona_horaria)")
+    .select("tenant_id, titulo, dias_acceso, tenants(slug)")
     .eq("id", cursoId)
     .maybeSingle();
   if (!curso) return;
-  const tenantCurso = curso.tenants as unknown as { slug: string; zona_horaria: string };
+  const tenantCurso = curso.tenants as unknown as { slug: string };
   const db = datosDelTenant(curso.tenant_id);
 
   // Idempotencia: si este pago ya se procesó (reintento del webhook), no duplicar.
@@ -144,11 +144,7 @@ async function procesarPagoCurso(cursoId: string, pago: MpPayment) {
     .maybeSingle();
   if (pagoExistente) return;
 
-  const expiraEn = calcularExpiracion(
-    new Date().toISOString(),
-    curso.dias_acceso,
-    tenantCurso.zona_horaria,
-  );
+  const expiraEn = calcularExpiracion(new Date().toISOString(), curso.dias_acceso);
 
   const { data: acceso } = await db
     .insert("accesos_curso", {
