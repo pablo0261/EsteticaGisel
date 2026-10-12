@@ -18,7 +18,8 @@ import {
   tokenConFormato,
   vencimientoDispositivo,
 } from "./dispositivo";
-import { hashEmail, recuperacionPermitida } from "./recuperacion";
+import { loginPermitido, VENTANA_LOGIN_MS } from "./limite-login";
+import { hashEmail, hashEmailLogin, recuperacionPermitida } from "./recuperacion";
 import { secretoMfa } from "./secreto";
 
 /**
@@ -195,4 +196,43 @@ export async function registrarPedidoRecuperacion(email: string, ip: string): Pr
     .lt("creado_en", new Date(ahora - DIA_MS).toISOString());
   fallar("limpiar pedidos viejos", errorLimpieza);
   return true;
+}
+
+/** Clave del email para los intentos de login: sin espacios ni mayúsculas, como lo trata Supabase. */
+function hashEmailIntento(email: string): string {
+  return hashEmailLogin(secretoMfa(), email.trim().toLowerCase());
+}
+
+/** ¿Se superó el límite de intentos fallidos de login (por email o por IP) en la ventana? */
+export async function loginBloqueado(email: string, ip: string): Promise<boolean> {
+  const db = createAdminClient();
+  const desde = new Date(Date.now() - VENTANA_LOGIN_MS).toISOString();
+  const [porEmail, porIp] = await Promise.all([
+    db.from("intentos_login").select("id", { count: "exact", head: true })
+      .eq("email_hash", hashEmailIntento(email)).eq("exito", false).gte("creado_en", desde),
+    db.from("intentos_login").select("id", { count: "exact", head: true })
+      .eq("ip", ip).eq("exito", false).gte("creado_en", desde),
+  ]);
+  fallar("intentos de login por email", porEmail.error);
+  fallar("intentos de login por IP", porIp.error);
+  return !loginPermitido(porEmail.count ?? 0, porIp.count ?? 0);
+}
+
+/** Registra un intento de login (exitoso o no) y limpia los de más de un día. */
+export async function registrarIntentoLogin(email: string, ip: string, exito: boolean): Promise<void> {
+  const db = createAdminClient();
+  const ahora = Date.now();
+  const { error } = await db.from("intentos_login").insert({
+    email_hash: hashEmailIntento(email),
+    ip,
+    exito,
+    // creado_en con el reloj del servidor, el mismo de las comparaciones.
+    creado_en: new Date(ahora).toISOString(),
+  });
+  fallar("registrar intento de login", error);
+  const { error: errorLimpieza } = await db
+    .from("intentos_login")
+    .delete()
+    .lt("creado_en", new Date(ahora - DIA_MS).toISOString());
+  fallar("limpiar intentos de login viejos", errorLimpieza);
 }

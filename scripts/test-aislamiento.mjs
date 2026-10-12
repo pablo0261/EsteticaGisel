@@ -4,7 +4,7 @@
 // ni escribe nada por la API pública, ni lo de su propio tenant (su token se obtiene sin
 // el segundo factor: todo pasa por el servidor con la service role), la integridad
 // entre tenants en la base, qué ve un anónimo, y que las tablas del login (códigos,
-// dispositivos y pedidos de recuperación) son solo del servidor. Al final borra todo.
+// dispositivos, pedidos de recuperación e intentos de login) son solo del servidor. Al final borra todo.
 // Uso: npm run test:aislamiento
 import { createClient } from "@supabase/supabase-js";
 import { randomBytes, randomUUID } from "node:crypto";
@@ -245,10 +245,15 @@ try {
   await ok(admin.from("codigos_login").insert({ user_id: a.userId, codigo_hash: "hash-de-prueba", expira_en: enDiezMinutos() }), "código de login");
   await ok(admin.from("dispositivos_confiables").insert({ user_id: a.userId, token_hash: `hash-de-prueba-${sufijo}`, expira_en: enDiezMinutos() }), "dispositivo");
   await ok(admin.from("pedidos_recuperacion").insert({ email_hash: `hash-de-prueba-${sufijo}`, ip: "127.0.0.1" }), "pedido de recuperación");
+  await ok(
+    admin.from("intentos_login").insert({ email_hash: `hash-de-prueba-${sufijo}`, ip: "127.0.0.1", creado_en: new Date().toISOString() }),
+    "intento de login",
+  );
   const filasNuevas = {
     codigos_login: { user_id: a.userId, codigo_hash: "intruso", expira_en: enDiezMinutos() },
     dispositivos_confiables: { user_id: a.userId, token_hash: `intruso-${sufijo}`, expira_en: enDiezMinutos() },
     pedidos_recuperacion: { email_hash: `intruso-${sufijo}`, ip: "127.0.0.1" },
+    intentos_login: { email_hash: `intruso-${sufijo}`, ip: "127.0.0.1", creado_en: new Date().toISOString() },
   };
   for (const [tabla, fila] of Object.entries(filasNuevas)) {
     for (const [quien, cliente] of [["cliente A", usuarioA], ["master", usuarioMaster], ["anónimo", anon]]) {
@@ -265,6 +270,7 @@ try {
     admin.from("codigos_login").select("id", { count: "exact", head: true }).eq("user_id", a.userId),
     admin.from("dispositivos_confiables").select("id", { count: "exact", head: true }).eq("user_id", a.userId),
     admin.from("pedidos_recuperacion").select("id", { count: "exact", head: true }).like("email_hash", `%-${sufijo}`),
+    admin.from("intentos_login").select("id", { count: "exact", head: true }).like("email_hash", `%-${sufijo}`),
   ]);
   verificar(intactas.every((r) => !r.error && r.count === 1), "tablas del login: las filas de prueba siguen intactas");
 
@@ -307,6 +313,11 @@ try {
   const { error: errorPedidos } = await admin.from("pedidos_recuperacion").delete().like("email_hash", `%-${sufijo}`);
   if (errorPedidos) {
     console.error(`✗ limpieza: pedidos_recuperacion: ${errorPedidos.message}`);
+    fallas++;
+  }
+  const { error: errorIntentos } = await admin.from("intentos_login").delete().like("email_hash", `%-${sufijo}`);
+  if (errorIntentos) {
+    console.error(`✗ limpieza: intentos_login: ${errorIntentos.message}`);
     fallas++;
   }
   for (const id of usuariosCreados) {

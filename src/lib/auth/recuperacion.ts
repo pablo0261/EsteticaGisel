@@ -12,10 +12,19 @@ export function normalizarEmail(entrada: string): string | null {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : null;
 }
 
+function hmacEmail(secreto: string | undefined, dominio: string, email: string): string {
+  if (!secretoMfaValido(secreto)) throw new Error("MFA_SECRET ausente o demasiado corto");
+  return createHmac("sha256", secreto).update(`${dominio}|${email}`).digest("hex");
+}
+
 /** Para contar pedidos sin guardar emails en claro (también los de cuentas que no existen). */
 export function hashEmail(secreto: string | undefined, email: string): string {
-  if (!secretoMfaValido(secreto)) throw new Error("MFA_SECRET ausente o demasiado corto");
-  return createHmac("sha256", secreto).update(`recuperacion|${email}`).digest("hex");
+  return hmacEmail(secreto, "recuperacion", email);
+}
+
+/** Igual que hashEmail, para los intentos de login (otro dominio: los hashes no se cruzan). */
+export function hashEmailLogin(secreto: string | undefined, email: string): string {
+  return hmacEmail(secreto, "login", email);
 }
 
 export function recuperacionPermitida(enLaHoraPorEmail: number, enLaHoraPorIp: number): boolean {

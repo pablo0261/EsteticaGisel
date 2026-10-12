@@ -4,6 +4,7 @@ import {
   MAX_RECUPERACIONES_POR_EMAIL,
   MAX_RECUPERACIONES_POR_IP,
   hashEmail,
+  hashEmailLogin,
   normalizarEmail,
   recuperacionPermitida,
   validarNuevaContrasena,
@@ -42,6 +43,22 @@ describe("hashEmail", () => {
   it("sin secreto válido falla cerrado", () => {
     expect(() => hashEmail(undefined, "gisel@example.com")).toThrow();
     expect(() => hashEmail("corto", "gisel@example.com")).toThrow();
+  });
+});
+
+describe("hashEmailLogin", () => {
+  const SECRETO = "s".repeat(43);
+
+  it("HMAC distinto del de recuperación para el mismo email", () => {
+    const h = hashEmailLogin(SECRETO, "gisel@example.com");
+    expect(h).toMatch(/^[0-9a-f]{64}$/);
+    expect(h).toBe(hashEmailLogin(SECRETO, "gisel@example.com"));
+    expect(h).not.toBe(hashEmail(SECRETO, "gisel@example.com"));
+    expect(hashEmailLogin(SECRETO, "otra@example.com")).not.toBe(h);
+  });
+
+  it("sin secreto válido falla cerrado", () => {
+    expect(() => hashEmailLogin(undefined, "gisel@example.com")).toThrow();
   });
 });
 

@@ -28,8 +28,10 @@ import {
   comprobarCodigo,
   crearCodigo,
   dispositivoValido,
+  loginBloqueado,
   perfilDe,
   recordarDispositivo,
+  registrarIntentoLogin,
   registrarPedidoRecuperacion,
   revocarDispositivos,
 } from "./servicio";
@@ -91,19 +93,28 @@ export async function iniciarSesion(formData: FormData) {
   if (!area) ir(null, RUTAS_AUTH.login, { error: "sitio" });
 
   const email = String(formData.get("email") ?? "").trim();
+  // Límite propio antes de llamar a Supabase: el mismo mensaje exista o no la cuenta.
+  const ip = await getClientIp();
+  if (await loginBloqueado(email, ip)) ir(area, RUTAS_AUTH.login, { error: "demasiados_intentos" });
+
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password: String(formData.get("password") ?? ""),
   });
   const { user, session } = data;
-  if (error || !user || !session) ir(area, RUTAS_AUTH.login, { error: "credenciales" });
+  if (error || !user || !session) {
+    await registrarIntentoLogin(email, ip, false);
+    ir(area, RUTAS_AUTH.login, { error: "credenciales" });
+  }
 
   // La cuenta tiene que ser de este sitio (o del master): si no, el mismo error que una contraseña mala.
   if (!perfilPermitido(await perfilDe(user.id), area)) {
+    await registrarIntentoLogin(email, ip, false);
     await supabase.auth.signOut({ scope: "local" });
     ir(area, RUTAS_AUTH.login, { error: "credenciales" });
   }
+  await registrarIntentoLogin(email, ip, true);
 
   const almacen = await cookies();
   const sessionId = await sessionIdDelToken(supabase, session.access_token);
