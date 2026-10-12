@@ -1,5 +1,15 @@
 import { describe, it, expect } from "vitest";
-import { estiloMarca } from "./estilo";
+import { esColorHex, estiloMarca } from "./estilo";
+
+describe("esColorHex", () => {
+  it("acepta #rgb y #rrggbb, con mayúsculas o espacios alrededor", () => {
+    for (const v of ["#abc", "#ABC", "#1f6f8b", " #1F6F8B "]) expect(esColorHex(v), v).toBe(true);
+  });
+
+  it("rechaza transparencia (#rgba, #rrggbbaa) y cualquier otro formato", () => {
+    for (const v of ["#abcd", "#1f6f8b80", "abc", "red", "#ggg", "", "#12345"]) expect(esColorHex(v), v).toBe(false);
+  });
+});
 
 describe("estiloMarca", () => {
   it("define las 4 variables de color de la marca", () => {
@@ -30,5 +40,11 @@ describe("estiloMarca", () => {
       "--marca-secundario": "#4E5340",
       "--marca-texto": "#123",
     });
+  });
+
+  it("omite los colores con transparencia", () => {
+    expect(
+      estiloMarca({ colorPrimario: "#c0899a80", colorSecundario: "#4e53", colorFondo: "#f6f1ea", colorTexto: "#1a1a1a" }),
+    ).toEqual({ "--marca-fondo": "#f6f1ea", "--marca-texto": "#1a1a1a" });
   });
 });

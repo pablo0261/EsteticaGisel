@@ -10,8 +10,11 @@ const VARIABLES = {
 
 export type ColoresMarca = Pick<Marca, keyof typeof VARIABLES>;
 
-/** #rgb, #rgba, #rrggbb o #rrggbbaa. Cualquier otra cosa podría inyectar CSS en el style. */
-const HEX = /^#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
+/**
+ * #rgb o #rrggbb, sin transparencia (con alfa no se puede calcular el contraste de la
+ * paleta). Cualquier otra cosa podría inyectar CSS en el style.
+ */
+const HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
 
 /** ¿Es un color hex válido? (también lo usan los emails con la marca) */
 export function esColorHex(valor: string): boolean {
