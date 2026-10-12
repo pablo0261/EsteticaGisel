@@ -9,7 +9,7 @@ import type { Tenant } from "@/lib/tenant/tipos";
 export async function Footer({ tenant }: { tenant: Tenant }) {
   const { marca } = tenant;
   const config = await getConfiguracion(tenant.id);
-  const horarios = config ? resumirHorario(config.horario_atencion) : [];
+  const horarios = config ? resumirHorario(config.horario_atencion, tenant.idioma) : [];
   const whatsapp = whatsappLink(marca.whatsapp);
 
   return (

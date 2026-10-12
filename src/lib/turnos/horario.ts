@@ -1,3 +1,5 @@
+import type { Idioma } from "@/lib/i18n/textos";
+
 export const DIAS_SEMANA = [
   { key: "lun", label: "Lunes" },
   { key: "mar", label: "Martes" },
@@ -23,19 +25,74 @@ export function construirHorarioAtencion(
   return horario;
 }
 
-const PLURAL: Record<string, string> = {
-  lun: "Lunes",
-  mar: "Martes",
-  mie: "Miércoles",
-  jue: "Jueves",
-  vie: "Viernes",
-  sab: "Sábados",
-  dom: "Domingos",
+type NombresHorario = {
+  /** Nombre del día en un rango ("Lunes a viernes"). */
+  enRango: Record<string, string>;
+  /** Nombre del día cuando va solo ("Sábados"). */
+  solo: Record<string, string>;
+  /** Conector de dos días seguidos. */
+  y: string;
+  /** Conector de tres o más días seguidos. */
+  a: string;
+  horas: (desde: string, hasta: string) => string;
 };
 
-/** Agrupa los días consecutivos con el mismo horario: "Lunes a viernes · 14:00 a 19:00 hs". */
+const NOMBRES: Record<Idioma, NombresHorario> = {
+  es: {
+    enRango: {
+      lun: "Lunes",
+      mar: "Martes",
+      mie: "Miércoles",
+      jue: "Jueves",
+      vie: "Viernes",
+      sab: "Sábado",
+      dom: "Domingo",
+    },
+    solo: {
+      lun: "Lunes",
+      mar: "Martes",
+      mie: "Miércoles",
+      jue: "Jueves",
+      vie: "Viernes",
+      sab: "Sábados",
+      dom: "Domingos",
+    },
+    y: "y",
+    a: "a",
+    horas: (desde, hasta) => `${desde} a ${hasta} hs`,
+  },
+  pt: {
+    enRango: {
+      lun: "Segunda",
+      mar: "Terça",
+      mie: "Quarta",
+      jue: "Quinta",
+      vie: "Sexta",
+      sab: "Sábado",
+      dom: "Domingo",
+    },
+    solo: {
+      lun: "Segundas",
+      mar: "Terças",
+      mie: "Quartas",
+      jue: "Quintas",
+      vie: "Sextas",
+      sab: "Sábados",
+      dom: "Domingos",
+    },
+    y: "e",
+    a: "a",
+    horas: (desde, hasta) => `${desde} às ${hasta}`,
+  },
+};
+
+/**
+ * Agrupa los días consecutivos con el mismo horario, en el idioma del sitio:
+ * "Lunes a viernes · 14:00 a 19:00 hs" / "Segunda a sexta · 14:00 às 19:00".
+ */
 export function resumirHorario(
   horario: Record<string, [string, string]>,
+  idioma: Idioma,
 ): { dias: string; horas: string }[] {
   const grupos: { keys: string[]; rango: [string, string] }[] = [];
   let anteriorAbierto = false;
@@ -55,14 +112,14 @@ export function resumirHorario(
     anteriorAbierto = true;
   }
 
-  const label = (key: string) => DIAS_SEMANA.find((d) => d.key === key)!.label;
+  const n = NOMBRES[idioma];
   return grupos.map(({ keys, rango }) => {
     const primero = keys[0];
     const ultimo = keys[keys.length - 1];
     const dias =
       keys.length === 1
-        ? PLURAL[primero]
-        : `${label(primero)} ${keys.length === 2 ? "y" : "a"} ${label(ultimo).toLowerCase()}`;
-    return { dias, horas: `${rango[0]} a ${rango[1]} hs` };
+        ? n.solo[primero]
+        : `${n.enRango[primero]} ${keys.length === 2 ? n.y : n.a} ${n.enRango[ultimo].toLowerCase()}`;
+    return { dias, horas: n.horas(rango[0], rango[1]) };
   });
 }
