@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { datosDelTenant } from "@/lib/tenant/datos";
 import type { AccesoCurso, ArchivoCurso, Curso } from "./types";
 
@@ -14,15 +15,18 @@ export async function getCursosPublicos(tenantId: string): Promise<Curso[]> {
   }
 }
 
-export async function getCursoPublico(tenantId: string, id: string): Promise<Curso | null> {
-  const { data, error } = await datosDelTenant(tenantId)
-    .select("cursos")
-    .eq("id", id)
-    .eq("estado", "publicado")
-    .maybeSingle();
-  if (error || !data) return null;
-  return data as unknown as Curso;
-}
+/** Cacheado por request: generateMetadata y la página del curso comparten la consulta. */
+export const getCursoPublico = cache(
+  async (tenantId: string, id: string): Promise<Curso | null> => {
+    const { data, error } = await datosDelTenant(tenantId)
+      .select("cursos")
+      .eq("id", id)
+      .eq("estado", "publicado")
+      .maybeSingle();
+    if (error || !data) return null;
+    return data as unknown as Curso;
+  },
+);
 
 export async function getCursosAdmin(tenantId: string): Promise<Curso[]> {
   const { data, error } = await datosDelTenant(tenantId).select("cursos").order("orden");
