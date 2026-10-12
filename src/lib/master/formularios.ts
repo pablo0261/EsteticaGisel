@@ -16,6 +16,11 @@ import { esIdioma, esMoneda, esPais, zonaPermitida } from "./pais";
  */
 export type Resultado<T> = { ok: true; valor: T } | { ok: false; error: ClaveError };
 
+/** Caracteres de control: en un texto de una línea no se permiten. */
+const CONTROL = /[\u0000-\u001f\u007f]/;
+/** En un texto de varias líneas se permiten los saltos de línea (LF y CR). */
+const CONTROL_MULTILINEA = /[\u0000-\u0009\u000b\u000c\u000e-\u001f\u007f]/;
+
 function texto(fd: FormData, nombre: string): string {
   const v = fd.get(nombre);
   return typeof v === "string" ? v.trim() : "";
@@ -29,6 +34,7 @@ export type AltaCliente = DatosCliente & { slug: string; modulos: Modulos };
 export function parsearDatos(fd: FormData): Resultado<DatosCliente> {
   const nombre = texto(fd, "nombre");
   if (nombre.length < 2 || nombre.length > LIMITES.nombre) return { ok: false, error: "nombre" };
+  if (CONTROL.test(nombre)) return { ok: false, error: "texto_invalido" };
   const pais = texto(fd, "pais");
   if (!esPais(pais)) return { ok: false, error: "pais" };
   const idioma = texto(fd, "idioma");
@@ -112,32 +118,38 @@ export function normalizarInstagram(entrada: string): string | null {
     .replace(/[?#].*$/, "")
     .replace(/\/+$/, "")
     .replace(/^@/, "");
-  return /^[A-Za-z0-9._]{1,30}$/.test(usuario) ? usuario : null;
+  return /^(?!.*\.\.)(?!\.)[A-Za-z0-9._]{1,30}(?<!\.)$/.test(usuario) ? usuario : null;
 }
 
 export function parsearTextos(fd: FormData, pais: Pais): Resultado<TextosMarca> {
   const inicioTitulo = texto(fd, "inicio_titulo");
   if (!inicioTitulo || inicioTitulo.length > LIMITES.titulo) return { ok: false, error: "inicio_titulo" };
 
+  if (CONTROL.test(inicioTitulo)) return { ok: false, error: "texto_invalido" };
+
   let largo = false;
-  const opcional = (nombre: string, maximo: number): string | null => {
+  let control = false;
+  const opcional = (nombre: string, maximo: number, multilinea = false): string | null => {
     const v = texto(fd, nombre);
     if (v.length > maximo) largo = true;
+    if ((multilinea ? CONTROL_MULTILINEA : CONTROL).test(v)) control = true;
     return v || null;
   };
   const rubro = opcional("rubro", LIMITES.rubro);
   const tagline = opcional("tagline", LIMITES.tagline);
   const inicioDestacado = opcional("inicio_destacado", LIMITES.titulo);
-  const inicioTexto = opcional("inicio_texto", LIMITES.texto);
+  const inicioTexto = opcional("inicio_texto", LIMITES.texto, true);
   const sobreMiTitulo = opcional("sobre_mi_titulo", LIMITES.titulo);
-  const sobreMiTexto = opcional("sobre_mi_texto", LIMITES.texto);
-  const notaReservas = opcional("nota_reservas", LIMITES.nota);
+  const sobreMiTexto = opcional("sobre_mi_texto", LIMITES.texto, true);
+  const notaReservas = opcional("nota_reservas", LIMITES.nota, true);
   const direccion = opcional("direccion", LIMITES.direccion);
+  if (control) return { ok: false, error: "texto_invalido" };
   if (largo) return { ok: false, error: "texto_largo" };
 
   const whatsappCrudo = texto(fd, "whatsapp");
   const whatsapp = whatsappCrudo ? normalizarWhatsApp(whatsappCrudo, pais) : null;
-  if (whatsappCrudo && !whatsapp) return { ok: false, error: "whatsapp" };
+  const prefijo = pais === "AR" ? "+54" : "+55";
+  if (whatsappCrudo && (!whatsapp || !whatsapp.startsWith(prefijo))) return { ok: false, error: "whatsapp" };
 
   const instagramCrudo = texto(fd, "instagram");
   const instagram = instagramCrudo ? normalizarInstagram(instagramCrudo) : null;

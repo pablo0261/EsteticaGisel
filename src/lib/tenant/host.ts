@@ -7,7 +7,8 @@ export const CABECERA_TENANT = "x-tenant-slug";
 const SLUG = /^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/;
 
 export function esSlugValido(slug: string): boolean {
-  return SLUG.test(slug) && !(SUBDOMINIOS_RESERVADOS as readonly string[]).includes(slug);
+  // "--" también cubre los prefijos punycode ("xn--").
+  return SLUG.test(slug) && !slug.includes("--") && !(SUBDOMINIOS_RESERVADOS as readonly string[]).includes(slug);
 }
 
 export type Destino =

@@ -26,6 +26,7 @@ const ERRORES = {
   imagen_grande: "La imagen pesa más de 2 MB.",
   imagen_tipo: "La imagen tiene que ser PNG, JPG o WebP.",
   inicio_titulo: `El título de inicio es obligatorio (hasta ${LIMITES.titulo} caracteres).`,
+  texto_invalido: "Algún texto tiene caracteres de control no permitidos.",
   texto_largo: "Algún texto supera el largo permitido.",
   whatsapp: "El WhatsApp no es un celular válido del país del cliente.",
   instagram: "El Instagram tiene que ser un usuario (letras, números, puntos y guiones bajos).",

@@ -73,6 +73,18 @@ describe("cifrar y descifrar", () => {
     expect(() => descifrar(CLAVE, valor.split(".").slice(0, 3).join("."), CTX)).toThrow();
   });
 
+  it("rechaza un tag bien formado pero de largo incorrecto, un cifrado truncado y acepta el texto vacío", () => {
+    const valor = cifrar(CLAVE, "secreto", CTX);
+    const partes = valor.split(".");
+    const tagCorto = [...partes];
+    tagCorto[2] = Buffer.alloc(12).toString("base64url");
+    expect(() => descifrar(CLAVE, tagCorto.join("."), CTX)).toThrow();
+    const truncado = [...partes];
+    truncado[3] = partes[3].slice(0, -1);
+    expect(() => descifrar(CLAVE, truncado.join("."), CTX)).toThrow();
+    expect(descifrar(CLAVE, cifrar(CLAVE, "", CTX), CTX)).toBe("");
+  });
+
   it("rechaza una clave que no es de 32 bytes", () => {
     expect(() => cifrar(randomBytes(16), "x", CTX)).toThrow();
   });

@@ -24,6 +24,10 @@ const DATOS_AR = {
 };
 
 describe("parsearAlta y parsearDatos", () => {
+  it("rechaza caracteres de control en el nombre", () => {
+    expect(parsearDatos(fd({ ...DATOS_AR, nombre: "Ana\u0007 Spa" }))).toEqual({ ok: false, error: "texto_invalido" });
+  });
+
   it("alta válida: subdominio normalizado y módulos tildados", () => {
     expect(parsearAlta(fd({ ...DATOS_AR, slug: "  Ana-Spa ", modulo_turnos: "on", modulo_galeria: "on" }))).toEqual({
       ok: true,
@@ -98,12 +102,13 @@ describe("normalizarInstagram", () => {
   it("usuario con o sin @, o URL del perfil", () => {
     expect(normalizarInstagram("@ana.spa")).toBe("ana.spa");
     expect(normalizarInstagram("ana_spa")).toBe("ana_spa");
+    expect(normalizarInstagram("gisel.estetica")).toBe("gisel.estetica");
     expect(normalizarInstagram("https://www.instagram.com/ana.spa/?igsh=abc")).toBe("ana.spa");
     expect(normalizarInstagram("instagram.com/ana.spa")).toBe("ana.spa");
   });
 
   it("rechaza lo que no es un usuario", () => {
-    for (const v of ["ana spa", "<b>", "a".repeat(31), "https://example.com/ana", ""]) expect(normalizarInstagram(v), v).toBeNull();
+    for (const v of [".", "..", "a..b", ".a", "a.", "ana spa", "<b>", "a".repeat(31), "https://example.com/ana", ""]) expect(normalizarInstagram(v), v).toBeNull();
   });
 });
 
@@ -143,6 +148,22 @@ describe("parsearTextos", () => {
     });
     const br = parsearTextos(fd({ ...TEXTOS, whatsapp: "(11) 91234-5678" }), "BR");
     expect(br.ok && br.valor.whatsapp).toBe("+5511912345678");
+  });
+
+  it("el WhatsApp tiene que ser del país del cliente", () => {
+    for (const w of ["+1 415 555 2671", "+55 11 91234-5678"]) {
+      expect(parsearTextos(fd({ ...TEXTOS, whatsapp: w }), "AR"), w).toEqual({ ok: false, error: "whatsapp" });
+    }
+    expect(parsearTextos(fd({ ...TEXTOS, whatsapp: "+54 9 11 2345 6789" }), "BR")).toEqual({ ok: false, error: "whatsapp" });
+  });
+
+  it("rechaza caracteres de control; los textos largos admiten saltos de línea", () => {
+    for (const campo of ["inicio_titulo", "rubro", "tagline", "inicio_destacado", "sobre_mi_titulo"]) {
+      expect(parsearTextos(fd({ ...TEXTOS, [campo]: "a\nb" }), "AR"), campo).toEqual({ ok: false, error: "texto_invalido" });
+    }
+    expect(parsearTextos(fd({ ...TEXTOS, inicio_texto: "a\u0000b" }), "AR")).toEqual({ ok: false, error: "texto_invalido" });
+    const ok = parsearTextos(fd({ ...TEXTOS, sobre_mi_texto: "línea 1\r\nlínea 2\n\nlínea 3" }), "AR");
+    expect(ok.ok).toBe(true);
   });
 
   it("campos vacíos opcionales: WhatsApp, Instagram y email en null", () => {

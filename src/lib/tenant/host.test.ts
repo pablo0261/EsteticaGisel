@@ -14,6 +14,9 @@ describe("esSlugValido", () => {
     expect(esSlugValido("a.b")).toBe(false);
     expect(esSlugValido("-gisel")).toBe(false);
     expect(esSlugValido("gisel-")).toBe(false);
+    expect(esSlugValido("a--b")).toBe(false);
+    expect(esSlugValido("xn--abc")).toBe(false);
+    expect(esSlugValido("demo-br")).toBe(true);
     expect(esSlugValido("ab")).toBe(false);
     expect(esSlugValido("a".repeat(41))).toBe(false);
     expect(esSlugValido("app")).toBe(false);
