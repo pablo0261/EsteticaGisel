@@ -1,9 +1,10 @@
 import Image from "next/image";
 import { Section } from "@/components/ui/Section";
 import { Container } from "@/components/ui/Container";
+import { traducir, type Idioma } from "@/lib/i18n/textos";
 import type { Marca } from "@/lib/tenant/tipos";
 
-export function SobreMi({ nombre, marca }: { nombre: string; marca: Marca }) {
+export function SobreMi({ nombre, marca, idioma }: { nombre: string; marca: Marca; idioma: Idioma }) {
   const parrafos = (marca.sobreMiTexto ?? "")
     .split(/\n\s*\n/)
     .map((p) => p.trim())
@@ -26,7 +27,9 @@ export function SobreMi({ nombre, marca }: { nombre: string; marca: Marca }) {
           </div>
 
           <div>
-            <p className="font-sans text-xs uppercase tracking-[0.35em] text-secundario">Sobre mí</p>
+            <p className="font-sans text-xs uppercase tracking-[0.35em] text-secundario">
+              {traducir(idioma, { es: "Sobre mí", pt: "Sobre mim" })}
+            </p>
             <h2 className="mt-3 font-serif text-4xl text-texto sm:text-5xl">
               {marca.sobreMiTitulo ?? nombre}
             </h2>

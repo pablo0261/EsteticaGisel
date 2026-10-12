@@ -1,10 +1,12 @@
 import { Container } from "@/components/ui/Container";
 import { Button } from "@/components/ui/Button";
-import { whatsappLink } from "@/lib/tenant/urls";
+import { whatsappLink, MENSAJES_WHATSAPP } from "@/lib/tenant/urls";
+import { traductor } from "@/lib/i18n/textos";
 import type { Tenant } from "@/lib/tenant/tipos";
 
 export function CtaWhatsapp({ tenant }: { tenant: Tenant }) {
-  const whatsapp = whatsappLink(tenant.marca.whatsapp, "¡Hola! Quería consultar por un turno.");
+  const t = traductor(tenant.idioma);
+  const whatsapp = whatsappLink(tenant.marca.whatsapp, t(MENSAJES_WHATSAPP.turno));
   const reservaOnline = tenant.modulos.turnos;
   if (!whatsapp && !reservaOnline) return null;
 
@@ -12,19 +14,28 @@ export function CtaWhatsapp({ tenant }: { tenant: Tenant }) {
     <section className="bg-primario">
       <Container className="flex flex-col items-center gap-6 py-16 text-center sm:py-20">
         <h2 className="max-w-2xl font-serif text-4xl text-fondo sm:text-5xl">
-          ¿Lista para tu próximo turno?
+          {t({ es: "¿Lista para tu próximo turno?", pt: "Pronta para o seu próximo horário?" })}
         </h2>
         <p className="max-w-xl font-sans text-fondo/90">
           {whatsapp && reservaOnline
-            ? "Escribime por WhatsApp para cualquier consulta, o reservá directamente online."
+            ? t({
+                es: "Escribime por WhatsApp para cualquier consulta, o reservá directamente online.",
+                pt: "Me chame no WhatsApp para qualquer dúvida ou agende direto online.",
+              })
             : whatsapp
-              ? "Escribime por WhatsApp y coordinamos tu turno."
-              : "Reservá tu turno online en pocos pasos."}
+              ? t({
+                  es: "Escribime por WhatsApp y coordinamos tu turno.",
+                  pt: "Me chame no WhatsApp e combinamos seu horário.",
+                })
+              : t({
+                  es: "Reservá tu turno online en pocos pasos.",
+                  pt: "Agende seu horário online em poucos passos.",
+                })}
         </p>
         <div className="flex flex-col gap-3 sm:flex-row">
           {whatsapp && (
             <Button href={whatsapp} variant="onDark">
-              Escribir por WhatsApp
+              {t({ es: "Escribir por WhatsApp", pt: "Falar no WhatsApp" })}
             </Button>
           )}
           {reservaOnline && (
@@ -33,7 +44,7 @@ export function CtaWhatsapp({ tenant }: { tenant: Tenant }) {
               variant="outline"
               className="border-fondo text-fondo hover:bg-fondo hover:text-primario"
             >
-              Reservar online
+              {t({ es: "Reservar online", pt: "Agendar online" })}
             </Button>
           )}
         </div>

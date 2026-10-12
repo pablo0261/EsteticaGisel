@@ -9,16 +9,16 @@ import { getTestimonios } from "@/lib/data/testimonios";
 
 export default async function Inicio({ params }: { params: Promise<{ tenant: string }> }) {
   const tenant = await tenantDeLaPagina(params);
-  const { modulos, marca } = tenant;
+  const { modulos, marca, idioma } = tenant;
   const testimonios = modulos.testimonios ? await getTestimonios(tenant.id) : [];
 
   return (
     <main>
       <Hero tenant={tenant} />
       <Servicios tenant={tenant} />
-      {modulos.sobreMi && <SobreMi nombre={tenant.nombre} marca={marca} />}
-      {testimonios.length > 0 && <Testimonios testimonios={testimonios} />}
-      {marca.instagram && <Redes instagram={marca.instagram} />}
+      {modulos.sobreMi && <SobreMi nombre={tenant.nombre} marca={marca} idioma={idioma} />}
+      {testimonios.length > 0 && <Testimonios testimonios={testimonios} idioma={idioma} />}
+      {marca.instagram && <Redes instagram={marca.instagram} idioma={idioma} />}
       <CtaWhatsapp tenant={tenant} />
     </main>
   );

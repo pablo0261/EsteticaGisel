@@ -1,24 +1,31 @@
 import Link from "next/link";
 import { Section } from "@/components/ui/Section";
 import { Container } from "@/components/ui/Container";
-import { formatPrecioARS, formatDuracion } from "@/lib/format";
+import { formatPrecio, formatDuracion } from "@/lib/format";
 import { getServiciosPublicos } from "@/lib/data/servicios";
+import { traductor } from "@/lib/i18n/textos";
 import type { Tenant } from "@/lib/tenant/tipos";
 
 export async function Servicios({ tenant }: { tenant: Tenant }) {
   const servicios = await getServiciosPublicos(tenant.id);
   if (servicios.length === 0) return null;
   const reservaOnline = tenant.modulos.turnos;
+  const t = traductor(tenant.idioma);
 
   return (
     <Section id="servicios" className="bg-fondo">
       <Container>
         <div className="max-w-2xl">
-          <p className="font-sans text-xs uppercase tracking-[0.35em] text-secundario">Tratamientos</p>
-          <h2 className="mt-3 font-serif text-4xl text-texto sm:text-5xl">Servicios</h2>
+          <p className="font-sans text-xs uppercase tracking-[0.35em] text-secundario">
+            {t({ es: "Tratamientos", pt: "Tratamentos" })}
+          </p>
+          <h2 className="mt-3 font-serif text-4xl text-texto sm:text-5xl">
+            {t({ es: "Servicios", pt: "Serviços" })}
+          </h2>
           <p className="mt-4 font-sans text-texto-suave">
-            Cada servicio tiene su duración y precio.
-            {reservaOnline && " Reservá online y asegurá tu turno."}
+            {t({ es: "Cada servicio tiene su duración y precio.", pt: "Cada serviço tem sua duração e preço." })}
+            {reservaOnline &&
+              ` ${t({ es: "Reservá online y asegurá tu turno.", pt: "Agende online e garanta seu horário." })}`}
           </p>
         </div>
 
@@ -33,14 +40,16 @@ export async function Servicios({ tenant }: { tenant: Tenant }) {
                 {formatDuracion(s.duracion_minutos)}
               </p>
               <p className="mt-4 font-sans text-lg text-primario-oscuro">
-                {s.precio > 0 ? formatPrecioARS(s.precio) : "Consultar"}
+                {s.precio > 0
+                  ? formatPrecio(s.precio, tenant.moneda, tenant.idioma)
+                  : t({ es: "Consultar", pt: "Sob consulta" })}
               </p>
               {reservaOnline && (
                 <Link
                   href={`/turnos?servicio=${encodeURIComponent(s.nombre)}`}
                   className="mt-6 inline-flex font-sans text-sm font-medium text-primario transition hover:text-primario-oscuro"
                 >
-                  Reservar turno →
+                  {t({ es: "Reservar turno →", pt: "Agendar horário →" })}
                 </Link>
               )}
             </article>

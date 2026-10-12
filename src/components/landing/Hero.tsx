@@ -1,12 +1,14 @@
 import { Container } from "@/components/ui/Container";
 import { Button } from "@/components/ui/Button";
-import { whatsappLink } from "@/lib/tenant/urls";
+import { whatsappLink, MENSAJES_WHATSAPP } from "@/lib/tenant/urls";
 import { iniciales } from "@/lib/tenant/iniciales";
+import { traductor } from "@/lib/i18n/textos";
 import type { Tenant } from "@/lib/tenant/tipos";
 
 export function Hero({ tenant }: { tenant: Tenant }) {
   const { marca, modulos } = tenant;
-  const whatsapp = whatsappLink(marca.whatsapp);
+  const t = traductor(tenant.idioma);
+  const whatsapp = whatsappLink(marca.whatsapp, t(MENSAJES_WHATSAPP.consulta));
 
   return (
     <section className="relative flex min-h-screen items-center overflow-hidden bg-gradient-to-b from-fondo via-fondo to-fondo-oscuro">
@@ -39,13 +41,17 @@ export function Hero({ tenant }: { tenant: Tenant }) {
           )}
           <div className="mt-9 flex flex-col gap-3 sm:flex-row">
             {modulos.turnos ? (
-              <Button href="/turnos">Reservar turno</Button>
+              <Button href="/turnos">{t({ es: "Reservar turno", pt: "Agendar horário" })}</Button>
             ) : (
-              whatsapp && <Button href={whatsapp}>Escribir por WhatsApp</Button>
+              whatsapp && (
+                <Button href={whatsapp}>
+                  {t({ es: "Escribir por WhatsApp", pt: "Falar no WhatsApp" })}
+                </Button>
+              )
             )}
             {modulos.cursos && (
               <Button href="/cursos" variant="outline">
-                Ver cursos
+                {t({ es: "Ver cursos", pt: "Ver cursos" })}
               </Button>
             )}
           </div>

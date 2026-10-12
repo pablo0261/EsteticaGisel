@@ -3,14 +3,16 @@ import { Container } from "@/components/ui/Container";
 import { Logo } from "@/components/ui/Logo";
 import { getConfiguracion } from "@/lib/data/configuracion";
 import { resumirHorario } from "@/lib/turnos/horario";
-import { whatsappLink } from "@/lib/tenant/urls";
+import { whatsappLink, MENSAJES_WHATSAPP } from "@/lib/tenant/urls";
+import { traductor } from "@/lib/i18n/textos";
 import type { Tenant } from "@/lib/tenant/tipos";
 
 export async function Footer({ tenant }: { tenant: Tenant }) {
   const { marca } = tenant;
+  const t = traductor(tenant.idioma);
   const config = await getConfiguracion(tenant.id);
   const horarios = config ? resumirHorario(config.horario_atencion, tenant.idioma) : [];
-  const whatsapp = whatsappLink(marca.whatsapp);
+  const whatsapp = whatsappLink(marca.whatsapp, t(MENSAJES_WHATSAPP.consulta));
 
   return (
     <footer id="contacto" className="bg-secundario-oscuro text-fondo">
@@ -26,7 +28,7 @@ export async function Footer({ tenant }: { tenant: Tenant }) {
           {horarios.length > 0 && (
             <div>
               <h3 className="font-sans text-sm font-semibold uppercase tracking-wider text-fondo/90">
-                Horarios
+                {t({ es: "Horarios", pt: "Horários" })}
               </h3>
               <ul className="mt-4 space-y-2 font-sans text-sm text-fondo/70">
                 {horarios.map((h) => (
@@ -41,7 +43,7 @@ export async function Footer({ tenant }: { tenant: Tenant }) {
 
           <div>
             <h3 className="font-sans text-sm font-semibold uppercase tracking-wider text-fondo/90">
-              Contacto
+              {t({ es: "Contacto", pt: "Contato" })}
             </h3>
             <ul className="mt-4 space-y-2 font-sans text-sm text-fondo/70">
               {whatsapp && (
@@ -77,7 +79,7 @@ export async function Footer({ tenant }: { tenant: Tenant }) {
           {tenant.modulos.turnos && (
             <div>
               <h3 className="font-sans text-sm font-semibold uppercase tracking-wider text-fondo/90">
-                Reservas
+                {t({ es: "Reservas", pt: "Agendamentos" })}
               </h3>
               {marca.notaReservas && (
                 <p className="mt-4 font-sans text-sm text-fondo/70">{marca.notaReservas}</p>
@@ -86,7 +88,7 @@ export async function Footer({ tenant }: { tenant: Tenant }) {
                 href="/turnos"
                 className="mt-4 inline-flex font-sans text-sm font-medium text-fondo underline-offset-4 hover:underline"
               >
-                Reservar turno →
+                {t({ es: "Reservar turno →", pt: "Agendar horário →" })}
               </Link>
             </div>
           )}
@@ -94,7 +96,8 @@ export async function Footer({ tenant }: { tenant: Tenant }) {
 
         <div className="mt-12 border-t border-fondo/15 pt-6 font-sans text-xs text-fondo/50">
           © {tenant.nombre}
-          {marca.rubro && ` · ${marca.rubro}`}. Todos los derechos reservados.
+          {marca.rubro && ` · ${marca.rubro}`}.{" "}
+          {t({ es: "Todos los derechos reservados.", pt: "Todos os direitos reservados." })}
         </div>
       </Container>
     </footer>

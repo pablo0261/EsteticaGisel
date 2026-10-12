@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Container } from "@/components/ui/Container";
 import { Button } from "@/components/ui/Button";
 import { Logo } from "@/components/ui/Logo";
+import { useT } from "@/lib/i18n/cliente";
 import type { Modulos } from "@/lib/tenant/tipos";
 
 export function Nav({
@@ -18,14 +19,20 @@ export function Nav({
   modulos: Modulos;
   whatsappUrl: string | null;
 }) {
+  const t = useT();
   const links = [
-    { href: "/#servicios", label: "Servicios" },
-    ...(modulos.sobreMi ? [{ href: "/#sobre-mi", label: "Sobre mí" }] : []),
-    ...(modulos.testimonios ? [{ href: "/#testimonios", label: "Testimonios" }] : []),
-    ...(modulos.cursos ? [{ href: "/cursos", label: "Cursos" }] : []),
-    { href: "/#contacto", label: "Contacto" },
+    { href: "/#servicios", label: t({ es: "Servicios", pt: "Serviços" }) },
+    ...(modulos.sobreMi
+      ? [{ href: "/#sobre-mi", label: t({ es: "Sobre mí", pt: "Sobre mim" }) }]
+      : []),
+    ...(modulos.testimonios
+      ? [{ href: "/#testimonios", label: t({ es: "Testimonios", pt: "Depoimentos" }) }]
+      : []),
+    ...(modulos.cursos ? [{ href: "/cursos", label: t({ es: "Cursos", pt: "Cursos" }) }] : []),
+    { href: "/#contacto", label: t({ es: "Contacto", pt: "Contato" }) },
   ];
   const reservarHref = modulos.turnos ? "/turnos" : whatsappUrl;
+  const reservarTexto = t({ es: "Reservar turno", pt: "Agendar horário" });
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
 
@@ -45,7 +52,7 @@ export function Nav({
       }`}
     >
       <Container className="flex h-16 items-center justify-between sm:h-20">
-        <Link href="/" aria-label="Inicio" onClick={() => setOpen(false)}>
+        <Link href="/" aria-label={t({ es: "Inicio", pt: "Início" })} onClick={() => setOpen(false)}>
           <Logo src={logoUrl} alt={nombre} />
         </Link>
 
@@ -59,14 +66,16 @@ export function Nav({
               {l.label}
             </Link>
           ))}
-          {reservarHref && <Button href={reservarHref}>Reservar turno</Button>}
+          {reservarHref && <Button href={reservarHref}>{reservarTexto}</Button>}
         </nav>
 
         <button
           type="button"
           className="flex h-10 w-10 items-center justify-center text-texto md:hidden"
           onClick={() => setOpen((v) => !v)}
-          aria-label={open ? "Cerrar menú" : "Abrir menú"}
+          aria-label={
+            open ? t({ es: "Cerrar menú", pt: "Fechar menu" }) : t({ es: "Abrir menú", pt: "Abrir menu" })
+          }
           aria-expanded={open}
         >
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
@@ -94,7 +103,7 @@ export function Nav({
             ))}
             {reservarHref && (
               <Button href={reservarHref} className="mt-2 w-full">
-                Reservar turno
+                {reservarTexto}
               </Button>
             )}
           </Container>
