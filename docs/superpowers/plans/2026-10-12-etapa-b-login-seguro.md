@@ -18,6 +18,8 @@
 
 ---
 
+> **Nota (post-revisión de las Tasks 1–5):** `hashEmail` cambió a `hashEmail(secreto, email)` (HMAC con `MFA_SECRET`) en el commit d278fa5. Los bloques de la Task 4 de abajo muestran la versión original con SHA-256; el código vigente es el del repo.
+
 ## Alcance y decisiones
 
 **Incluido en B:**
@@ -64,7 +66,7 @@
 
 1. **`codigos_login` suma `usado_en`.** Al verificar, el código se marca como usado y no se borra, así sigue contando para el límite de 5 códigos por usuario por hora. Hay un solo código vigente por usuario: al crear uno, los anteriores vencen.
 2. **Intentos con compare-and-set.** Cada intento suma 1 a `intentos` con `update … where intentos = <leído>` antes de comparar. Dos intentos en paralelo no pueden usar el mismo número, y no hace falta una función SQL.
-3. **Tabla `pedidos_recuperacion`** (`email_hash`, `ip`, `creado_en`) para limitar la recuperación a 3 pedidos por email y 10 por IP por hora. El email se guarda como SHA-256 del email normalizado, nunca en claro.
+3. **Tabla `pedidos_recuperacion`** (`email_hash`, `ip`, `creado_en`) para limitar la recuperación a 3 pedidos por email y 10 por IP por hora. El email se guarda como HMAC-SHA256 con `MFA_SECRET` (`hashEmail(secreto, email)`, implementado en el commit d278fa5), nunca en claro.
 4. **El link de recuperación es nuestro:** `<sitio>/admin/restablecer?token_hash=…`, o `app.<dominio>/restablecer?…` para el master. No se usa el `action_link` de Supabase.
    - La página (GET) solo muestra el formulario. El token se consume en la server action, con `verifyOtp({ type: "recovery", token_hash })`.
    - Así no hace falta configurar URLs de redirección en Supabase, y un antivirus que abre el link no gasta el token.
@@ -2054,7 +2056,7 @@ export async function registrarPedidoRecuperacion(email: string, ip: string): Pr
   const db = createAdminClient();
   const ahora = Date.now();
   const desde = new Date(ahora - HORA_MS).toISOString();
-  const emailHash = hashEmail(email);
+  const emailHash = hashEmail(secretoMfa(), email);
   const [porEmail, porIp] = await Promise.all([
     db.from("pedidos_recuperacion").select("id", { count: "exact", head: true }).eq("email_hash", emailHash).gte("creado_en", desde),
     db.from("pedidos_recuperacion").select("id", { count: "exact", head: true }).eq("ip", ip).gte("creado_en", desde),
