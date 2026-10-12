@@ -47,6 +47,8 @@ const ERRORES = {
   gmail_usuario: "El usuario de Gmail tiene que ser un email.",
   gmail_contrasena: "La contraseña de aplicación son 16 letras (Google la muestra en grupos de 4).",
   gmail_sin_contrasena: "Falta la contraseña de aplicación.",
+  gmail_contrasena_cuenta_nueva: "Cargá la contraseña de aplicación de la cuenta nueva.",
+  credencial_ilegible: "No se pudo leer la credencial guardada; volvé a cargarla.",
   gmail_remitente: `El nombre del remitente tiene hasta ${LIMITES.remitente} caracteres, en una sola línea.`,
   gmail_autenticacion: "Gmail rechazó el usuario o la contraseña de aplicación. No se guardó nada nuevo.",
   gmail_conexion: "No pudimos conectar con Gmail. No se guardó nada nuevo.",

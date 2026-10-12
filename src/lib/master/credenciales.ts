@@ -78,30 +78,47 @@ export async function estadoCredenciales(tenantId: string): Promise<EstadoCreden
   };
 }
 
+/** Misma cuenta de Gmail que la guardada (form.usuario ya viene normalizado). */
+function mismaCuenta(usuario: string, guardado: string | null): boolean {
+  return guardado !== null && usuario === guardado.trim().toLowerCase();
+}
+
 /**
  * "Probar conexión y guardar". Prueba con los datos efectivos (la contraseña nueva o la
- * guardada). Si pasa, guarda y marca ok. Si falla, no guarda nada nuevo; si los datos
- * eran los guardados (misma cuenta, sin contraseña nueva), registra el error (alerta en la
- * lista). Lanza si falta CREDENCIALES_KEY (la action lo chequea antes).
+ * guardada, que solo sirve para la misma cuenta). Si pasa, guarda y marca ok. Si falla, no
+ * guarda nada nuevo; si los datos eran los guardados (misma cuenta, sin contraseña nueva),
+ * registra el error (alerta en la lista). Lanza si falta CREDENCIALES_KEY (la action lo
+ * chequea antes). Si la contraseña guardada no se puede descifrar (clave cambiada o valor
+ * dañado), pide volver a cargarla.
  */
 export async function probarYGuardarGmail(
   tenantId: string,
   form: FormGmail,
-): Promise<{ ok: true } | { ok: false; error: FalloSmtp | "gmail_sin_contrasena" }> {
+): Promise<
+  | { ok: true }
+  | { ok: false; error: FalloSmtp | "gmail_sin_contrasena" | "gmail_contrasena_cuenta_nueva" | "credencial_ilegible" }
+> {
   await masterVerificado();
   const clave = claveCredenciales();
   const fila = await leerFila(tenantId);
   const contexto = { tenantId, columna: "smtp_password" } as const;
+  const esLaMismaCuenta = mismaCuenta(form.usuario, fila.smtp_usuario);
 
   let contrasena = form.contrasena;
   if (!contrasena) {
     if (!fila.smtp_password) return { ok: false, error: "gmail_sin_contrasena" };
-    contrasena = descifrar(clave, fila.smtp_password, contexto);
+    // La contraseña guardada es de la cuenta guardada: no se prueba con otra cuenta.
+    if (!esLaMismaCuenta) return { ok: false, error: "gmail_contrasena_cuenta_nueva" };
+    try {
+      contrasena = descifrar(clave, fila.smtp_password, contexto);
+    } catch {
+      return { ok: false, error: "credencial_ilegible" };
+    }
   }
 
   const prueba = await verificarGmail(form.usuario, contrasena);
   if (!prueba.ok) {
-    const esLaGuardada = !form.contrasena && form.usuario === fila.smtp_usuario;
+    const esLaGuardada = !form.contrasena && esLaMismaCuenta;
     if (esLaGuardada) {
       await actualizar(tenantId, { smtp_estado: "error", smtp_ultimo_error: textoErrorSmtp(prueba.fallo) });
     }
@@ -120,7 +137,9 @@ export async function probarYGuardarGmail(
 
 /**
  * Mercado Pago manual (spec 9). Un access token nuevo fija mp_origen = 'manual' y limpia
- * los datos del OAuth. Los campos vacíos mantienen lo guardado.
+ * los datos del OAuth. Guardar solo la public key o el secreto del webhook no cambia el
+ * origen ni toca el OAuth (salvo que no hubiera origen: entonces queda 'manual'). Los
+ * campos vacíos mantienen lo guardado.
  */
 export async function guardarMercadoPago(tenantId: string, form: FormMp): Promise<"ok" | "mp_sin_access_token"> {
   await masterVerificado();
@@ -128,8 +147,9 @@ export async function guardarMercadoPago(tenantId: string, form: FormMp): Promis
   const fila = await leerFila(tenantId);
   if (!form.accessToken && !fila.mp_access_token) return "mp_sin_access_token";
 
-  const cambios: Record<string, unknown> = { mp_origen: "manual" };
+  const cambios: Record<string, unknown> = {};
   if (form.accessToken) {
+    cambios.mp_origen = "manual";
     cambios.mp_access_token = cifrar(clave, form.accessToken, { tenantId, columna: "mp_access_token" });
     cambios.mp_refresh_token = null;
     cambios.mp_token_vence_en = null;
@@ -139,6 +159,8 @@ export async function guardarMercadoPago(tenantId: string, form: FormMp): Promis
     cambios.mp_webhook_secret = cifrar(clave, form.webhookSecret, { tenantId, columna: "mp_webhook_secret" });
   }
   if (form.publicKey) cambios.mp_public_key = form.publicKey;
+  if (Object.keys(cambios).length === 0) return "ok";
+  if (!fila.mp_origen) cambios.mp_origen = "manual";
   await actualizar(tenantId, cambios);
   return "ok";
 }

@@ -154,7 +154,7 @@ export async function guardarImagen(tenant: Tenant, tipo: TipoImagen, bytes: Buf
   try {
     await actualizarMarca(tenant.id, { [COLUMNA_IMAGEN[tipo]]: nueva.url });
   } catch (e) {
-    await borrarImagenSitio(nueva.path).catch(() => {});
+    await borrarImagenSitio(nueva.path).catch((err) => console.error("No se pudo borrar la imagen nueva:", err));
     throw e;
   }
   const pathAnterior = pathDeUrlPublica(anterior, urlSupabase(), tenant.id);

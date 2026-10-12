@@ -10,7 +10,7 @@ describe("mensajes del panel master", () => {
       "ya_es_usuario", "limite_usuarios", "usuario_de_otro", "usuario_master", "usuario_sin_cliente",
       "usuario_no_encontrado", "usuario_sin_email", "envio_fallo", "envio_emails_no_configurado",
       "cliente_suspendido", "clave_credenciales", "gmail_usuario", "gmail_contrasena", "gmail_sin_contrasena",
-      "gmail_remitente", "gmail_autenticacion", "gmail_conexion", "gmail_otro", "mp_access_token",
+      "gmail_contrasena_cuenta_nueva", "credencial_ilegible", "gmail_remitente", "gmail_autenticacion", "gmail_conexion", "gmail_otro", "mp_access_token",
       "mp_public_key", "mp_webhook_secret", "mp_sin_access_token",
     ];
     for (const c of errores) expect(mensajeError(c), c).toBeTruthy();
