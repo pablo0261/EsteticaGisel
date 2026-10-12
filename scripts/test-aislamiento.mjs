@@ -4,7 +4,8 @@
 // ni escribe nada por la API pública, ni lo de su propio tenant (su token se obtiene sin
 // el segundo factor: todo pasa por el servidor con la service role), la integridad
 // entre tenants en la base, qué ve un anónimo (solo las tablas públicas; ni las funciones
-// auxiliares por RPC), y que las tablas del login (códigos,
+// auxiliares ni el alta de clientes por RPC), que crear_tenant crea las cuatro filas de un
+// cliente en una sola transacción (con la service role), y que las tablas del login (códigos,
 // dispositivos, pedidos de recuperación e intentos de login) son solo del servidor. Por
 // último revisa en el catálogo de Postgres (con SUPABASE_DB_URL) los privilegios de anon y
 // authenticated, RLS en todas las tablas y los privilegios por defecto. Al final borra todo.
@@ -322,6 +323,39 @@ try {
   mostrarError(pagoPropio);
   verificar(!pagoPropio.error, "pagos: sí puede apuntar a un turno propio (control)");
 
+  console.log("\nAlta de clientes (crear_tenant, solo con la service role):");
+  const COLORES_RPC = { primario: "#3d5a80", secundario: "#5c677d", fondo: "#f4f5f7", texto: "#1f2933" };
+  const altaRpc = (slugAlta, colores) => ({
+    p_slug: slugAlta, p_nombre: "Alta RPC", p_pais: "BR", p_idioma: "pt", p_zona_horaria: "America/Sao_Paulo",
+    p_moneda: "BRL", p_modulos: { turnos: true, faq: true }, p_colores: colores,
+  });
+  const slugRpc = `test-rpc-${sufijo}`;
+  const { data: idRpc, error: errorRpc } = await admin.rpc("crear_tenant", altaRpc(slugRpc, COLORES_RPC));
+  mostrarError({ error: errorRpc });
+  if (!idRpc) {
+    verificar(false, "crear_tenant: la service role crea un cliente");
+  } else {
+    tenantsCreados.push(idRpc);
+    const [tRpc, mRpc, cRpc, credRpc] = await Promise.all([
+      admin.from("tenants").select("pais, modulo_turnos, modulo_faq, modulo_cursos").eq("id", idRpc).maybeSingle(),
+      admin.from("tenant_marca").select("color_primario, inicio_titulo").eq("tenant_id", idRpc).maybeSingle(),
+      admin.from("configuracion_negocio").select("horario_atencion").eq("tenant_id", idRpc).maybeSingle(),
+      admin.from("tenant_credenciales").select("smtp_estado").eq("tenant_id", idRpc).maybeSingle(),
+    ]);
+    verificar(
+      tRpc.data?.pais === "BR" && tRpc.data.modulo_turnos && tRpc.data.modulo_faq && !tRpc.data.modulo_cursos,
+      "crear_tenant: crea el tenant con su país y sus módulos",
+    );
+    verificar(mRpc.data?.color_primario === "#3d5a80" && mRpc.data.inicio_titulo === "Alta RPC", "crear_tenant: crea la marca");
+    verificar(!!cRpc.data && Object.keys(cRpc.data.horario_atencion).length === 0, "crear_tenant: crea la configuración con horario vacío");
+    verificar(credRpc.data?.smtp_estado === "sin_configurar", "crear_tenant: crea la fila de credenciales");
+  }
+  verificar(esperaError(await admin.rpc("crear_tenant", altaRpc(slugRpc, COLORES_RPC)), "23505"), "crear_tenant: un subdominio repetido falla");
+  const slugIncompleto = `test-rpc-x-${sufijo}`;
+  verificar(esperaError(await admin.rpc("crear_tenant", altaRpc(slugIncompleto, {})), "23502"), "crear_tenant: sin colores falla (not null)");
+  const { count: aMedias } = await admin.from("tenants").select("id", { count: "exact", head: true }).eq("slug", slugIncompleto);
+  verificar(aMedias === 0, "crear_tenant: si falla una fila no queda el tenant (una sola transacción)");
+
   console.log("\nUsuario logueado sin perfil (sin acceso por la API):");
   const sinPerfil = await crearUsuario("sin-perfil");
   const usuarioSinPerfil = await clienteLogueado(sinPerfil.email, sinPerfil.password);
@@ -376,12 +410,19 @@ try {
   ]) {
     verificar(esperaError(await anon.from(tabla).select("*").limit(1), "42501"), `${tabla}: no es legible (sin privilegio)`);
   }
-  // Las funciones auxiliares sin uso no se pueden invocar por RPC (migración 0016).
+  // Las funciones auxiliares sin uso y el alta de clientes no se invocan por RPC (migraciones 0016 y 0018).
+  const altaIntrusa = {
+    p_slug: `test-intruso-${sufijo}`, p_nombre: "Intruso", p_pais: "AR", p_idioma: "es",
+    p_zona_horaria: "America/Argentina/Buenos_Aires", p_moneda: "ARS", p_modulos: {},
+    p_colores: { primario: "#000000", secundario: "#000000", fondo: "#ffffff", texto: "#000000" },
+  };
   for (const [quien, cliente] of [["anónimo", anon], ["cliente A", usuarioA], ["master", usuarioMaster]]) {
-    for (const fn of ["tenant_actual", "es_master"]) {
-      verificar(esperaError(await cliente.rpc(fn), "42501"), `rpc ${fn}: ${quien} no la invoca`);
+    for (const [fn, args] of [["tenant_actual"], ["es_master"], ["crear_tenant", altaIntrusa]]) {
+      verificar(esperaError(await cliente.rpc(fn, args), "42501"), `rpc ${fn}: ${quien} no la invoca`);
     }
   }
+  const { count: intrusos } = await admin.from("tenants").select("id", { count: "exact", head: true }).eq("slug", altaIntrusa.p_slug);
+  verificar(intrusos === 0, "crear_tenant: ningún intento por la API creó un cliente");
   const serviciosAnon = await anon.from("servicios").select("nombre").in("tenant_id", [a.id, b.id]);
   verificar(
     !serviciosAnon.error && serviciosAnon.data.length === 2 && serviciosAnon.data.every((s) => s.nombre === "Servicio"),
@@ -437,6 +478,8 @@ try {
       fallas++;
     }
   }
+  // Por si un alta indebida (o a medias) hubiera pasado.
+  await admin.from("tenants").delete().like("slug", `test-%-${sufijo}`);
 }
 
 console.log(fallas === 0 ? "\nAislamiento OK" : `\n${fallas} verificación(es) fallaron`);
