@@ -55,7 +55,7 @@
 5. **Mensajes del panel** (`src/lib/panel/mensajes.ts`): tablas `Record<clave, Textos>`; `ClaveError` y `ClaveInfo` salen de las tablas, así una action no puede redirigir con una clave sin texto (no compila).
 6. **Nuevas tablas:** `galeria.imagen_url` (no `imagen_path` como decía el spec 4.1): la URL pública armada por la app, igual que `tenant_marca.logo_url`; el path del objeto se deduce con `pathDeImagenGaleria`, que solo reconoce imágenes de la galería de ese tenant. Path `{tenant_id}/galeria-{ms}-{8 hex}.{ext}` (el sufijo aleatorio evita choques de dos subidas en el mismo milisegundo). Restricciones de largo también en la base (defensa en profundidad). Tope de 30 imágenes por galería (`galeria_llena`): acota el espacio de Storage por cliente.
 7. **`modo_pago` por defecto:** la columna se agrega con `default 'sena'` (las filas existentes, o sea Gisel, quedan como hoy) y después el default pasa a `'ninguno'`: un cliente nuevo no tiene Mercado Pago hasta la etapa D, y con `sena` toda reserva suya fallaría. `crear_tenant` no cambia (usa el default). Se agrega `check (sena_porcentaje between 1 and 100)` (verificado con un SELECT: la única fila tiene 50).
-8. **Montos:** `cobroDeReserva(modo, porcentaje, precios)` → `sin_cobro` (modo `ninguno`), `cobro` (montos por servicio y total) o `sin_precio` (modo con pago y total 0, por ejemplo servicios "a consultar"). `sin_precio` se rechaza **antes** de crear los turnos con un mensaje claro; hoy esos turnos quedaban pendientes 15 minutos y Mercado Pago fallaba. La seña sigue redondeada como hoy (`calcularMontoSena`); en `total` se cobra el precio tal cual (BRL con centavos). `turnos.monto_sena` guarda lo cobrado (seña o total) y queda null sin pago anticipado.
+8. **Montos:** `cobroDeReserva(modo, porcentaje, precios, moneda)` → `sin_cobro` (modo `ninguno`), `cobro` (montos por servicio y total) o `sin_precio` (modo con pago y total 0, por ejemplo servicios "a consultar"). `sin_precio` se rechaza **antes** de crear los turnos con un mensaje claro; hoy esos turnos quedaban pendientes 15 minutos y Mercado Pago fallaba. Los montos se calculan en centavos enteros y quedan redondeados en la moneda (`calcularMontoSena` para la seña; ARS en pesos enteros, BRL en centavos); en `total` se cobra el precio redondeado en la moneda; el total es la suma en centavos, dividida una sola vez. `turnos.monto_sena` guarda lo cobrado (seña o total) y queda null sin pago anticipado.
 9. **Confirmación sin pago anticipado** (`src/lib/turnos/confirmacion.ts`): `crearEventoDeTurno` y `enviarConfirmacionDeTurno`, extraídas del webhook y usadas por el webhook y por la reserva. Las dos exigen `usaCredencialesGlobales(slug)`: el Calendar y el Gmail del `.env` (y la plantilla del email, con el logo de Gisel) son de un solo cliente. **Cambio de comportamiento:** el email del webhook antes no tenía esa condición; solo Gisel llega al webhook (Mercado Pago ya exige `usaCredencialesGlobales`), así que para Gisel nada cambia, y un cliente sin pago anticipado no recibe un email con la marca de otro. Los demás clientes no reciben email de confirmación hasta la etapa D: la página de gracias les muestra el turno confirmado y el link para gestionarlo.
 10. **Gracias con el turno:** la reserva sin pago devuelve `/turnos/gracias?turno=<token_gestion>` (el primero si se reservaron varios servicios). La página muestra el turno confirmado con un botón "Ver o gestionar mi turno". El token ya es la credencial del turno (es el mismo link del email).
 11. **Textos de gestión del turno:** el aviso de turno pendiente deja de mencionar la seña ("si ya hiciste el pago"), y el de cancelado depende de lo cobrado: seña (texto actual), pago total (sin prometer reembolso) o nada.
@@ -5319,7 +5319,7 @@ export async function reservarTurno(formData: FormData): Promise<ReservarTurnoRe
     };
   }
 
-  const cobro = cobroDeReserva(config.modo_pago, config.sena_porcentaje, servicios.map((s) => s.precio));
+  const cobro = cobroDeReserva(config.modo_pago, config.sena_porcentaje, servicios.map((s) => s.precio), tenant.moneda);
   if (cobro.tipo === "sin_precio") {
     return {
       ok: false,
@@ -5456,14 +5456,12 @@ En `src/components/turnos/ReservaForm.tsx`:
 Reemplazar:
 
 ```tsx
-import { formatPrecio } from "@/lib/format";
-import { calcularMontoSena } from "@/lib/turnos/reglas";
+import { cobroDeReserva } from "@/lib/turnos/pago";
 ```
 
 por:
 
 ```tsx
-import { formatPrecio } from "@/lib/format";
 import { cobroDeReserva, detalleCobro, textoModoPago, type ModoPago } from "@/lib/turnos/pago";
 ```
 
@@ -5500,15 +5498,16 @@ export function ReservaForm({
 Reemplazar:
 
 ```tsx
-  const precioTotal = seleccionados.reduce((sum, s) => sum + s.precio, 0);
-  const montoSena = calcularMontoSena(precioTotal, senaPorcentaje);
-  const sena = montoSena > 0 ? precio(montoSena) : "";
+  // Mismo cálculo que el servidor: seña de cada servicio, redondeada en la moneda.
+  const cobro = cobroDeReserva("sena", senaPorcentaje, seleccionados.map((s) => s.precio), moneda);
+  const sena = cobro.tipo === "cobro" ? precio(cobro.total) : "";
 ```
 
 por:
 
 ```tsx
-  const cobro = cobroDeReserva(modoPago, senaPorcentaje, seleccionados.map((s) => s.precio));
+  // Mismo cálculo que el servidor (montos por servicio en centavos, sumados una vez).
+  const cobro = cobroDeReserva(modoPago, senaPorcentaje, seleccionados.map((s) => s.precio), moneda);
   const textoCobro =
     cobro.tipo === "cobro" && modoPago !== "ninguno"
       ? t(detalleCobro(modoPago, precio(cobro.total)))
@@ -5823,14 +5822,15 @@ por:
 - [ ] **Step 4: Tipos, lint, tests y build**
 
 ```bash
-grep -rn "initPoint\|calcularMontoSena" src/components src/app
+grep -rn "initPoint\|calcularMontoSena\|redondearMonto" src/components src/app
+grep -rn "cobroDeReserva(" src/components src/app
 npx tsc --noEmit
 npx eslint src
 npx vitest run
 npm run build
 ```
 
-Expected: el `grep` solo encuentra `pref.initPoint` en `src/app/sitio/[tenant]/turnos/actions.ts` (ningún uso de `calcularMontoSena` fuera de `src/lib`); sin errores; tests en PASS; build sin errores.
+Expected: el primer `grep` solo encuentra `pref.initPoint` en `src/app/sitio/[tenant]/turnos/actions.ts` (ningún uso de `calcularMontoSena` ni `redondearMonto` fuera de `src/lib`: nadie calcula una seña sobre un total); el segundo encuentra las dos llamadas (servidor y `ReservaForm`), las dos con la moneda como cuarto argumento; sin errores; tests en PASS; build sin errores.
 
 - [ ] **Step 5: Commit**
 
