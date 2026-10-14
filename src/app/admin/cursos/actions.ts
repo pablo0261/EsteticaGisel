@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { videoProvider } from "@/lib/video";
 import { subirArchivoCurso, borrarArchivoCurso } from "@/lib/storage/archivos";
 import { youtubeId } from "@/lib/video/youtube";
-import { tenantDelAdmin } from "@/lib/tenant/admin";
+import { tenantDeAccion } from "@/lib/panel/servidor";
 import { datosDelTenant } from "@/lib/tenant/datos";
 import type { ArchivoCurso } from "@/lib/data/types";
 
@@ -21,7 +21,7 @@ function revalidar(cursoId?: string) {
 }
 
 export async function createCurso(formData: FormData) {
-  const tenant = await tenantDelAdmin();
+  const tenant = await tenantDeAccion("cursos");
   const db = datosDelTenant(tenant.id);
 
   const video = formData.get("video") as File | null;
@@ -53,7 +53,7 @@ export async function createCurso(formData: FormData) {
 }
 
 export async function updateCurso(formData: FormData) {
-  const tenant = await tenantDelAdmin();
+  const tenant = await tenantDeAccion("cursos");
   const id = String(formData.get("id"));
 
   const ofertaDesde = String(formData.get("oferta_desde") || "");
@@ -86,14 +86,14 @@ export async function updateCurso(formData: FormData) {
 }
 
 export async function deleteCurso(formData: FormData) {
-  const tenant = await tenantDelAdmin();
+  const tenant = await tenantDeAccion("cursos");
   await datosDelTenant(tenant.id).delete("cursos").eq("id", String(formData.get("id")));
   revalidar();
   redirect("/admin/cursos");
 }
 
 export async function subirVideoCurso(formData: FormData) {
-  const tenant = await tenantDelAdmin();
+  const tenant = await tenantDeAccion("cursos");
   const cursoId = String(formData.get("cursoId"));
   const file = formData.get("video") as File | null;
   if (!file || file.size === 0) return;
@@ -114,7 +114,7 @@ export async function subirVideoCurso(formData: FormData) {
 }
 
 export async function subirArchivoAdicional(formData: FormData) {
-  const tenant = await tenantDelAdmin();
+  const tenant = await tenantDeAccion("cursos");
   const cursoId = String(formData.get("cursoId"));
   const file = formData.get("archivo") as File | null;
   if (!file || file.size === 0) return;
@@ -143,7 +143,7 @@ export async function subirArchivoAdicional(formData: FormData) {
 }
 
 export async function eliminarArchivoAdicional(formData: FormData) {
-  const tenant = await tenantDelAdmin();
+  const tenant = await tenantDeAccion("cursos");
   const db = datosDelTenant(tenant.id);
   const id = String(formData.get("id"));
   const cursoId = String(formData.get("cursoId"));

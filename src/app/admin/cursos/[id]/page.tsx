@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { getCursoAdmin, getArchivosCurso, getAccesosDeCurso } from "@/lib/data/cursos";
-import { tenantDelAdmin } from "@/lib/tenant/admin";
+import { tenantDeSeccion } from "@/lib/panel/servidor";
 import {
   updateCurso,
   deleteCurso,
@@ -19,7 +19,7 @@ export default async function EditarCursoAdmin({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const tenant = await tenantDelAdmin();
+  const tenant = await tenantDeSeccion("cursos");
   const { id } = await params;
   const curso = await getCursoAdmin(tenant.id, id);
   if (!curso) notFound();

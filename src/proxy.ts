@@ -36,6 +36,8 @@ export async function proxy(request: NextRequest) {
   }
 
   if (path === "/admin" || path.startsWith("/admin/")) {
+    // El panel está en el idioma del cliente: el layout raíz lee el tenant de esta cabecera.
+    cabeceras.set(CABECERA_TENANT, destino.slug);
     return protegerArea(request, { tipo: "tenant", cabeceras });
   }
 

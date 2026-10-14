@@ -27,11 +27,16 @@ export async function tenantDeLaPagina(params: Promise<{ tenant: string }>): Pro
   return tenant;
 }
 
-/** Tenant activo según el host del request (server actions y route handlers). */
-export async function tenantDelRequest(): Promise<Tenant | null> {
+/** Tenant del host del request, activo o suspendido. null si el host no es de un tenant o no existe. */
+export async function tenantDelHost(): Promise<Tenant | null> {
   const h = await headers();
   const destino = resolverHost(h.get("host") ?? "", configHost());
   if (destino.tipo !== "tenant") return null;
-  const tenant = await getTenantPorSlug(destino.slug);
+  return getTenantPorSlug(destino.slug);
+}
+
+/** Tenant activo según el host del request (server actions y route handlers). */
+export async function tenantDelRequest(): Promise<Tenant | null> {
+  const tenant = await tenantDelHost();
   return tenant?.estado === "activo" ? tenant : null;
 }

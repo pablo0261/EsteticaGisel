@@ -24,8 +24,8 @@ export const metadata: Metadata = {
 };
 
 /**
- * Idioma del documento. En el sitio público, el proxy indica el tenant en x-tenant-slug.
- * En el resto (panel, rutas sin tenant) queda "es", el idioma del panel hasta la etapa C.
+ * Idioma del documento. En el sitio público y en el panel del cliente (/admin), el proxy
+ * indica el tenant en x-tenant-slug. En el resto (master, rutas sin tenant) queda "es".
  * getTenantPorSlug está cacheado por request: el layout del sitio reutiliza la consulta.
  */
 async function langDelDocumento(): Promise<string> {
