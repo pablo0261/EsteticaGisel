@@ -2,27 +2,28 @@
 
 import { revalidatePath } from "next/cache";
 import { isGoogleConfigurado, borrarEvento } from "@/lib/google-calendar/client";
-import { tenantDelAdmin } from "@/lib/tenant/admin";
-import { datosDelTenant } from "@/lib/tenant/datos";
+import { parsearId } from "@/lib/panel/formularios";
+import { ir, tenantDeAccion } from "@/lib/panel/servidor";
 import { usaCredencialesGlobales } from "@/lib/tenant/credenciales-globales";
+import { datosDelTenant } from "@/lib/tenant/datos";
 import type { Turno } from "@/lib/data/types";
 
-export async function cancelarTurnoAdmin(formData: FormData) {
-  const tenant = await tenantDelAdmin();
+const RUTA = "/admin/turnos";
+
+export async function cancelarTurno(formData: FormData) {
+  const tenant = await tenantDeAccion("turnos");
+  const id = parsearId(formData);
+  if (!id) ir(RUTA, { error: "id" });
   const db = datosDelTenant(tenant.id);
-  const id = String(formData.get("id"));
 
   const { data: fila } = await db
-    .select("turnos", "google_calendar_event_id")
+    .select("turnos", "google_calendar_event_id, estado")
     .eq("id", id)
     .maybeSingle();
-  const turno = fila as unknown as Pick<Turno, "google_calendar_event_id"> | null;
+  const turno = fila as unknown as Pick<Turno, "google_calendar_event_id" | "estado"> | null;
+  if (!turno || (turno.estado !== "pendiente_pago" && turno.estado !== "confirmado")) ir(RUTA, { error: "id" });
 
-  if (
-    turno?.google_calendar_event_id &&
-    isGoogleConfigurado() &&
-    usaCredencialesGlobales(tenant.slug)
-  ) {
+  if (turno.google_calendar_event_id && isGoogleConfigurado() && usaCredencialesGlobales(tenant.slug)) {
     try {
       await borrarEvento(turno.google_calendar_event_id);
     } catch {
@@ -30,14 +31,28 @@ export async function cancelarTurnoAdmin(formData: FormData) {
     }
   }
 
-  await db.update("turnos", { estado: "cancelado", google_calendar_event_id: null }).eq("id", id);
-  revalidatePath("/admin/turnos");
+  const { data, error } = await db
+    .update("turnos", { estado: "cancelado", google_calendar_event_id: null })
+    .eq("id", id)
+    .in("estado", ["pendiente_pago", "confirmado"])
+    .select("id");
+  if (error) ir(RUTA, { error: "error" });
+  if (!data?.length) ir(RUTA, { error: "id" });
+  revalidatePath(RUTA);
+  ir(RUTA, { ok: "turno_cancelado" });
 }
 
-export async function marcarCompletado(formData: FormData) {
-  const tenant = await tenantDelAdmin();
-  await datosDelTenant(tenant.id)
+export async function completarTurno(formData: FormData) {
+  const tenant = await tenantDeAccion("turnos");
+  const id = parsearId(formData);
+  if (!id) ir(RUTA, { error: "id" });
+  const { data, error } = await datosDelTenant(tenant.id)
     .update("turnos", { estado: "completado" })
-    .eq("id", String(formData.get("id")));
-  revalidatePath("/admin/turnos");
+    .eq("id", id)
+    .eq("estado", "confirmado")
+    .select("id");
+  if (error) ir(RUTA, { error: "error" });
+  if (!data?.length) ir(RUTA, { error: "id" });
+  revalidatePath(RUTA);
+  ir(RUTA, { ok: "turno_completado" });
 }
