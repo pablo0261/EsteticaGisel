@@ -1,5 +1,9 @@
 import type { Idioma, Textos } from "@/lib/i18n/textos";
 import { LIMITES_PANEL as L } from "./limites";
+import { MAX_BYTES_IMAGEN } from "@/lib/storage/imagenes";
+
+/** Tope de una imagen en MB, como lo lee el cliente (2 MB, 1,5 MB...). */
+const MB_IMAGEN = Number((MAX_BYTES_IMAGEN / (1024 * 1024)).toFixed(1));
 
 /**
  * Textos del panel del cliente por clave, en el idioma del cliente. Las actions redirigen
@@ -48,7 +52,7 @@ const ERRORES = {
     es: `Los minutos entre turnos tienen que ser un número entero entre 0 y ${L.minutosEntreTurnosMax}.`,
     pt: `Os minutos entre atendimentos precisam ser um número inteiro entre 0 e ${L.minutosEntreTurnosMax}.`,
   },
-  modo_pago: { es: "Elegí cómo se paga al reservar.", pt: "Escolha como se paga ao agendar." },
+  modo_pago: { es: "Elegí cómo se paga al reservar.", pt: "Escolha a forma de pagamento do agendamento." },
   sena_porcentaje: {
     es: "El porcentaje de seña tiene que ser un número entero entre 1 y 100.",
     pt: "A porcentagem do sinal precisa ser um número inteiro entre 1 e 100.",
@@ -78,7 +82,7 @@ const ERRORES = {
     pt: `A descrição tem até ${L.descripcionImagen} caracteres, em uma linha.`,
   },
   imagen_vacia: { es: "Elegí una imagen.", pt: "Escolha uma imagem." },
-  imagen_grande: { es: "La imagen pesa más de 2 MB.", pt: "A imagem tem mais de 2 MB." },
+  imagen_grande: { es: `La imagen pesa más de ${MB_IMAGEN} MB.`, pt: `A imagem tem mais de ${MB_IMAGEN} MB.` },
   imagen_tipo: { es: "La imagen tiene que ser PNG, JPG o WebP.", pt: "A imagem precisa ser PNG, JPG ou WebP." },
   galeria_llena: {
     es: `La galería ya tiene ${L.imagenesGaleria} imágenes: eliminá alguna para subir otra.`,

@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { SlotPicker } from "./SlotPicker";
 import { reservarTurno } from "@/app/sitio/[tenant]/turnos/actions";
 import { formatPrecio } from "@/lib/format";
-import { calcularMontoSena } from "@/lib/turnos/reglas";
+import { cobroDeReserva } from "@/lib/turnos/pago";
 import { EJEMPLO_WHATSAPP } from "@/lib/turnos/ejemplo-whatsapp";
 import { LoadingOverlay } from "@/components/ui/LoadingOverlay";
 import { T, useIdioma, useT } from "@/lib/i18n/cliente";
@@ -36,9 +36,9 @@ export function ReservaForm({
 
   const precio = (monto: number) => formatPrecio(monto, moneda, idioma);
   const seleccionados = servicios.filter((s) => selectedIds.includes(s.id));
-  const precioTotal = seleccionados.reduce((sum, s) => sum + s.precio, 0);
-  const montoSena = calcularMontoSena(precioTotal, senaPorcentaje);
-  const sena = montoSena > 0 ? precio(montoSena) : "";
+  // Mismo cálculo que el servidor: seña de cada servicio, redondeada en la moneda.
+  const cobro = cobroDeReserva("sena", senaPorcentaje, seleccionados.map((s) => s.precio), moneda);
+  const sena = cobro.tipo === "cobro" ? precio(cobro.total) : "";
 
   function toggleServicio(id: string) {
     setSelectedIds((prev) => {

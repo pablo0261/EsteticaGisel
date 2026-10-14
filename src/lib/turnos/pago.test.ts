@@ -11,21 +11,31 @@ describe("esModoPago", () => {
 
 describe("cobroDeReserva", () => {
   it("sin pago anticipado: no se cobra nada", () => {
-    expect(cobroDeReserva("ninguno", 50, [1000, 2000])).toEqual({ tipo: "sin_cobro" });
+    expect(cobroDeReserva("ninguno", 50, [1000, 2000], "ARS")).toEqual({ tipo: "sin_cobro" });
   });
 
-  it("seña: el porcentaje de cada servicio, redondeado como hoy", () => {
-    expect(cobroDeReserva("sena", 50, [1000, 3001])).toEqual({ tipo: "cobro", montos: [500, 1501], total: 2001 });
-    expect(cobroDeReserva("sena", 30, [0, 1000])).toEqual({ tipo: "cobro", montos: [0, 300], total: 300 });
+  it("seña: el porcentaje de cada servicio, redondeado al peso en ARS", () => {
+    expect(cobroDeReserva("sena", 50, [1000, 3001], "ARS")).toEqual({ tipo: "cobro", montos: [500, 1501], total: 2001 });
+    expect(cobroDeReserva("sena", 30, [0, 1000], "ARS")).toEqual({ tipo: "cobro", montos: [0, 300], total: 300 });
+    expect(cobroDeReserva("sena", 50, [35000], "ARS")).toEqual({ tipo: "cobro", montos: [17500], total: 17500 });
   });
 
-  it("pago total: el precio de cada servicio, con centavos", () => {
-    expect(cobroDeReserva("total", 50, [1000, 250.5])).toEqual({ tipo: "cobro", montos: [1000, 250.5], total: 1250.5 });
+  it("seña en BRL: redondeada al centavo, no al real", () => {
+    expect(cobroDeReserva("sena", 50, [0.8], "BRL")).toEqual({ tipo: "cobro", montos: [0.4], total: 0.4 });
+    expect(cobroDeReserva("sena", 30, [99.99], "BRL")).toEqual({ tipo: "cobro", montos: [30], total: 30 });
+  });
+
+  it("pago total: el precio de cada servicio, exacto en la moneda", () => {
+    expect(cobroDeReserva("total", 50, [1000, 250.5], "BRL")).toEqual({ tipo: "cobro", montos: [1000, 250.5], total: 1250.5 });
+    expect(cobroDeReserva("total", 50, [10.1, 20.2], "BRL")).toEqual({ tipo: "cobro", montos: [10.1, 20.2], total: 30.3 });
+    expect(cobroDeReserva("total", 50, [1000.4, 2000], "ARS")).toEqual({ tipo: "cobro", montos: [1000, 2000], total: 3000 });
   });
 
   it("con pago y nada para cobrar (servicios a consultar): sin_precio", () => {
-    expect(cobroDeReserva("sena", 50, [0])).toEqual({ tipo: "sin_precio" });
-    expect(cobroDeReserva("total", 50, [0, 0])).toEqual({ tipo: "sin_precio" });
+    expect(cobroDeReserva("sena", 50, [0], "ARS")).toEqual({ tipo: "sin_precio" });
+    expect(cobroDeReserva("total", 50, [0, 0], "BRL")).toEqual({ tipo: "sin_precio" });
+    // En ARS una seña de menos de medio peso redondea a 0.
+    expect(cobroDeReserva("sena", 50, [0.8], "ARS")).toEqual({ tipo: "sin_precio" });
   });
 });
 

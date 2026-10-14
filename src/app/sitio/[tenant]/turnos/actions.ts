@@ -1,7 +1,7 @@
 "use server";
 
 import { getDisponibilidad } from "@/lib/data/turnos";
-import { calcularMontoSena, puedeReservar } from "@/lib/turnos/reglas";
+import { calcularMontoSena, puedeReservar, redondearMonto } from "@/lib/turnos/reglas";
 import { getClientIp } from "@/lib/turnos/ip";
 import { normalizarWhatsApp } from "@/lib/turnos/whatsapp";
 import { EJEMPLO_WHATSAPP } from "@/lib/turnos/ejemplo-whatsapp";
@@ -138,7 +138,7 @@ export async function reservarTurno(formData: FormData): Promise<ReservarTurnoRe
   let montoSenaTotal = 0;
 
   for (const servicio of servicios) {
-    const montoSena = calcularMontoSena(servicio.precio, config.sena_porcentaje);
+    const montoSena = calcularMontoSena(servicio.precio, config.sena_porcentaje, tenant.moneda);
     const { data: turno, error } = await db
       .insert("turnos", {
         servicio_id: servicio.id,
@@ -167,7 +167,7 @@ export async function reservarTurno(formData: FormData): Promise<ReservarTurnoRe
     }
 
     turnoIds.push(turno.id);
-    montoSenaTotal += montoSena;
+    montoSenaTotal = redondearMonto(montoSenaTotal + montoSena, tenant.moneda);
     inicioActual = new Date(inicioActual.getTime() + servicio.duracion_minutos * 60000);
   }
 

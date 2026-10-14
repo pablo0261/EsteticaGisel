@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import type { ProblemaImagen } from "@/lib/storage/imagenes";
+import { MAX_BYTES_IMAGEN, type ProblemaImagen } from "@/lib/storage/imagenes";
 import { mensajeError, mensajeInfo, type ClaveError, type ClaveInfo } from "./mensajes";
 
 describe("mensajes del panel", () => {
@@ -8,6 +8,12 @@ describe("mensajes del panel", () => {
     expect(mensajeError("pt", "modulo_inactivo")).toBe("Essa seção não está habilitada para o seu site.");
     expect(mensajeInfo("es", "guardado")).toBe("Cambios guardados.");
     expect(mensajeInfo("pt", "guardado")).toBe("Alterações salvas.");
+  });
+
+  it("el tope de la imagen sale de MAX_BYTES_IMAGEN y el modo de pago dice lo mismo en pt", () => {
+    expect(mensajeError("es", "imagen_grande")).toBe(`La imagen pesa más de ${MAX_BYTES_IMAGEN / (1024 * 1024)} MB.`);
+    expect(mensajeError("pt", "imagen_grande")).toBe("A imagem tem mais de 2 MB.");
+    expect(mensajeError("pt", "modo_pago")).toBe("Escolha a forma de pagamento do agendamento.");
   });
 
   it("no muestra textos arbitrarios de la URL", () => {

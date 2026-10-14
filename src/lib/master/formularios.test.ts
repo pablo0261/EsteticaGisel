@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
+  CONTROL,
+  CONTROL_MULTILINEA,
   normalizarInstagram,
   parsearAlta,
   parsearColores,
@@ -231,5 +233,36 @@ describe("parsearMp", () => {
     expect(parsearMp(fd({ ...MP, mp_access_token: `Bearer ${MP.mp_access_token}` }))).toEqual({ ok: false, error: "mp_access_token" });
     expect(parsearMp(fd({ ...MP, mp_public_key: "xx" }))).toEqual({ ok: false, error: "mp_public_key" });
     expect(parsearMp(fd({ ...MP, mp_webhook_secret: "corto" }))).toEqual({ ok: false, error: "mp_webhook_secret" });
+  });
+});
+
+describe("CONTROL y CONTROL_MULTILINEA", () => {
+  const prohibidos = [
+    "\u0000", "\u0009", "\u001f", "\u007f",
+    "\u0080", "\u0085", "\u009f",
+    "\u202a", "\u202b", "\u202c", "\u202d", "\u202e",
+    "\u2066", "\u2067", "\u2068", "\u2069",
+    "\u2028", "\u2029",
+  ];
+
+  it("rechaza controles C0/C1, overrides de bidi y separadores de línea Unicode", () => {
+    for (const c of prohibidos) {
+      const cp = c.codePointAt(0)!.toString(16);
+      expect(CONTROL.test(`a${c}b`), cp).toBe(true);
+      expect(CONTROL_MULTILINEA.test(`a${c}b`), cp).toBe(true);
+    }
+  });
+
+  it("una línea no admite saltos; varias líneas solo LF y CR", () => {
+    expect(CONTROL.test("a\nb")).toBe(true);
+    expect(CONTROL.test("a\rb")).toBe(true);
+    expect(CONTROL_MULTILINEA.test("a\r\nb\nc")).toBe(false);
+  });
+
+  it("acepta texto común con acentos, emojis y comillas", () => {
+    for (const t of ["Estética Ñandú", "Olá, coração — “ok” ✨", "\u00a0espacio duro", "\u2027\u202f\u2065\u206a"]) {
+      expect(CONTROL.test(t), t).toBe(false);
+      expect(CONTROL_MULTILINEA.test(t), t).toBe(false);
+    }
   });
 });

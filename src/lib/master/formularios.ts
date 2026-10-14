@@ -16,10 +16,16 @@ import { esIdioma, esMoneda, esPais, zonaPermitida } from "./pais";
  */
 export type Resultado<T> = { ok: true; valor: T } | { ok: false; error: ClaveError };
 
-/** Caracteres de control: en un texto de una línea no se permiten. Lo usa también el panel del cliente. */
-export const CONTROL = /[\u0000-\u001f\u007f]/;
-/** En un texto de varias líneas se permiten los saltos de línea (LF y CR). */
-export const CONTROL_MULTILINEA = /[\u0000-\u0009\u000b\u000c\u000e-\u001f\u007f]/;
+/**
+ * Caracteres de control: en un texto de una línea no se permiten. Lo usa también el panel
+ * del cliente. Incluye C0, DEL, C1 (U+0080–U+009F), los overrides y aislamientos de bidi
+ * (U+202A–U+202E, U+2066–U+2069: pueden dar vuelta lo que se ve) y los separadores de
+ * línea y de párrafo de Unicode (U+2028, U+2029).
+ */
+export const CONTROL = /[\u0000-\u001f\u007f-\u009f\u2028\u2029\u202a-\u202e\u2066-\u2069]/;
+/** En un texto de varias líneas se permiten los saltos de línea (LF y CR) y nada más. */
+export const CONTROL_MULTILINEA =
+  /[\u0000-\u0009\u000b\u000c\u000e-\u001f\u007f-\u009f\u2028\u2029\u202a-\u202e\u2066-\u2069]/;
 
 function texto(fd: FormData, nombre: string): string {
   const v = fd.get(nombre);

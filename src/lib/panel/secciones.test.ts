@@ -62,6 +62,12 @@ describe("seccionHabilitada", () => {
     expect(seccionHabilitada({ ...TODOS, testimonios: false }, "testimonios")).toBe(false);
     expect(seccionHabilitada(TODOS, "cursos")).toBe(true);
   });
+
+  it("solo un true habilita (un valor raro de la base no abre la sección)", () => {
+    const raro = { ...NINGUNO, turnos: "true", galeria: 1 } as unknown as Modulos;
+    expect(seccionHabilitada(raro, "turnos")).toBe(false);
+    expect(seccionHabilitada(raro, "galeria")).toBe(false);
+  });
 });
 
 describe("SECCIONES_PANEL", () => {

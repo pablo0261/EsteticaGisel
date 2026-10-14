@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { puedeCancelar, calcularMontoSena, puedeReservar } from "./reglas";
+import { puedeCancelar, calcularMontoSena, puedeReservar, redondearMonto } from "./reglas";
 
 describe("puedeCancelar", () => {
   const ahora = "2026-07-10T12:00:00-03:00";
@@ -49,12 +49,23 @@ describe("puedeCancelar", () => {
 
 describe("calcularMontoSena", () => {
   it("calcula el porcentaje de seña sobre el precio", () => {
-    expect(calcularMontoSena(10000, 50)).toBe(5000);
-    expect(calcularMontoSena(15000, 30)).toBe(4500);
+    expect(calcularMontoSena(10000, 50, "ARS")).toBe(5000);
+    expect(calcularMontoSena(15000, 30, "ARS")).toBe(4500);
   });
 
-  it("redondea a entero", () => {
-    expect(calcularMontoSena(10001, 50)).toBe(5001); // 5000.5 -> redondeo
+  it("redondea a entero en ARS y al centavo en BRL", () => {
+    expect(calcularMontoSena(10001, 50, "ARS")).toBe(5001); // 5000.5 -> redondeo
+    expect(calcularMontoSena(0.8, 50, "BRL")).toBe(0.4);
+    expect(calcularMontoSena(99.99, 30, "BRL")).toBe(30); // 29.997 -> 30.00
+    expect(calcularMontoSena(15.5, 50, "BRL")).toBe(7.75);
+  });
+});
+
+describe("redondearMonto", () => {
+  it("ARS sin decimales, BRL con centavos exactos", () => {
+    expect(redondearMonto(1000.5, "ARS")).toBe(1001);
+    expect(redondearMonto(10.1 + 20.2, "BRL")).toBe(30.3);
+    expect(redondearMonto(0.1 + 0.2, "BRL")).toBe(0.3);
   });
 });
 

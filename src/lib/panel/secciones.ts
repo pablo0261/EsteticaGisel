@@ -87,7 +87,7 @@ export const SECCIONES_PANEL: readonly DefinicionSeccion[] = [
 ];
 
 function habilitada(def: DefinicionSeccion, modulos: Modulos): boolean {
-  return def.modulo === null || modulos[def.modulo];
+  return def.modulo === null || modulos[def.modulo] === true;
 }
 
 export function seccionHabilitada(modulos: Modulos, seccion: SeccionPanel): boolean {

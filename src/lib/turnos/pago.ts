@@ -1,5 +1,6 @@
 import type { Textos } from "@/lib/i18n/textos";
-import { calcularMontoSena } from "./reglas";
+import type { Moneda } from "@/lib/tenant/tipos";
+import { calcularMontoSena, redondearMonto } from "./reglas";
 
 /**
  * Modo de pago de las reservas de un cliente (configuracion_negocio.modo_pago):
@@ -23,10 +24,21 @@ export type CobroReserva =
   /** Monto de cada servicio (en el orden recibido) y el total a cobrar. */
   | { tipo: "cobro"; montos: number[]; total: number };
 
-export function cobroDeReserva(modo: ModoPago, senaPorcentaje: number, precios: number[]): CobroReserva {
+/** Cada monto y el total quedan redondeados en la moneda (ARS en pesos, BRL en centavos). */
+export function cobroDeReserva(
+  modo: ModoPago,
+  senaPorcentaje: number,
+  precios: number[],
+  moneda: Moneda,
+): CobroReserva {
   if (modo === "ninguno") return { tipo: "sin_cobro" };
-  const montos = precios.map((precio) => (modo === "total" ? precio : calcularMontoSena(precio, senaPorcentaje)));
-  const total = montos.reduce((suma, monto) => suma + monto, 0);
+  const montos = precios.map((precio) =>
+    modo === "total" ? redondearMonto(precio, moneda) : calcularMontoSena(precio, senaPorcentaje, moneda),
+  );
+  const total = redondearMonto(
+    montos.reduce((suma, monto) => suma + monto, 0),
+    moneda,
+  );
   return total > 0 ? { tipo: "cobro", montos, total } : { tipo: "sin_precio" };
 }
 
