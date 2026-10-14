@@ -1,3 +1,5 @@
+import type { ModoPago } from "@/lib/turnos/pago";
+
 export type Servicio = {
   id: string;
   nombre: string;
@@ -13,6 +15,7 @@ export type ConfiguracionNegocio = {
   horas_minimas_cancelacion: number;
   minutos_preparacion_entre_turnos: number;
   sena_porcentaje: number;
+  modo_pago: ModoPago;
   horario_atencion: Record<string, [string, string]>;
 };
 
@@ -76,4 +79,23 @@ export type Testimonio = {
   id: string;
   nombre: string;
   texto: string;
+};
+
+/** Testimonio con los campos que edita el panel. */
+export type TestimonioAdmin = Testimonio & { orden: number; activo: boolean };
+
+export type ImagenGaleria = {
+  id: string;
+  imagen_url: string;
+  descripcion: string | null;
+  orden: number;
+  activo: boolean;
+};
+
+export type PreguntaFrecuente = {
+  id: string;
+  pregunta: string;
+  respuesta: string;
+  orden: number;
+  activo: boolean;
 };

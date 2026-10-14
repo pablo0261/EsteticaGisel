@@ -12,6 +12,8 @@ export type TablaTenant =
   | "intentos_reserva"
   | "recordatorios_enviados"
   | "testimonios"
+  | "galeria"
+  | "preguntas_frecuentes"
   | "tenant_marca"
   | "tenant_credenciales";
 

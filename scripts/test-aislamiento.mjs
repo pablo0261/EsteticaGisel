@@ -8,7 +8,9 @@
 // cliente en una sola transacción (con la service role), y que las tablas del login (códigos,
 // dispositivos, pedidos de recuperación e intentos de login) son solo del servidor. Por
 // último revisa en el catálogo de Postgres (con SUPABASE_DB_URL) los privilegios de anon y
-// authenticated, RLS en todas las tablas y los privilegios por defecto. Al final borra todo.
+// authenticated, RLS en todas las tablas y los privilegios por defecto. Las tablas de la
+// etapa C2 (galeria, preguntas_frecuentes) son solo del servidor: sin policies y sin
+// privilegios para la API, ni siquiera de lectura para anon. Al final borra todo.
 // Uso: npm run test:aislamiento
 import { createClient } from "@supabase/supabase-js";
 import { randomBytes, randomUUID } from "node:crypto";
@@ -29,8 +31,10 @@ const sufijo = Date.now().toString(36);
 const TABLAS_TENANT = [
   "servicios", "configuracion_negocio", "turnos", "cursos", "archivos_curso",
   "accesos_curso", "pagos", "intentos_reserva", "recordatorios_enviados",
-  "testimonios", "tenant_marca",
+  "testimonios", "galeria", "preguntas_frecuentes", "tenant_marca",
 ];
+/** Tablas sin lectura pública: el sitio las lee con la service role (etapa C2). */
+const TABLAS_SOLO_SERVIDOR = ["galeria", "preguntas_frecuentes"];
 /** Columnas que genera la base: se quitan al copiar una fila para insertarla en otro tenant. */
 const COLUMNAS_GENERADAS = ["id", "token_gestion", "token_acceso", "creado_en", "enviado_en", "comprado_en"];
 
@@ -146,6 +150,8 @@ async function crearTenant(letra) {
   await ok(admin.from("pagos").insert({ tenant_id: t, tipo: "turno", referencia_id: turno.id, estado: "approved", monto: 1 }), "pago");
   await ok(admin.from("intentos_reserva").insert({ tenant_id: t, ip: "127.0.0.1" }), "intento");
   await ok(admin.from("testimonios").insert({ tenant_id: t, nombre: "N", texto: "T" }), "testimonio");
+  await ok(admin.from("galeria").insert({ tenant_id: t, imagen_url: "https://example.com/galeria.png" }), "galería");
+  await ok(admin.from("preguntas_frecuentes").insert({ tenant_id: t, pregunta: "¿P?", respuesta: "R" }), "pregunta");
 
   const usuario = await crearUsuario(letra);
   await ok(admin.from("perfiles").insert({ user_id: usuario.userId, rol: "cliente", tenant_id: t }), "perfil");
@@ -262,6 +268,15 @@ async function permisosDeLaBase() {
     verificar(sinRls.length === 0, "todas las tablas de public tienen RLS activado");
     if (sinRls.length) console.log(`    (${listar(sinRls)})`);
 
+    const policiesSoloServidor = (
+      await db.query(
+        `select tablename, policyname from pg_policies where schemaname = 'public' and tablename = any($1) order by 1, 2`,
+        [TABLAS_SOLO_SERVIDOR],
+      )
+    ).rows;
+    verificar(policiesSoloServidor.length === 0, `${TABLAS_SOLO_SERVIDOR.join(" y ")}: sin policies (solo el servidor)`);
+    if (policiesSoloServidor.length) console.log(`    (${listar(policiesSoloServidor)})`);
+
     const funciones = (
       await db.query(
         `select p.oid::regprocedure::text as funcion, p.proname as nombre
@@ -341,6 +356,14 @@ try {
   });
   mostrarError(pagoPropio);
   verificar(!pagoPropio.error, "pagos: sí puede apuntar a un turno propio (control)");
+  const modoInvalido = await admin.from("configuracion_negocio").update({ modo_pago: "gratis" }).eq("tenant_id", a.id);
+  verificar(esperaError(modoInvalido, "23514"), "configuracion_negocio: modo_pago solo ninguno, sena o total");
+  const senaInvalida = await admin.from("configuracion_negocio").update({ sena_porcentaje: 0 }).eq("tenant_id", a.id);
+  verificar(esperaError(senaInvalida, "23514"), "configuracion_negocio: sena_porcentaje de 1 a 100");
+  const preguntaLarga = await admin
+    .from("preguntas_frecuentes")
+    .insert({ tenant_id: a.id, pregunta: "x".repeat(301), respuesta: "R" });
+  verificar(esperaError(preguntaLarga, "23514"), "preguntas_frecuentes: la base también limita el largo");
 
   console.log("\nAlta de clientes (crear_tenant, solo con la service role):");
   const COLORES_RPC = { primario: "#3d5a80", secundario: "#5c677d", fondo: "#f4f5f7", texto: "#1f2933" };
@@ -358,7 +381,7 @@ try {
     const [tRpc, mRpc, cRpc, credRpc] = await Promise.all([
       admin.from("tenants").select("pais, modulo_turnos, modulo_faq, modulo_cursos").eq("id", idRpc).maybeSingle(),
       admin.from("tenant_marca").select("color_primario, inicio_titulo").eq("tenant_id", idRpc).maybeSingle(),
-      admin.from("configuracion_negocio").select("horario_atencion").eq("tenant_id", idRpc).maybeSingle(),
+      admin.from("configuracion_negocio").select("horario_atencion, modo_pago").eq("tenant_id", idRpc).maybeSingle(),
       admin.from("tenant_credenciales").select("smtp_estado").eq("tenant_id", idRpc).maybeSingle(),
     ]);
     verificar(
@@ -367,6 +390,7 @@ try {
     );
     verificar(mRpc.data?.color_primario === "#3d5a80" && mRpc.data.inicio_titulo === "Alta RPC", "crear_tenant: crea la marca");
     verificar(!!cRpc.data && Object.keys(cRpc.data.horario_atencion).length === 0, "crear_tenant: crea la configuración con horario vacío");
+    verificar(cRpc.data?.modo_pago === "ninguno", "crear_tenant: un cliente nuevo arranca sin pago anticipado");
     verificar(credRpc.data?.smtp_estado === "sin_configurar", "crear_tenant: crea la fila de credenciales");
   }
   verificar(esperaError(await admin.rpc("crear_tenant", altaRpc(slugRpc, COLORES_RPC)), "23505"), "crear_tenant: un subdominio repetido falla");
@@ -425,7 +449,7 @@ try {
   for (const tabla of [
     "tenant_credenciales", "turnos", "pagos", "accesos_curso", "perfiles",
     "configuracion_negocio", "intentos_reserva", "recordatorios_enviados", "archivos_curso",
-    "migraciones_aplicadas",
+    "migraciones_aplicadas", ...TABLAS_SOLO_SERVIDOR,
   ]) {
     verificar(esperaError(await anon.from(tabla).select("*").limit(1), "42501"), `${tabla}: no es legible (sin privilegio)`);
   }
