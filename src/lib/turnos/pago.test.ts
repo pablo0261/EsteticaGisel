@@ -31,6 +31,12 @@ describe("cobroDeReserva", () => {
     expect(cobroDeReserva("total", 50, [1000.4, 2000], "ARS")).toEqual({ tipo: "cobro", montos: [1000, 2000], total: 3000 });
   });
 
+  it("suma en centavos enteros: el total es la suma exacta de los montos", () => {
+    expect(cobroDeReserva("sena", 50, [10.01, 0.29], "BRL")).toEqual({ tipo: "cobro", montos: [5.01, 0.15], total: 5.16 });
+    expect(cobroDeReserva("sena", 70, [45, 45], "ARS")).toEqual({ tipo: "cobro", montos: [32, 32], total: 64 });
+    expect(cobroDeReserva("total", 50, [0.1, 0.2, 1.005], "BRL")).toEqual({ tipo: "cobro", montos: [0.1, 0.2, 1.01], total: 1.31 });
+  });
+
   it("con pago y nada para cobrar (servicios a consultar): sin_precio", () => {
     expect(cobroDeReserva("sena", 50, [0], "ARS")).toEqual({ tipo: "sin_precio" });
     expect(cobroDeReserva("total", 50, [0, 0], "BRL")).toEqual({ tipo: "sin_precio" });

@@ -59,6 +59,13 @@ describe("calcularMontoSena", () => {
     expect(calcularMontoSena(99.99, 30, "BRL")).toBe(30); // 29.997 -> 30.00
     expect(calcularMontoSena(15.5, 50, "BRL")).toBe(7.75);
   });
+
+  it("calcula en centavos enteros, sin errores de coma flotante", () => {
+    expect(calcularMontoSena(10.01, 50, "BRL")).toBe(5.01); // 500.5 centavos -> 501
+    expect(calcularMontoSena(0.29, 50, "BRL")).toBe(0.15); // 14.5 centavos -> 15
+    expect(calcularMontoSena(45, 70, "ARS")).toBe(32); // 31.5 -> 32
+    expect(calcularMontoSena(90, 35, "ARS")).toBe(32); // 31.5 -> 32
+  });
 });
 
 describe("redondearMonto", () => {
@@ -66,6 +73,7 @@ describe("redondearMonto", () => {
     expect(redondearMonto(1000.5, "ARS")).toBe(1001);
     expect(redondearMonto(10.1 + 20.2, "BRL")).toBe(30.3);
     expect(redondearMonto(0.1 + 0.2, "BRL")).toBe(0.3);
+    expect(redondearMonto(1.005, "BRL")).toBe(1.01);
   });
 });
 

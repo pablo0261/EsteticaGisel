@@ -1,7 +1,8 @@
 "use server";
 
 import { getDisponibilidad } from "@/lib/data/turnos";
-import { calcularMontoSena, puedeReservar, redondearMonto } from "@/lib/turnos/reglas";
+import { puedeReservar } from "@/lib/turnos/reglas";
+import { cobroDeReserva } from "@/lib/turnos/pago";
 import { getClientIp } from "@/lib/turnos/ip";
 import { normalizarWhatsApp } from "@/lib/turnos/whatsapp";
 import { EJEMPLO_WHATSAPP } from "@/lib/turnos/ejemplo-whatsapp";
@@ -132,13 +133,29 @@ export async function reservarTurno(formData: FormData): Promise<ReservarTurnoRe
     };
   }
 
+  // Montos en centavos enteros, igual que el formulario de reserva del navegador.
+  const cobro = cobroDeReserva(
+    "sena",
+    config.sena_porcentaje,
+    servicios.map((s) => s.precio),
+    tenant.moneda,
+  );
+  if (cobro.tipo !== "cobro") {
+    return {
+      ok: false,
+      error: t({
+        es: "Los servicios elegidos no tienen precio para reservar online. Escribinos por WhatsApp para coordinar tu turno.",
+        pt: "Os serviços escolhidos não têm valor para agendar online. Fale com a gente pelo WhatsApp para combinar seu horário.",
+      }),
+    };
+  }
+
   const bloqueadoHasta = new Date(Date.now() + 15 * 60 * 1000).toISOString();
   let inicioActual = new Date(iso);
   const turnoIds: string[] = [];
-  let montoSenaTotal = 0;
 
-  for (const servicio of servicios) {
-    const montoSena = calcularMontoSena(servicio.precio, config.sena_porcentaje, tenant.moneda);
+  for (const [i, servicio] of servicios.entries()) {
+    const montoSena = cobro.montos[i];
     const { data: turno, error } = await db
       .insert("turnos", {
         servicio_id: servicio.id,
@@ -167,7 +184,6 @@ export async function reservarTurno(formData: FormData): Promise<ReservarTurnoRe
     }
 
     turnoIds.push(turno.id);
-    montoSenaTotal = redondearMonto(montoSenaTotal + montoSena, tenant.moneda);
     inicioActual = new Date(inicioActual.getTime() + servicio.duracion_minutos * 60000);
   }
 
@@ -177,7 +193,7 @@ export async function reservarTurno(formData: FormData): Promise<ReservarTurnoRe
     const titulo = `${t({ es: "Seña", pt: "Sinal" })} — ${servicios.map((s) => s.nombre).join(" + ")}`;
     const pref = await crearPreferencia({
       titulo,
-      monto: montoSenaTotal,
+      monto: cobro.total,
       moneda: tenant.moneda,
       externalReference: `turno:${turnoIds.join(",")}`,
       clienteEmail,

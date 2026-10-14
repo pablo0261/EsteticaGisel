@@ -1,6 +1,6 @@
 import type { Textos } from "@/lib/i18n/textos";
 import type { Moneda } from "@/lib/tenant/tipos";
-import { calcularMontoSena, redondearMonto } from "./reglas";
+import { centavosDeMonto, centavosDeSena } from "./reglas";
 
 /**
  * Modo de pago de las reservas de un cliente (configuracion_negocio.modo_pago):
@@ -24,7 +24,10 @@ export type CobroReserva =
   /** Monto de cada servicio (en el orden recibido) y el total a cobrar. */
   | { tipo: "cobro"; montos: number[]; total: number };
 
-/** Cada monto y el total quedan redondeados en la moneda (ARS en pesos, BRL en centavos). */
+/**
+ * Cada monto queda redondeado en la moneda (ARS en pesos, BRL en centavos); se suman en
+ * centavos enteros y se divide una sola vez al final, así el total es la suma exacta.
+ */
 export function cobroDeReserva(
   modo: ModoPago,
   senaPorcentaje: number,
@@ -32,14 +35,13 @@ export function cobroDeReserva(
   moneda: Moneda,
 ): CobroReserva {
   if (modo === "ninguno") return { tipo: "sin_cobro" };
-  const montos = precios.map((precio) =>
-    modo === "total" ? redondearMonto(precio, moneda) : calcularMontoSena(precio, senaPorcentaje, moneda),
+  const centavos = precios.map((precio) =>
+    modo === "total" ? centavosDeMonto(precio, moneda) : centavosDeSena(precio, senaPorcentaje, moneda),
   );
-  const total = redondearMonto(
-    montos.reduce((suma, monto) => suma + monto, 0),
-    moneda,
-  );
-  return total > 0 ? { tipo: "cobro", montos, total } : { tipo: "sin_precio" };
+  const totalCentavos = centavos.reduce((suma, c) => suma + c, 0);
+  return totalCentavos > 0
+    ? { tipo: "cobro", montos: centavos.map((c) => c / 100), total: totalCentavos / 100 }
+    : { tipo: "sin_precio" };
 }
 
 export const NOMBRE_MODO_PAGO: Record<ModoPago, Textos> = {
