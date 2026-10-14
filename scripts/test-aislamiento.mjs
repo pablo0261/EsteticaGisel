@@ -150,7 +150,7 @@ async function crearTenant(letra) {
   await ok(admin.from("pagos").insert({ tenant_id: t, tipo: "turno", referencia_id: turno.id, estado: "approved", monto: 1 }), "pago");
   await ok(admin.from("intentos_reserva").insert({ tenant_id: t, ip: "127.0.0.1" }), "intento");
   await ok(admin.from("testimonios").insert({ tenant_id: t, nombre: "N", texto: "T" }), "testimonio");
-  await ok(admin.from("galeria").insert({ tenant_id: t, imagen_url: "https://example.com/galeria.png" }), "galería");
+  await ok(admin.from("galeria").insert({ tenant_id: t, imagen_url: `https://example.supabase.co/storage/v1/object/public/sitios/${t}/galeria-1700000000000-0123abcd.png` }), "galería");
   await ok(admin.from("preguntas_frecuentes").insert({ tenant_id: t, pregunta: "¿P?", respuesta: "R" }), "pregunta");
 
   const usuario = await crearUsuario(letra);

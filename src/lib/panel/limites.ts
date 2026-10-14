@@ -16,5 +16,9 @@ export const LIMITES_PANEL = {
   pregunta: 300,
   respuesta: 2000,
   descripcionImagen: 200,
+  /**
+   * Tope de la galería, solo en la app (cuenta y después inserta): dos subidas simultáneas
+   * pueden dejar 31. Se acepta: acota el espacio de Storage, no es una regla de seguridad.
+   */
   imagenesGaleria: 30,
 } as const;
