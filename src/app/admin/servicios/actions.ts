@@ -1,41 +1,51 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-import { tenantDelAdmin } from "@/lib/tenant/admin";
+import { columnasServicio, esReferenciaEnUso, parsearId, parsearServicio } from "@/lib/panel/formularios";
+import { ir, revalidarSitio, tenantDeAccion } from "@/lib/panel/servidor";
 import { datosDelTenant } from "@/lib/tenant/datos";
 
-function revalidar() {
-  revalidatePath("/admin/servicios");
-  revalidatePath("/sitio/[tenant]", "layout");
+/*
+ * Servicios del cliente. Cada action verifica sesión y sección antes de leer el formulario,
+ * valida con lista blanca (parsearServicio) y redirige con una clave de mensajes.ts. Editar
+ * y borrar filtran por tenant e id: un id de otro cliente no afecta ninguna fila (?error=id).
+ */
+const RUTA = "/admin/servicios";
+
+export async function crearServicio(formData: FormData) {
+  const tenant = await tenantDeAccion("servicios");
+  const servicio = parsearServicio(formData);
+  if (!servicio.ok) ir(RUTA, { error: servicio.error });
+  const { error } = await datosDelTenant(tenant.id).insert("servicios", columnasServicio(servicio.valor));
+  if (error) ir(RUTA, { error: "error" });
+  revalidarSitio(RUTA);
+  ir(RUTA, { ok: "creado" });
 }
 
-export async function createServicio(formData: FormData) {
-  const tenant = await tenantDelAdmin();
-  await datosDelTenant(tenant.id).insert("servicios", {
-    nombre: String(formData.get("nombre")),
-    duracion_minutos: Number(formData.get("duracion_minutos")),
-    precio: Number(formData.get("precio") || 0),
-    orden: Number(formData.get("orden") || 0),
-  });
-  revalidar();
+export async function editarServicio(formData: FormData) {
+  const tenant = await tenantDeAccion("servicios");
+  const id = parsearId(formData);
+  if (!id) ir(RUTA, { error: "id" });
+  const servicio = parsearServicio(formData);
+  if (!servicio.ok) ir(RUTA, { error: servicio.error });
+  const { data, error } = await datosDelTenant(tenant.id)
+    .update("servicios", columnasServicio(servicio.valor))
+    .eq("id", id)
+    .select("id");
+  if (error) ir(RUTA, { error: "error" });
+  if (!data?.length) ir(RUTA, { error: "id" });
+  revalidarSitio(RUTA);
+  ir(RUTA, { ok: "guardado" });
 }
 
-export async function updateServicio(formData: FormData) {
-  const tenant = await tenantDelAdmin();
-  await datosDelTenant(tenant.id)
-    .update("servicios", {
-      nombre: String(formData.get("nombre")),
-      duracion_minutos: Number(formData.get("duracion_minutos")),
-      precio: Number(formData.get("precio") || 0),
-      orden: Number(formData.get("orden") || 0),
-      activo: formData.get("activo") === "on",
-    })
-    .eq("id", String(formData.get("id")));
-  revalidar();
-}
-
-export async function deleteServicio(formData: FormData) {
-  const tenant = await tenantDelAdmin();
-  await datosDelTenant(tenant.id).delete("servicios").eq("id", String(formData.get("id")));
-  revalidar();
+export async function eliminarServicio(formData: FormData) {
+  const tenant = await tenantDeAccion("servicios");
+  const id = parsearId(formData);
+  if (!id) ir(RUTA, { error: "id" });
+  const { data, error } = await datosDelTenant(tenant.id).delete("servicios").eq("id", id).select("id");
+  // Los turnos referencian el servicio (FK sin cascada): un servicio con turnos no se borra.
+  if (esReferenciaEnUso(error)) ir(RUTA, { error: "servicio_con_turnos" });
+  if (error) ir(RUTA, { error: "error" });
+  if (!data?.length) ir(RUTA, { error: "id" });
+  revalidarSitio(RUTA);
+  ir(RUTA, { ok: "eliminado" });
 }

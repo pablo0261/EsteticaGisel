@@ -1,115 +1,161 @@
-import { getServiciosAdmin } from "@/lib/data/servicios";
-import { tenantDelAdmin } from "@/lib/tenant/admin";
-import { createServicio, updateServicio, deleteServicio } from "./actions";
-import { formatPrecio, formatDuracion } from "@/lib/format";
-import { SubmitButton } from "@/components/ui/SubmitButton";
+import type { Metadata } from "next";
+import {
+  BOTON,
+  BOTON_SECUNDARIO,
+  CAMPO_EN_LINEA,
+  CASILLA,
+  ENLACE,
+  FILA,
+  Mensajes,
+  SUBTITULO,
+  TARJETA,
+  TITULO,
+  type ParamsPanel,
+} from "@/components/panel/ui";
 import { FormPendingOverlay } from "@/components/ui/FormPendingOverlay";
+import { SubmitButton } from "@/components/ui/SubmitButton";
+import { getServiciosAdmin } from "@/lib/data/servicios";
+import { formatDuracion, formatPrecio } from "@/lib/format";
+import { traductor } from "@/lib/i18n/textos";
+import { LIMITES_PANEL as L } from "@/lib/panel/limites";
+import { metadataDelPanel } from "@/lib/panel/metadata";
+import { tenantDeSeccion } from "@/lib/panel/servidor";
+import { crearServicio, editarServicio, eliminarServicio } from "./actions";
 
-export const metadata = { title: "Servicios · Panel" };
+export function generateMetadata(): Promise<Metadata> {
+  return metadataDelPanel({ es: "Servicios", pt: "Serviços" });
+}
 
-export default async function ServiciosAdmin() {
-  const tenant = await tenantDelAdmin();
+export default async function ServiciosAdmin({ searchParams }: { searchParams: Promise<ParamsPanel> }) {
+  const tenant = await tenantDeSeccion("servicios");
+  const t = traductor(tenant.idioma);
   const servicios = await getServiciosAdmin(tenant.id);
+  // BRL tiene centavos; ARS se maneja en pesos enteros.
+  const pasoPrecio = tenant.moneda === "BRL" ? "0.01" : "1";
+  const etiqueta = {
+    nombre: t({ es: "Nombre", pt: "Nome" }),
+    minutos: t({ es: "Minutos", pt: "Minutos" }),
+    precio: t({ es: "Precio", pt: "Preço" }),
+    orden: t({ es: "Orden", pt: "Ordem" }),
+    activo: t({ es: "activo", pt: "ativo" }),
+  };
 
   return (
     <div>
-      <h1 className="font-serif text-4xl text-texto">Servicios</h1>
-      <p className="mt-2 font-sans text-sm text-texto-suave">
-        Cargá el precio (en pesos) y la duración (en minutos) de cada servicio.
-        Desmarcá &ldquo;activo&rdquo; para ocultarlo del sitio.
+      <h1 className={TITULO}>{t({ es: "Servicios", pt: "Serviços" })}</h1>
+      <p className={SUBTITULO}>
+        {t({
+          es: "Cargá el precio y la duración (en minutos) de cada servicio. Con el precio vacío o en 0, el sitio muestra “Consultar”. Desmarcá “activo” para ocultarlo del sitio.",
+          pt: "Informe o preço e a duração (em minutos) de cada serviço. Com o preço vazio ou 0, o site mostra “Sob consulta”. Desmarque “ativo” para ocultá-lo do site.",
+        })}
       </p>
+      <div className="mt-6">
+        <Mensajes idioma={tenant.idioma} params={await searchParams} />
+      </div>
 
-      {/* Alta */}
-      <form
-        action={createServicio}
-        className="mt-6 flex flex-wrap items-end gap-3 rounded-2xl border border-primario/15 bg-white/60 p-4"
-      >
+      <form id="form-nuevo-servicio" action={crearServicio} className={`${TARJETA} flex flex-wrap items-end gap-3`}>
         <input
           name="nombre"
-          placeholder="Nombre"
+          placeholder={etiqueta.nombre}
+          aria-label={etiqueta.nombre}
           required
-          className="min-w-48 flex-1 rounded-lg border border-primario/20 bg-fondo px-3 py-2"
+          maxLength={L.nombre}
+          className={`${CAMPO_EN_LINEA} min-w-48 flex-1`}
         />
         <input
           name="duracion_minutos"
           type="number"
-          placeholder="Min"
+          min={L.duracionMin}
+          max={L.duracionMax}
+          placeholder={etiqueta.minutos}
+          aria-label={etiqueta.minutos}
           required
-          className="w-24 rounded-lg border border-primario/20 bg-fondo px-3 py-2"
+          className={`${CAMPO_EN_LINEA} w-24`}
         />
         <input
           name="precio"
           type="number"
-          placeholder="Precio"
-          className="w-32 rounded-lg border border-primario/20 bg-fondo px-3 py-2"
+          min={0}
+          step={pasoPrecio}
+          placeholder={etiqueta.precio}
+          aria-label={etiqueta.precio}
+          className={`${CAMPO_EN_LINEA} w-32`}
         />
         <input
           name="orden"
           type="number"
-          placeholder="Orden"
-          className="w-24 rounded-lg border border-primario/20 bg-fondo px-3 py-2"
+          min={0}
+          max={L.ordenMax}
+          placeholder={etiqueta.orden}
+          aria-label={etiqueta.orden}
+          className={`${CAMPO_EN_LINEA} w-24`}
         />
-        <SubmitButton className="rounded-full bg-primario px-6 py-2 text-sm font-medium text-fondo transition hover:bg-primario-oscuro disabled:opacity-60">
-          Agregar
-        </SubmitButton>
-        <FormPendingOverlay label="Agregando servicio…" />
+        <label className={CASILLA}>
+          <input name="activo" type="checkbox" defaultChecked />
+          {etiqueta.activo}
+        </label>
+        <SubmitButton className={BOTON}>{t({ es: "Agregar", pt: "Adicionar" })}</SubmitButton>
+        <FormPendingOverlay label={t({ es: "Agregando servicio…", pt: "Adicionando serviço…" })} />
       </form>
 
-      {/* Listado editable */}
       <div className="mt-6 space-y-3">
         {servicios.length === 0 && (
-          <p className="font-sans text-sm text-texto-suave">
-            No hay servicios. Si recién creaste la base, aplicá la migración
-            (<code>supabase db push</code>) y recargá.
-          </p>
+          <p className="font-sans text-sm text-texto-suave">{t({ es: "Todavía no hay servicios.", pt: "Ainda não há serviços." })}</p>
         )}
         {servicios.map((s) => (
-          <form
-            key={s.id}
-            action={updateServicio}
-            className="flex flex-wrap items-center gap-3 rounded-xl border border-primario/15 bg-white/60 p-3"
-          >
-            <input type="hidden" name="id" value={s.id} />
-            <input
-              name="nombre"
-              defaultValue={s.nombre}
-              className="min-w-48 flex-1 rounded-lg border border-primario/20 bg-fondo px-3 py-2"
-            />
-            <input
-              name="duracion_minutos"
-              type="number"
-              defaultValue={s.duracion_minutos}
-              title={formatDuracion(s.duracion_minutos)}
-              className="w-20 rounded-lg border border-primario/20 bg-fondo px-3 py-2"
-            />
-            <input
-              name="precio"
-              type="number"
-              defaultValue={s.precio}
-              title={formatPrecio(s.precio, tenant.moneda, tenant.idioma)}
-              className="w-28 rounded-lg border border-primario/20 bg-fondo px-3 py-2"
-            />
-            <input
-              name="orden"
-              type="number"
-              defaultValue={s.orden}
-              className="w-20 rounded-lg border border-primario/20 bg-fondo px-3 py-2"
-            />
-            <label className="flex items-center gap-1 font-sans text-sm text-texto-suave">
-              <input name="activo" type="checkbox" defaultChecked={s.activo} />
-              activo
-            </label>
-            <SubmitButton className="rounded-full bg-secundario px-4 py-2 text-sm text-fondo transition hover:bg-secundario-oscuro disabled:opacity-60">
-              Guardar
-            </SubmitButton>
-            <SubmitButton
-              formAction={deleteServicio}
-              className="font-sans text-sm text-primario hover:text-primario-oscuro disabled:opacity-60"
-            >
-              Eliminar
-            </SubmitButton>
-            <FormPendingOverlay label="Guardando cambios…" />
-          </form>
+          <div key={s.id} className={`${FILA} flex flex-wrap items-center gap-3`}>
+            <form id={`form-servicio-${s.id}`} action={editarServicio} className="flex flex-1 flex-wrap items-center gap-3">
+              <input type="hidden" name="id" value={s.id} />
+              <input
+                name="nombre"
+                defaultValue={s.nombre}
+                aria-label={etiqueta.nombre}
+                required
+                maxLength={L.nombre}
+                className={`${CAMPO_EN_LINEA} min-w-48 flex-1`}
+              />
+              <input
+                name="duracion_minutos"
+                type="number"
+                min={L.duracionMin}
+                max={L.duracionMax}
+                defaultValue={s.duracion_minutos}
+                aria-label={etiqueta.minutos}
+                title={formatDuracion(s.duracion_minutos)}
+                className={`${CAMPO_EN_LINEA} w-20`}
+              />
+              <input
+                name="precio"
+                type="number"
+                min={0}
+                step={pasoPrecio}
+                defaultValue={s.precio}
+                aria-label={etiqueta.precio}
+                title={formatPrecio(s.precio, tenant.moneda, tenant.idioma)}
+                className={`${CAMPO_EN_LINEA} w-28`}
+              />
+              <input
+                name="orden"
+                type="number"
+                min={0}
+                max={L.ordenMax}
+                defaultValue={s.orden}
+                aria-label={etiqueta.orden}
+                className={`${CAMPO_EN_LINEA} w-20`}
+              />
+              <label className={CASILLA}>
+                <input name="activo" type="checkbox" defaultChecked={s.activo} />
+                {etiqueta.activo}
+              </label>
+              <SubmitButton className={BOTON_SECUNDARIO}>{t({ es: "Guardar", pt: "Salvar" })}</SubmitButton>
+              <FormPendingOverlay label={t({ es: "Guardando cambios…", pt: "Salvando alterações…" })} />
+            </form>
+            <form id={`form-eliminar-servicio-${s.id}`} action={eliminarServicio}>
+              <input type="hidden" name="id" value={s.id} />
+              <SubmitButton className={ENLACE}>{t({ es: "Eliminar", pt: "Excluir" })}</SubmitButton>
+              <FormPendingOverlay label={t({ es: "Eliminando…", pt: "Excluindo…" })} />
+            </form>
+          </div>
         ))}
       </div>
     </div>
