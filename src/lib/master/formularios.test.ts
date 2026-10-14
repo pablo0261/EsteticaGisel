@@ -198,6 +198,13 @@ describe("parsearGmail", () => {
       ok: false,
       error: "gmail_remitente",
     });
+    // Cualquier carácter de control, no solo los saltos de línea.
+    for (const remitente of ["Ana\tB", "Ana\u0000", "Ana\u007f"]) {
+      expect(parsearGmail(fd({ smtp_usuario: "t@gmail.com", smtp_nombre_remitente: remitente })), JSON.stringify(remitente)).toEqual({
+        ok: false,
+        error: "gmail_remitente",
+      });
+    }
   });
 });
 

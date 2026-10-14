@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 import {
   detectarFormato,
   esTipoImagen,
+  pathDeImagenGaleria,
+  pathImagenGaleria,
   MAX_BYTES_IMAGEN,
   pathDeUrlPublica,
   pathImagen,
@@ -76,5 +78,24 @@ describe("tipos, paths y URLs", () => {
     expect(pathDeUrlPublica(`https://abc.supabase.co/storage/v1/object/public/cursos-archivos/${TENANT}/logo-1.png`, SUPABASE, TENANT)).toBeNull();
     expect(pathDeUrlPublica(urlPublica(SUPABASE, `${TENANT}/../${OTRO}/logo-1.png`), SUPABASE, TENANT)).toBeNull();
     expect(pathDeUrlPublica(urlPublica(SUPABASE, `${TENANT}/logo-1.svg`), SUPABASE, TENANT)).toBeNull();
+  });
+});
+
+describe("galería", () => {
+  it("path {tenant}/galeria-{ms}-{8 hex}.{ext}", () => {
+    expect(pathImagenGaleria(TENANT, "jpg", new Date(1_700_000_000_000), "0a1b2c3d")).toBe(
+      `${TENANT}/galeria-1700000000000-0a1b2c3d.jpg`,
+    );
+    expect(() => pathImagenGaleria(TENANT, "jpg", new Date(0), "../x")).toThrow();
+  });
+
+  it("pathDeImagenGaleria: solo imágenes de la galería de ese tenant", () => {
+    const propia = urlPublica(SUPABASE, `${TENANT}/galeria-123-0a1b2c3d.webp`);
+    expect(pathDeImagenGaleria(propia, SUPABASE, TENANT)).toBe(`${TENANT}/galeria-123-0a1b2c3d.webp`);
+    expect(pathDeImagenGaleria(propia, SUPABASE, OTRO)).toBeNull();
+    expect(pathDeImagenGaleria(urlPublica(SUPABASE, `${TENANT}/logo-123.png`), SUPABASE, TENANT)).toBeNull();
+    expect(pathDeImagenGaleria(urlPublica(SUPABASE, `${TENANT}/galeria-1-0a1b2c3d.svg`), SUPABASE, TENANT)).toBeNull();
+    expect(pathDeImagenGaleria("https://otro.example/galeria-1-0a1b2c3d.png", SUPABASE, TENANT)).toBeNull();
+    expect(pathDeImagenGaleria(null, SUPABASE, TENANT)).toBeNull();
   });
 });

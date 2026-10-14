@@ -1,5 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { construirHorarioAtencion, DIAS_SEMANA, resumirHorario } from "./horario";
+import { construirHorarioAtencion, DIAS_SEMANA, nombreDia, resumirHorario } from "./horario";
+
+describe("nombreDia", () => {
+  it("nombre del día en el idioma del panel", () => {
+    expect(nombreDia("lun", "es")).toBe("Lunes");
+    expect(nombreDia("lun", "pt")).toBe("Segunda");
+    expect(nombreDia("dom", "pt")).toBe("Domingo");
+  });
+});
 
 describe("DIAS_SEMANA", () => {
   it("tiene los 7 días de la semana en orden", () => {

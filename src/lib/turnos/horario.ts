@@ -124,3 +124,8 @@ export function resumirHorario(
     return { dias, horas: n.horas(rango[0], rango[1]) };
   });
 }
+
+/** Nombre del día para el panel ("Lunes", "Segunda"). */
+export function nombreDia(dia: DiaSemana, idioma: Idioma): string {
+  return NOMBRES[idioma].enRango[dia];
+}

@@ -16,10 +16,10 @@ import { esIdioma, esMoneda, esPais, zonaPermitida } from "./pais";
  */
 export type Resultado<T> = { ok: true; valor: T } | { ok: false; error: ClaveError };
 
-/** Caracteres de control: en un texto de una línea no se permiten. */
-const CONTROL = /[\u0000-\u001f\u007f]/;
+/** Caracteres de control: en un texto de una línea no se permiten. Lo usa también el panel del cliente. */
+export const CONTROL = /[\u0000-\u001f\u007f]/;
 /** En un texto de varias líneas se permiten los saltos de línea (LF y CR). */
-const CONTROL_MULTILINEA = /[\u0000-\u0009\u000b\u000c\u000e-\u001f\u007f]/;
+export const CONTROL_MULTILINEA = /[\u0000-\u0009\u000b\u000c\u000e-\u001f\u007f]/;
 
 function texto(fd: FormData, nombre: string): string {
   const v = fd.get(nombre);
@@ -207,7 +207,7 @@ export function parsearGmail(fd: FormData): Resultado<FormGmail> {
   const contrasena = texto(fd, "smtp_password").replace(/\s+/g, "");
   if (contrasena && !/^[a-z]{16}$/i.test(contrasena)) return { ok: false, error: "gmail_contrasena" };
   const remitente = texto(fd, "smtp_nombre_remitente");
-  if (remitente.length > LIMITES.remitente || /[\r\n]/.test(remitente)) return { ok: false, error: "gmail_remitente" };
+  if (remitente.length > LIMITES.remitente || CONTROL.test(remitente)) return { ok: false, error: "gmail_remitente" };
   return { ok: true, valor: { usuario, contrasena: contrasena || null, remitente: remitente || null } };
 }
 

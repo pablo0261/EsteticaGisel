@@ -92,3 +92,25 @@ export function pathDeUrlPublica(url: string | null, urlSupabase: string, tenant
   if (!path.startsWith(carpeta)) return null;
   return ARCHIVO_PROPIO.test(path.slice(carpeta.length)) ? path : null;
 }
+
+/**
+ * Imagen de la galería: {tenant_id}/galeria-{ms}-{sufijo}.{ext}. El sufijo (8 hex
+ * aleatorios) evita que dos subidas del mismo milisegundo se pisen.
+ */
+export function pathImagenGaleria(tenantId: string, formato: FormatoImagen, ahora: Date, sufijo: string): string {
+  if (!/^[0-9a-f]{8}$/.test(sufijo)) throw new Error("Sufijo de imagen inválido");
+  return `${tenantId}/galeria-${ahora.getTime()}-${sufijo}.${formato}`;
+}
+
+const ARCHIVO_GALERIA = /^galeria-\d+-[0-9a-f]{8}\.(png|jpg|webp)$/;
+
+/** Path de una imagen de la galería de ese tenant (para borrarla), o null si la URL no es una. */
+export function pathDeImagenGaleria(url: string | null, urlSupabase: string, tenantId: string): string | null {
+  if (!url) return null;
+  const prefijo = prefijoPublico(urlSupabase);
+  if (!url.startsWith(prefijo)) return null;
+  const path = url.slice(prefijo.length);
+  const carpeta = `${tenantId}/`;
+  if (!path.startsWith(carpeta)) return null;
+  return ARCHIVO_GALERIA.test(path.slice(carpeta.length)) ? path : null;
+}
