@@ -41,7 +41,7 @@ export default async function MasterLayout({ children }: { children: React.React
     <div className="min-h-screen bg-fondo">
       <header className="border-b border-primario/15 bg-white/70">
         <Container className="flex h-16 items-center justify-between">
-          <nav className="flex items-center gap-6">
+          <nav aria-label="Panel master" className="flex items-center gap-6">
             <Link href="/" className="font-serif text-xl text-texto">
               Panel master
             </Link>

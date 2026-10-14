@@ -6,6 +6,7 @@ import { esMasterVerificado } from "@/lib/auth/master";
 import { claveCredencialesConfigurada } from "@/lib/cripto/clave";
 import { configurarGmail, configurarMercadoPago } from "@/lib/master/acciones";
 import { estadoCredenciales } from "@/lib/master/credenciales";
+import { mensajeError } from "@/lib/master/mensajes";
 import { LIMITES } from "@/lib/master/limites";
 import { clientePorSlug } from "@/lib/master/servicio";
 
@@ -20,13 +21,15 @@ export default async function CredencialesCliente({ params, searchParams }: Prop
   if (!tenant) notFound();
   // Solo estados y valores no secretos: los secretos nunca llegan a la página.
   const { gmail, mp } = await estadoCredenciales(tenant.id);
+  const query = await searchParams;
   return (
     <div className="flex max-w-2xl flex-col gap-8">
       <div>
-        <Mensajes params={await searchParams} />
-        {!claveCredencialesConfigurada() && (
+        <Mensajes params={query} />
+        {/* Si la action ya redirigió con ese error, Mensajes lo muestra: no se repite. */}
+        {!claveCredencialesConfigurada() && query.error !== "clave_credenciales" && (
           <p role="alert" className="rounded-lg bg-primario/10 px-4 py-3 font-sans text-sm text-primario-oscuro">
-            Falta CREDENCIALES_KEY en el servidor: no se pueden guardar credenciales.
+            {mensajeError("clave_credenciales")}
           </p>
         )}
       </div>
@@ -46,7 +49,16 @@ export default async function CredencialesCliente({ params, searchParams }: Prop
         </p>
         <label className={ETIQUETA}>
           Cuenta de Gmail
-          <input name="smtp_usuario" type="email" required defaultValue={gmail.usuario ?? ""} autoComplete="off" className={CAMPO} />
+          <input
+            name="smtp_usuario"
+            type="email"
+            required
+            defaultValue={gmail.usuario ?? ""}
+            autoComplete="off"
+            data-1p-ignore
+            data-lpignore="true"
+            className={CAMPO}
+          />
         </label>
         <label className={ETIQUETA}>
           Contraseña de aplicación
@@ -54,6 +66,8 @@ export default async function CredencialesCliente({ params, searchParams }: Prop
             name="smtp_password"
             type="password"
             autoComplete="new-password"
+            data-1p-ignore
+            data-lpignore="true"
             placeholder={gmail.contrasenaConfigurada ? MANTENER : "16 letras"}
             className={CAMPO}
           />
@@ -67,7 +81,7 @@ export default async function CredencialesCliente({ params, searchParams }: Prop
             maxLength={LIMITES.remitente}
             className={CAMPO}
           />
-          <span className={AYUDA}>Si lo dejás vacío, se borra el nombre guardado.</span>
+          <span className={AYUDA}>Si lo dejás vacío, se borra al guardar.</span>
         </label>
         <p className={AYUDA}>
           Para probar la configuración guardada, enviá el formulario con la contraseña vacía. Si cambiás de cuenta, cargá

@@ -22,12 +22,14 @@ export default async function MarcaCliente({ params, searchParams }: Props) {
   const tenant = await clientePorSlug((await params).slug);
   if (!tenant) notFound();
   const m = tenant.marca;
+  const query = await searchParams;
   return (
     <div className="flex max-w-3xl flex-col gap-8">
       <div>
-        <Mensajes params={await searchParams} />
+        <Mensajes params={query} />
         <EditorColores
           slug={tenant.slug}
+          avisoGuardado={query.aviso === "contraste_secundario"}
           inicial={{
             colorPrimario: m.colorPrimario,
             colorSecundario: m.colorSecundario,

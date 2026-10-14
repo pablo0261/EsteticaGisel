@@ -16,7 +16,7 @@ const PESTANAS = [
 export function PestanasCliente({ slug }: { slug: string }) {
   const activo = useSelectedLayoutSegment();
   return (
-    <nav className="mt-6 flex flex-wrap gap-1 border-b border-primario/15 font-sans text-sm">
+    <nav aria-label="Secciones del cliente" className="mt-6 flex flex-wrap gap-1 border-b border-primario/15 font-sans text-sm">
       {PESTANAS.map((p) => {
         const href = `/clientes/${slug}${p.segmento ? `/${p.segmento}` : ""}`;
         const seleccionada = activo === p.segmento;
