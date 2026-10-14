@@ -1,28 +1,23 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-import { construirHorarioAtencion, DIAS_SEMANA } from "@/lib/turnos/horario";
-import { tenantDelAdmin } from "@/lib/tenant/admin";
+import { columnasConfiguracion, parsearConfiguracion } from "@/lib/panel/formularios";
+import { ir, revalidarSitio, tenantDeAccion } from "@/lib/panel/servidor";
 import { datosDelTenant } from "@/lib/tenant/datos";
 
-export async function updateConfiguracion(formData: FormData) {
-  const tenant = await tenantDelAdmin();
+const RUTA = "/admin/configuracion";
 
-  const horarioAtencion = construirHorarioAtencion(
-    DIAS_SEMANA.map((d) => ({
-      key: d.key,
-      cerrado: formData.get(`cerrado_${d.key}`) === "on",
-      desde: String(formData.get(`desde_${d.key}`) || ""),
-      hasta: String(formData.get(`hasta_${d.key}`) || ""),
-    })),
-  );
-
-  await datosDelTenant(tenant.id).update("configuracion_negocio", {
-    horas_minimas_cancelacion: Number(formData.get("horas_minimas_cancelacion")),
-    minutos_preparacion_entre_turnos: Number(formData.get("minutos_preparacion_entre_turnos")),
-    sena_porcentaje: Number(formData.get("sena_porcentaje")),
-    horario_atencion: horarioAtencion,
-  });
-  revalidatePath("/admin/configuracion");
-  revalidatePath("/sitio/[tenant]", "layout");
+/**
+ * Horario de atención y, con el módulo turnos, las reglas de los turnos y el modo de pago.
+ * Sin el módulo, las reglas no se leen ni se tocan (parsearConfiguracion devuelve reglas null).
+ */
+export async function guardarConfiguracion(formData: FormData) {
+  const tenant = await tenantDeAccion("configuracion");
+  const config = parsearConfiguracion(formData, tenant.modulos.turnos);
+  if (!config.ok) ir(RUTA, { error: config.error });
+  const { data, error } = await datosDelTenant(tenant.id)
+    .update("configuracion_negocio", columnasConfiguracion(config.valor))
+    .select("tenant_id");
+  if (error || !data?.length) ir(RUTA, { error: "error" });
+  revalidarSitio(RUTA);
+  ir(RUTA, { ok: "guardado" });
 }
