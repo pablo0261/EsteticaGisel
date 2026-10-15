@@ -6,32 +6,25 @@ import { Container } from "@/components/ui/Container";
 import { Button } from "@/components/ui/Button";
 import { Logo } from "@/components/ui/Logo";
 import { useT } from "@/lib/i18n/cliente";
-import type { Modulos } from "@/lib/tenant/tipos";
+import { DESTINO_ENLACE, type EnlaceSitio } from "@/lib/sitio/enlaces";
 
+/** Menú del sitio. Los enlaces los decide el layout (enlacesDelSitio): solo secciones con contenido. */
 export function Nav({
   nombre,
   logoUrl,
-  modulos,
+  enlaces,
+  reservaOnline,
   whatsappUrl,
 }: {
   nombre: string;
   logoUrl: string | null;
-  modulos: Modulos;
+  enlaces: EnlaceSitio[];
+  reservaOnline: boolean;
   whatsappUrl: string | null;
 }) {
   const t = useT();
-  const links = [
-    { href: "/#servicios", label: t({ es: "Servicios", pt: "Serviços" }) },
-    ...(modulos.sobreMi
-      ? [{ href: "/#sobre-mi", label: t({ es: "Sobre mí", pt: "Sobre mim" }) }]
-      : []),
-    ...(modulos.testimonios
-      ? [{ href: "/#testimonios", label: t({ es: "Testimonios", pt: "Depoimentos" }) }]
-      : []),
-    ...(modulos.cursos ? [{ href: "/cursos", label: t({ es: "Cursos", pt: "Cursos" }) }] : []),
-    { href: "/#contacto", label: t({ es: "Contacto", pt: "Contato" }) },
-  ];
-  const reservarHref = modulos.turnos ? "/turnos" : whatsappUrl;
+  const links = enlaces.map((e) => ({ href: DESTINO_ENLACE[e].href, label: t(DESTINO_ENLACE[e].etiqueta) }));
+  const reservarHref = reservaOnline ? "/turnos" : whatsappUrl;
   const reservarTexto = t({ es: "Reservar turno", pt: "Agendar horário" });
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
@@ -58,11 +51,7 @@ export function Nav({
 
         <nav className="hidden items-center gap-8 md:flex">
           {links.map((l) => (
-            <Link
-              key={l.href}
-              href={l.href}
-              className="font-sans text-sm text-texto transition hover:text-primario"
-            >
+            <Link key={l.href} href={l.href} className="font-sans text-sm text-texto transition hover:text-primario">
               {l.label}
             </Link>
           ))}
@@ -73,9 +62,7 @@ export function Nav({
           type="button"
           className="flex h-10 w-10 items-center justify-center text-texto md:hidden"
           onClick={() => setOpen((v) => !v)}
-          aria-label={
-            open ? t({ es: "Cerrar menú", pt: "Fechar menu" }) : t({ es: "Abrir menú", pt: "Abrir menu" })
-          }
+          aria-label={open ? t({ es: "Cerrar menú", pt: "Fechar menu" }) : t({ es: "Abrir menú", pt: "Abrir menu" })}
           aria-expanded={open}
         >
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
