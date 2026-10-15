@@ -40,6 +40,9 @@ describe("parsearMonto", () => {
     expect(parsearMonto("350,50", 10_000)).toBe(350.5);
     expect(parsearMonto(" 0.99 ", 10_000)).toBe(0.99);
     for (const v of ["-1", "1.234", "1e3", "abc", "", "10001"]) expect(parsearMonto(v, 10_000), v).toBeNull();
+    // Sin decimales (ARS)
+    expect(parsearMonto("1500", 10_000, 0)).toBe(1500);
+    for (const v of ["1500.5", "1500,50", "0.99"]) expect(parsearMonto(v, 10_000, 0), v).toBeNull();
   });
 });
 
@@ -47,7 +50,7 @@ describe("parsearServicio", () => {
   const SERVICIO = { nombre: " Limpieza facial ", duracion_minutos: "60", precio: "35000", orden: "2", activo: "on" };
 
   it("valida y devuelve solo las columnas del servicio", () => {
-    const r = parsearServicio(fd({ ...SERVICIO, tenant_id: "otro", id: ID }));
+    const r = parsearServicio("ARS", fd({ ...SERVICIO, tenant_id: "otro", id: ID }));
     expect(r).toEqual({ ok: true, valor: { nombre: "Limpieza facial", duracionMinutos: 60, precio: 35000, orden: 2, activo: true } });
     if (r.ok) {
       expect(columnasServicio(r.valor)).toEqual({ nombre: "Limpieza facial", duracion_minutos: 60, precio: 35000, orden: 2, activo: true });
@@ -55,21 +58,31 @@ describe("parsearServicio", () => {
   });
 
   it("precio y orden vacíos valen 0; sin la casilla, inactivo", () => {
-    expect(parsearServicio(fd({ nombre: "A", duracion_minutos: "30", precio: "", orden: "" }))).toEqual({
+    expect(parsearServicio("ARS", fd({ nombre: "A", duracion_minutos: "30", precio: "", orden: "" }))).toEqual({
       ok: true,
       valor: { nombre: "A", duracionMinutos: 30, precio: 0, orden: 0, activo: false },
     });
   });
 
   it("cada error", () => {
-    expect(parsearServicio(fd({ ...SERVICIO, nombre: "" }))).toEqual({ ok: false, error: "nombre" });
-    expect(parsearServicio(fd({ ...SERVICIO, nombre: "x".repeat(81) }))).toEqual({ ok: false, error: "nombre" });
-    expect(parsearServicio(fd({ ...SERVICIO, nombre: "A\u0000B" }))).toEqual({ ok: false, error: "texto_invalido" });
+    expect(parsearServicio("ARS", fd({ ...SERVICIO, nombre: "" }))).toEqual({ ok: false, error: "nombre" });
+    expect(parsearServicio("ARS", fd({ ...SERVICIO, nombre: "x".repeat(81) }))).toEqual({ ok: false, error: "nombre" });
+    expect(parsearServicio("ARS", fd({ ...SERVICIO, nombre: "A\u0000B" }))).toEqual({ ok: false, error: "texto_invalido" });
     for (const d of ["4", "601", "30.5", "", "-30"]) {
-      expect(parsearServicio(fd({ ...SERVICIO, duracion_minutos: d })), d).toEqual({ ok: false, error: "duracion" });
+      expect(parsearServicio("ARS", fd({ ...SERVICIO, duracion_minutos: d })), d).toEqual({ ok: false, error: "duracion" });
     }
-    expect(parsearServicio(fd({ ...SERVICIO, precio: "-1" }))).toEqual({ ok: false, error: "precio" });
-    expect(parsearServicio(fd({ ...SERVICIO, orden: "1000" }))).toEqual({ ok: false, error: "orden" });
+    expect(parsearServicio("ARS", fd({ ...SERVICIO, precio: "-1" }))).toEqual({ ok: false, error: "precio" });
+    expect(parsearServicio("ARS", fd({ ...SERVICIO, orden: "1000" }))).toEqual({ ok: false, error: "orden" });
+  });
+
+  it("precio según la moneda: ARS en pesos enteros, BRL con hasta 2 decimales", () => {
+    for (const p of ["350.5", "350,50", "0.99"]) {
+      expect(parsearServicio("ARS", fd({ ...SERVICIO, precio: p })), p).toEqual({ ok: false, error: "precio" });
+    }
+    expect(parsearServicio("ARS", fd({ ...SERVICIO, precio: "35000" })).ok).toBe(true);
+    const brl = parsearServicio("BRL", fd({ ...SERVICIO, precio: "350,50" }));
+    expect(brl.ok && brl.valor.precio).toBe(350.5);
+    expect(parsearServicio("BRL", fd({ ...SERVICIO, precio: "350.555" }))).toEqual({ ok: false, error: "precio" });
   });
 });
 

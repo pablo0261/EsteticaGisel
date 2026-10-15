@@ -13,7 +13,7 @@ const RUTA = "/admin/servicios";
 
 export async function crearServicio(formData: FormData) {
   const tenant = await tenantDeAccion("servicios");
-  const servicio = parsearServicio(formData);
+  const servicio = parsearServicio(tenant.moneda, formData);
   if (!servicio.ok) ir(RUTA, { error: servicio.error });
   const { error } = await datosDelTenant(tenant.id).insert("servicios", columnasServicio(servicio.valor));
   if (error) ir(RUTA, { error: "error" });
@@ -25,7 +25,7 @@ export async function editarServicio(formData: FormData) {
   const tenant = await tenantDeAccion("servicios");
   const id = parsearId(formData);
   if (!id) ir(RUTA, { error: "id" });
-  const servicio = parsearServicio(formData);
+  const servicio = parsearServicio(tenant.moneda, formData);
   if (!servicio.ok) ir(RUTA, { error: servicio.error });
   const { data, error } = await datosDelTenant(tenant.id)
     .update("servicios", columnasServicio(servicio.valor))

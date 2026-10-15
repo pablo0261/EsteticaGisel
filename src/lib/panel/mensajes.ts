@@ -27,8 +27,8 @@ const ERRORES = {
     pt: `A duração precisa ser um número inteiro de minutos, entre ${L.duracionMin} e ${L.duracionMax}.`,
   },
   precio: {
-    es: "El precio tiene que ser un número mayor o igual a 0, con hasta 2 decimales.",
-    pt: "O preço precisa ser um número maior ou igual a 0, com até 2 casas decimais.",
+    es: "El precio tiene que ser un número mayor o igual a 0: en pesos, sin decimales; en reales, con hasta 2 decimales.",
+    pt: "O preço precisa ser um número maior ou igual a 0: em pesos, sem casas decimais; em reais, com até 2 casas decimais.",
   },
   orden: {
     es: `El orden tiene que ser un número entero entre 0 y ${L.ordenMax}.`,

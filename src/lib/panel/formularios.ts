@@ -2,6 +2,7 @@ import { CONTROL, CONTROL_MULTILINEA } from "@/lib/master/formularios";
 import { DIAS_SEMANA } from "@/lib/turnos/horario";
 import { esModoPago, type ModoPago } from "@/lib/turnos/pago";
 import { LIMITES_PANEL as L } from "./limites";
+import type { Moneda } from "@/lib/tenant/tipos";
 import type { ClaveError } from "./mensajes";
 
 /**
@@ -39,10 +40,14 @@ function entero(fd: FormData, nombre: string, min: number, max: number, porDefec
   return n >= min && n <= max ? n : null;
 }
 
-/** Monto ≥ 0 con hasta 2 decimales, con punto o coma decimal ("1500", "350,50"). null si no lo es. */
-export function parsearMonto(entrada: string, maximo: number): number | null {
+/**
+ * Monto ≥ 0 con hasta `decimales` decimales (2 o 0), con punto o coma decimal ("1500",
+ * "350,50"). null si no lo es.
+ */
+export function parsearMonto(entrada: string, maximo: number, decimales: 0 | 2 = 2): number | null {
   const v = entrada.trim().replace(",", ".");
-  if (!/^\d{1,9}(\.\d{1,2})?$/.test(v)) return null;
+  const formato = decimales === 0 ? /^\d{1,9}$/ : /^\d{1,9}(\.\d{1,2})?$/;
+  if (!formato.test(v)) return null;
   const n = Number(v);
   return n <= maximo ? n : null;
 }
@@ -67,7 +72,8 @@ export function esReferenciaEnUso(error: { code?: string } | null | undefined): 
 
 export type FormServicio = { nombre: string; duracionMinutos: number; precio: number; orden: number; activo: boolean };
 
-export function parsearServicio(fd: FormData): Resultado<FormServicio> {
+/** El precio va en la moneda del cliente: ARS en pesos enteros, BRL con hasta 2 decimales. */
+export function parsearServicio(moneda: Moneda, fd: FormData): Resultado<FormServicio> {
   const nombre = leerTexto(fd, "nombre", L.nombre);
   if ("problema" in nombre) return { ok: false, error: nombre.problema === "control" ? "texto_invalido" : "nombre" };
   if (!nombre.valor) return { ok: false, error: "nombre" };
@@ -75,7 +81,7 @@ export function parsearServicio(fd: FormData): Resultado<FormServicio> {
   if (duracionMinutos === null) return { ok: false, error: "duracion" };
   const precioTexto = texto(fd, "precio");
   // Vacío = 0: el sitio lo muestra "a consultar".
-  const precio = precioTexto === "" ? 0 : parsearMonto(precioTexto, L.precioMax);
+  const precio = precioTexto === "" ? 0 : parsearMonto(precioTexto, L.precioMax, moneda === "ARS" ? 0 : 2);
   if (precio === null) return { ok: false, error: "precio" };
   const orden = entero(fd, "orden", 0, L.ordenMax, 0);
   if (orden === null) return { ok: false, error: "orden" };
