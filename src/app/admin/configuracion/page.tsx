@@ -18,6 +18,7 @@ import { getConfiguracion } from "@/lib/data/configuracion";
 import { traductor, type Textos } from "@/lib/i18n/textos";
 import { isMpConfigurado } from "@/lib/mercadopago/client";
 import { LIMITES_PANEL as L } from "@/lib/panel/limites";
+import { seccionHabilitada } from "@/lib/panel/secciones";
 import { metadataDelPanel } from "@/lib/panel/metadata";
 import { tenantDeSeccion } from "@/lib/panel/servidor";
 import { usaCredencialesGlobales } from "@/lib/tenant/credenciales-globales";
@@ -60,7 +61,7 @@ export default async function ConfiguracionAdmin({ searchParams }: { searchParam
     );
   }
 
-  const conTurnos = tenant.modulos.turnos;
+  const conTurnos = seccionHabilitada(tenant.modulos, "turnos");
   // Hasta la etapa D, solo el tenant de las credenciales globales cobra con Mercado Pago.
   const cobraOnline = isMpConfigurado() && usaCredencialesGlobales(tenant.slug);
   const numero = (nombre: string, etiqueta: string, valor: number, min: number, max: number) => (
