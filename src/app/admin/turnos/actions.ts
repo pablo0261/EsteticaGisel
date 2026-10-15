@@ -16,21 +16,16 @@ export async function cancelarTurno(formData: FormData) {
   if (!id) ir(RUTA, { error: "id" });
   const db = datosDelTenant(tenant.id);
 
-  const { data: fila } = await db
+  const { data: fila, error: errorLectura } = await db
     .select("turnos", "google_calendar_event_id, estado")
     .eq("id", id)
     .maybeSingle();
+  if (errorLectura) ir(RUTA, { error: "error" });
   const turno = fila as unknown as Pick<Turno, "google_calendar_event_id" | "estado"> | null;
   if (!turno || (turno.estado !== "pendiente_pago" && turno.estado !== "confirmado")) ir(RUTA, { error: "id" });
 
-  if (turno.google_calendar_event_id && isGoogleConfigurado() && usaCredencialesGlobales(tenant.slug)) {
-    try {
-      await borrarEvento(turno.google_calendar_event_id);
-    } catch {
-      // La cancelación sigue adelante aunque falle Calendar.
-    }
-  }
-
+  // Primero la cancelación condicional; el evento de Calendar se borra solo si el turno
+  // realmente pasó a cancelado (con el id leído antes, porque el update lo deja en null).
   const { data, error } = await db
     .update("turnos", { estado: "cancelado", google_calendar_event_id: null })
     .eq("id", id)
@@ -38,6 +33,14 @@ export async function cancelarTurno(formData: FormData) {
     .select("id");
   if (error) ir(RUTA, { error: "error" });
   if (!data?.length) ir(RUTA, { error: "id" });
+
+  if (turno.google_calendar_event_id && isGoogleConfigurado() && usaCredencialesGlobales(tenant.slug)) {
+    try {
+      await borrarEvento(turno.google_calendar_event_id);
+    } catch {
+      // El turno ya quedó cancelado aunque falle Calendar.
+    }
+  }
   revalidatePath(RUTA);
   ir(RUTA, { ok: "turno_cancelado" });
 }
