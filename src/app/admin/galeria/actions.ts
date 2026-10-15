@@ -30,7 +30,15 @@ export async function subirImagen(formData: FormData) {
   // El formato (y con él el Content-Type y la extensión) sale de los bytes, nunca de archivo.type.
   const imagen = validarImagen(bytes);
   if (!imagen.ok) ir(RUTA, { error: imagen.error });
-  const url = await subirImagenGaleria(tenant.id, bytes, imagen.formato);
+  // Un fallo de Storage vuelve al panel con el aviso traducido (no a la pantalla de error).
+  // ir() queda fuera del try: su redirect es una excepción que el catch no debe tragar.
+  let url: string | null = null;
+  try {
+    url = await subirImagenGaleria(tenant.id, bytes, imagen.formato);
+  } catch (e) {
+    console.error("No se pudo subir la imagen de la galería:", e);
+  }
+  if (!url) ir(RUTA, { error: "error" });
   const { error } = await db.insert("galeria", {
     imagen_url: url,
     descripcion: descripcion.valor,
