@@ -50,6 +50,13 @@ export default async function TurnosAdmin({ searchParams }: { searchParams: Prom
           });
           const estado = ESTADOS[turno.estado as EstadoTurno];
           const gestionable = turno.estado === "pendiente_pago" || turno.estado === "confirmado";
+          // Cobrado solo si el pago se aprobó (confirmado o completado); pendiente, todavía a cobrar.
+          const etiquetaMonto =
+            turno.estado === "confirmado" || turno.estado === "completado"
+              ? { es: "Cobro online", pt: "Pagamento online" }
+              : turno.estado === "pendiente_pago"
+                ? { es: "A cobrar", pt: "A cobrar" }
+                : null;
           return (
             <div key={turno.id} className={`${FILA} flex flex-wrap items-center justify-between gap-3 p-4`}>
               <div>
@@ -61,9 +68,9 @@ export default async function TurnosAdmin({ searchParams }: { searchParams: Prom
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-3">
-                {turno.monto_sena != null && (
+                {turno.monto_sena != null && etiquetaMonto && (
                   <span className="font-sans text-sm text-texto-suave">
-                    {`${t({ es: "Cobro online", pt: "Pagamento online" })}: ${formatPrecio(turno.monto_sena, tenant.moneda, tenant.idioma)}`}
+                    {`${t(etiquetaMonto)}: ${formatPrecio(turno.monto_sena, tenant.moneda, tenant.idioma)}`}
                   </span>
                 )}
                 <span className={`rounded-full px-3 py-1 font-sans text-xs font-medium ${estado?.clase ?? ""}`}>
