@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { puedeCancelar, calcularMontoSena, puedeReservar, redondearMonto } from "./reglas";
+import { puedeCancelar, calcularMontoSena, mismoMonto, puedeReservar, redondearMonto, sumaEnCentavos } from "./reglas";
 
 describe("puedeCancelar", () => {
   const ahora = "2026-07-10T12:00:00-03:00";
@@ -89,5 +89,20 @@ describe("puedeReservar", () => {
 
   it("bloquea si ya lo superó", () => {
     expect(puedeReservar(3, 2)).toBe(false);
+  });
+});
+
+describe("mismoMonto y sumaEnCentavos (webhook: lo pagado contra lo esperado)", () => {
+  it("compara en centavos enteros", () => {
+    expect(mismoMonto(0.1 + 0.2, 0.3)).toBe(true);
+    expect(mismoMonto(5.01, 5.01)).toBe(true);
+    expect(mismoMonto(5.01, 5)).toBe(false);
+    expect(mismoMonto(1, 100)).toBe(false);
+  });
+
+  it("suma montos en centavos y divide una vez", () => {
+    expect(sumaEnCentavos([0.1, 0.2])).toBe(0.3);
+    expect(sumaEnCentavos([5.01, 0.15])).toBe(5.16);
+    expect(sumaEnCentavos([])).toBe(0);
   });
 });

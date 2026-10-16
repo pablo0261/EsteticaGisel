@@ -65,6 +65,8 @@ export type MpPayment = {
   externalReference: string | null;
   transactionAmount: number;
   payerEmail: string | null;
+  /** Cuándo se creó el pago (ISO), para el precio de un curso con oferta por fechas. */
+  fechaCreacion: string | null;
 };
 
 /** Consulta el estado real de un pago contra la API de MP (nunca confiar solo en el webhook). */
@@ -82,5 +84,6 @@ export async function obtenerPago(paymentId: string): Promise<MpPayment> {
     externalReference: data.external_reference ?? null,
     transactionAmount: data.transaction_amount,
     payerEmail: data.payer?.email ?? null,
+    fechaCreacion: data.date_created ?? null,
   };
 }

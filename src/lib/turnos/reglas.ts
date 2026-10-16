@@ -49,6 +49,16 @@ export function calcularMontoSena(precio: number, senaPorcentaje: number, moneda
   return centavosDeSena(precio, senaPorcentaje, moneda) / 100;
 }
 
+/** ¿Son el mismo monto, comparados en centavos enteros? (lo pagado contra lo esperado) */
+export function mismoMonto(a: number, b: number): boolean {
+  return aCentavos(a) === aCentavos(b);
+}
+
+/** Suma de montos en centavos enteros, dividida una sola vez al final. */
+export function sumaEnCentavos(montos: number[]): number {
+  return montos.reduce((suma, m) => suma + aCentavos(m), 0) / 100;
+}
+
 /** ¿Se puede intentar una nueva reserva, dado cuántas ya se hicieron en la ventana (ej. la última hora)? */
 export function puedeReservar(intentosEnVentana: number, maximo: number): boolean {
   return intentosEnVentana < maximo;

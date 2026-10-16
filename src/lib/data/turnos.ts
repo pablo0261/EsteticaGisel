@@ -101,6 +101,8 @@ export type TurnoConServicio = {
   duracion_minutos: number;
   estado: string;
   token_gestion: string;
+  /** Lo cobrado al reservar (seña o total); null sin pago anticipado. */
+  monto_sena: number | null;
   servicios: { nombre: string };
 };
 
@@ -111,7 +113,7 @@ export async function getTurnoPorToken(
   const { data } = await datosDelTenant(tenantId)
     .select(
       "turnos",
-      "id, servicio_id, cliente_nombre, fecha_hora, duracion_minutos, estado, token_gestion, servicios(nombre)",
+      "id, servicio_id, cliente_nombre, fecha_hora, duracion_minutos, estado, token_gestion, monto_sena, servicios(nombre)",
     )
     .eq("token_gestion", token)
     .maybeSingle();

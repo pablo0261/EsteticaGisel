@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { SlotPicker } from "./SlotPicker";
 import { reservarTurno } from "@/app/sitio/[tenant]/turnos/actions";
 import { formatPrecio } from "@/lib/format";
-import { cobroDeReserva } from "@/lib/turnos/pago";
+import { cobroDeReserva, detalleCobro, textoModoPago, type ModoPago } from "@/lib/turnos/pago";
 import { EJEMPLO_WHATSAPP } from "@/lib/turnos/ejemplo-whatsapp";
 import { LoadingOverlay } from "@/components/ui/LoadingOverlay";
 import { T, useIdioma, useT } from "@/lib/i18n/cliente";
@@ -13,12 +13,14 @@ import type { Moneda, Pais } from "@/lib/tenant/tipos";
 
 export function ReservaForm({
   servicios,
+  modoPago,
   senaPorcentaje,
   moneda,
   pais,
   zonaHoraria,
 }: {
   servicios: Servicio[];
+  modoPago: ModoPago;
   senaPorcentaje: number;
   moneda: Moneda;
   pais: Pais;
@@ -36,9 +38,17 @@ export function ReservaForm({
 
   const precio = (monto: number) => formatPrecio(monto, moneda, idioma);
   const seleccionados = servicios.filter((s) => selectedIds.includes(s.id));
-  // Mismo cálculo que el servidor: seña de cada servicio, redondeada en la moneda.
-  const cobro = cobroDeReserva("sena", senaPorcentaje, seleccionados.map((s) => s.precio), moneda);
-  const sena = cobro.tipo === "cobro" ? precio(cobro.total) : "";
+  // Mismo cálculo que el servidor (montos por servicio en centavos, sumados una vez).
+  const cobro = cobroDeReserva(modoPago, senaPorcentaje, seleccionados.map((s) => s.precio), moneda);
+  const textoCobro =
+    cobro.tipo === "cobro" && modoPago !== "ninguno"
+      ? t(detalleCobro(modoPago, precio(cobro.total)))
+      : cobro.tipo === "sin_cobro"
+        ? t(textoModoPago("ninguno", senaPorcentaje))
+        : t({
+            es: "Los servicios elegidos no tienen precio para cobrar online: escribinos para coordinar tu turno.",
+            pt: "Os serviços escolhidos não têm preço para cobrança online: fale com a gente para combinar seu horário.",
+          });
 
   function toggleServicio(id: string) {
     setSelectedIds((prev) => {
@@ -59,7 +69,7 @@ export function ReservaForm({
     startTransition(async () => {
       const result = await reservarTurno(formData);
       if (result.ok) {
-        window.location.href = result.initPoint;
+        window.location.href = result.url;
       } else {
         setError(result.error);
       }
@@ -125,12 +135,7 @@ export function ReservaForm({
 
       {iso && (
         <div className="flex flex-col gap-4 rounded-2xl border border-primario/15 bg-white/60 p-5">
-          <p className="font-sans text-sm text-texto-suave">
-            {t({
-              es: `Reservás con una seña de ${sena} (se descuenta del precio total del servicio).`,
-              pt: `Você agenda com um sinal de ${sena} (descontado do valor total do serviço).`,
-            })}
-          </p>
+          <p className="font-sans text-sm text-texto-suave">{textoCobro}</p>
           <label className="font-sans text-sm text-texto-suave">
             <T es="Nombre y apellido" pt="Nome e sobrenome" />
             <input
@@ -178,7 +183,11 @@ export function ReservaForm({
       )}
       <LoadingOverlay
         show={pending}
-        label={t({ es: "Redirigiendo a Mercado Pago…", pt: "Redirecionando para o Mercado Pago…" })}
+        label={
+          cobro.tipo === "cobro"
+            ? t({ es: "Redirigiendo a Mercado Pago…", pt: "Redirecionando para o Mercado Pago…" })
+            : t({ es: "Confirmando tu turno…", pt: "Confirmando seu agendamento…" })
+        }
       />
     </form>
   );

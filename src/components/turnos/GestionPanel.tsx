@@ -10,11 +10,14 @@ export function GestionPanel({
   token,
   servicioId,
   permitido,
+  pagoAnticipado,
   zonaHoraria,
 }: {
   token: string;
   servicioId: string;
   permitido: boolean;
+  /** Qué se cobró al reservar: cambia el aviso al cancelar. */
+  pagoAnticipado: "sena" | "total" | null;
   zonaHoraria: string;
 }) {
   const t = useT();
@@ -39,10 +42,19 @@ export function GestionPanel({
   if (modo === "cancelado") {
     return (
       <p className="rounded-lg bg-secundario/10 px-4 py-3 font-sans text-sm text-secundario-oscuro">
-        <T
-          es="Tu turno fue cancelado. La seña no es reembolsable."
-          pt="Seu agendamento foi cancelado. O sinal não é reembolsável."
-        />
+        {pagoAnticipado === "sena" ? (
+          <T
+            es="Tu turno fue cancelado. La seña no es reembolsable."
+            pt="Seu agendamento foi cancelado. O sinal não é reembolsável."
+          />
+        ) : pagoAnticipado === "total" ? (
+          <T
+            es="Tu turno fue cancelado. Escribinos si tenés dudas sobre el pago."
+            pt="Seu agendamento foi cancelado. Fale com a gente se tiver dúvidas sobre o pagamento."
+          />
+        ) : (
+          <T es="Tu turno fue cancelado." pt="Seu agendamento foi cancelado." />
+        )}
       </p>
     );
   }

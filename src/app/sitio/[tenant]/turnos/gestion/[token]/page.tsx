@@ -36,8 +36,8 @@ export default async function GestionTurnoPage({ params }: Props) {
         ) : turno.estado !== "confirmado" ? (
           <p className="font-sans text-texto-suave">
             {t({
-              es: "Este turno todavía no está confirmado. Si ya pagaste la seña, esperá la confirmación por email.",
-              pt: "Este agendamento ainda não está confirmado. Se você já pagou o sinal, aguarde a confirmação por e-mail.",
+              es: "Este turno todavía no está confirmado. Si ya hiciste el pago, esperá la confirmación por email.",
+              pt: "Este agendamento ainda não está confirmado. Se você já fez o pagamento, aguarde a confirmação por e-mail.",
             })}
           </p>
         ) : (
@@ -59,6 +59,9 @@ async function TurnoDetalle({
   turno: NonNullable<Awaited<ReturnType<typeof getTurnoPorToken>>>;
 }) {
   const config = await getConfiguracion(tenant.id);
+  // Qué se cobró al reservar, para el aviso al cancelar (el modo actual dice si fue seña o total).
+  const pagoAnticipado =
+    turno.monto_sena != null && turno.monto_sena > 0 ? (config?.modo_pago === "total" ? "total" : "sena") : null;
   const permitido = puedeCancelar({
     fechaHoraIso: turno.fecha_hora,
     horasMinimas: config?.horas_minimas_cancelacion ?? 24,
@@ -87,6 +90,7 @@ async function TurnoDetalle({
           token={turno.token_gestion}
           servicioId={turno.servicio_id}
           permitido={permitido}
+          pagoAnticipado={pagoAnticipado}
           zonaHoraria={tenant.zonaHoraria}
         />
       </div>

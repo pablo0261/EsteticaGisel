@@ -9,6 +9,7 @@ import { tenantDeLaPagina } from "@/lib/tenant/actual";
 import { metadataTraducida } from "@/lib/tenant/metadata";
 import { whatsappLink, MENSAJES_WHATSAPP } from "@/lib/tenant/urls";
 import { traductor } from "@/lib/i18n/textos";
+import { textoModoPago } from "@/lib/turnos/pago";
 
 type Props = { params: Promise<{ tenant: string }> };
 
@@ -26,6 +27,7 @@ export default async function TurnosPage({ params }: Props) {
   const servicios = await getServiciosPublicos(tenant.id);
   const config = await getConfiguracion(tenant.id);
   const senaPorcentaje = config?.sena_porcentaje ?? 50;
+  const modoPago = config?.modo_pago ?? "sena";
   const whatsapp = whatsappLink(tenant.marca.whatsapp, t(MENSAJES_WHATSAPP.turno));
 
   return (
@@ -37,6 +39,7 @@ export default async function TurnosPage({ params }: Props) {
         <h1 className="mt-3 font-serif text-4xl text-texto sm:text-5xl">
           {t({ es: "Reservá tu turno", pt: "Agende seu horário" })}
         </h1>
+        <p className="mt-3 font-sans text-texto-suave">{t(textoModoPago(modoPago, senaPorcentaje))}</p>
 
         {servicios.length === 0 ? (
           <p className="mt-6 font-sans text-texto-suave">
@@ -59,6 +62,7 @@ export default async function TurnosPage({ params }: Props) {
           <div className="mt-8">
             <ReservaForm
               servicios={servicios}
+              modoPago={modoPago}
               senaPorcentaje={senaPorcentaje}
               moneda={tenant.moneda}
               pais={tenant.pais}
