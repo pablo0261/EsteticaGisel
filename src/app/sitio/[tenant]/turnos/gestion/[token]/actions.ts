@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getDisponibilidad } from "@/lib/data/turnos";
 import { puedeCancelar } from "@/lib/turnos/reglas";
 import { isGoogleConfigurado, crearEvento, borrarEvento } from "@/lib/google-calendar/client";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { tenantDelRequest } from "@/lib/tenant/actual";
 import { datosDelTenant } from "@/lib/tenant/datos";
 import { usaCredencialesGlobales } from "@/lib/tenant/credenciales-globales";
@@ -95,21 +96,29 @@ export async function reprogramarTurno(
     };
   }
 
+  const noDisponible: AccionResult = {
+    ok: false,
+    error: t({
+      es: "Ese horario ya no está disponible.",
+      pt: "Esse horário não está mais disponível.",
+    }),
+  };
   const disponibles = await getDisponibilidad(
     tenant.id,
     tenant.zonaHoraria,
     [ctx.turno.servicio_id],
     nuevaFecha,
   );
-  if (!disponibles.some((s) => s.iso === nuevoIso)) {
-    return {
-      ok: false,
-      error: t({
-        es: "Ese horario ya no está disponible.",
-        pt: "Esse horário não está mais disponível.",
-      }),
-    };
-  }
+  if (!disponibles.some((s) => s.iso === nuevoIso)) return noDisponible;
+
+  // Chequeo y cambio atómicos (migración 0023), con el mismo lock por tenant que la reserva:
+  // si otra reserva tomó el horario recién, no se mueve.
+  const { data: movido, error } = await createAdminClient().rpc("reprogramar_turno", {
+    p_tenant: tenant.id,
+    p_turno: ctx.turno.id,
+    p_fecha_hora: nuevoIso,
+  });
+  if (error || movido !== true) return noDisponible;
 
   let nuevoEventId: string | null = null;
   if (isGoogleConfigurado() && usaCredencialesGlobales(tenant.slug)) {
@@ -131,13 +140,10 @@ export async function reprogramarTurno(
         clienteEmail: ctx.turno.cliente_email,
       });
     } catch {
-      // Si Calendar falla, la reprogramación en la DB sigue adelante.
+      // Si Calendar falla, la reprogramación en la DB ya quedó hecha.
     }
   }
-
-  await ctx.db
-    .update("turnos", { fecha_hora: nuevoIso, google_calendar_event_id: nuevoEventId })
-    .eq("id", ctx.turno.id);
+  await ctx.db.update("turnos", { google_calendar_event_id: nuevoEventId }).eq("id", ctx.turno.id);
 
   // La nueva fecha vuelve a recibir sus recordatorios.
   await ctx.db.delete("recordatorios_enviados").eq("turno_id", ctx.turno.id);

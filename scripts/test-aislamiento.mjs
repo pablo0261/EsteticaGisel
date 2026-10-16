@@ -5,7 +5,9 @@
 // el segundo factor: todo pasa por el servidor con la service role), la integridad
 // entre tenants en la base, qué ve un anónimo (solo las tablas públicas; ni las funciones
 // auxiliares ni el alta de clientes por RPC), que crear_tenant crea las cuatro filas de un
-// cliente en una sola transacción (con la service role), y que las tablas del login (códigos,
+// cliente en una sola transacción (con la service role), que la reserva atómica
+// (reservar_turnos, reprogramar_turno) no deja reservar dos veces el mismo horario ni pasar el
+// límite por cliente y no se invoca por la API, y que las tablas del login (códigos,
 // dispositivos, pedidos de recuperación e intentos de login) son solo del servidor. Por
 // último revisa en el catálogo de Postgres (con SUPABASE_DB_URL) los privilegios de anon y
 // authenticated, RLS en todas las tablas y los privilegios por defecto. Las tablas de la
@@ -317,6 +319,64 @@ async function permisosDeLaBase() {
   }
 }
 
+/**
+ * Reserva atómica (migración 0023), con la service role sobre el tenant temporal A: dos
+ * reservas simultáneas del mismo horario (pasa una sola), el margen de preparación, el
+ * límite de turnos futuros por email y por WhatsApp, y la reprogramación con el mismo chequeo.
+ */
+async function reservaAtomica(a) {
+  console.log("\nReserva atómica (reservar_turnos y reprogramar_turno, con la service role):");
+  const base = new Date(Date.now() + 30 * 86400000);
+  base.setUTCHours(12, 0, 0, 0);
+  const en = (minutos) => new Date(base.getTime() + minutos * 60000).toISOString();
+  const pedido = (minutos) => ({ servicio_id: a.servicioId, fecha_hora: en(minutos), duracion_minutos: 30, monto_sena: null });
+  const reservar = (turnos, email, telefono, extra = {}) =>
+    admin.rpc("reservar_turnos", {
+      p_tenant: a.id, p_turnos: turnos, p_cliente_nombre: "Reserva", p_cliente_email: email,
+      p_cliente_telefono: telefono, p_estado: "confirmado", p_bloqueado_hasta: null, p_maximo_por_cliente: 3, ...extra,
+    });
+
+  const simultaneas = await Promise.all([
+    reservar([pedido(0)], "uno@example.com", "+5491100000001"),
+    reservar([pedido(0)], "dos@example.com", "+5491100000002"),
+  ]);
+  const ganadoras = simultaneas.filter((r) => !r.error && r.data?.length === 1);
+  const perdedoras = simultaneas.filter((r) => r.error?.code === "TU001");
+  for (const r of simultaneas) if (r.error && r.error.code !== "TU001") mostrarError(r);
+  verificar(ganadoras.length === 1 && perdedoras.length === 1, "dos reservas simultáneas del mismo horario: pasa una sola (la otra, TU001)");
+  const { count: enElHorario } = await admin
+    .from("turnos").select("id", { count: "exact", head: true }).eq("tenant_id", a.id).eq("fecha_hora", en(0));
+  verificar(enElHorario === 1, "queda un solo turno en ese horario");
+  const ganador = ganadoras[0]?.data?.[0];
+  verificar(!!ganador?.turno_id && !!ganador?.token, "devuelve el id y el token de gestión del turno");
+
+  verificar(esperaError(await reservar([pedido(40)], "tres@example.com", "+5491100000003"), "TU001"), "respeta el margen de preparación (15 min)");
+  verificar(!(await reservar([pedido(45)], "tres@example.com", "+5491100000003")).error, "con el margen cumplido, reserva");
+  const combinada = await reservar([pedido(120), pedido(150)], "cuatro@example.com", "+5491100000004");
+  mostrarError(combinada);
+  verificar(combinada.data?.length === 2, "una reserva combinada crea sus turnos consecutivos");
+  const pasado = { ...pedido(0), fecha_hora: new Date(Date.now() - 3600000).toISOString() };
+  verificar(esperaError(await reservar([pasado], "cinco@example.com", "+5491100000005"), "TU001"), "un horario pasado no se reserva");
+
+  for (const m of [300, 360, 420]) await ok(reservar([pedido(m)], "limite@example.com", `+54911000001${m}`), "reserva del límite por email");
+  verificar(esperaError(await reservar([pedido(480)], "LIMITE@example.com", "+5491100000999"), "TU002"), "un 4.º turno futuro con el mismo email: TU002");
+  for (const m of [540, 600, 660]) await ok(reservar([pedido(m)], `tel-${m}@example.com`, "+5491100000777"), "reserva del límite por WhatsApp");
+  verificar(esperaError(await reservar([pedido(720)], "otro@example.com", "+5491100000777"), "TU002"), "un 4.º turno futuro con el mismo WhatsApp: TU002");
+
+  const vencido = await reservar([pedido(900)], "vencido@example.com", "+5491100000006", {
+    p_estado: "pendiente_pago", p_bloqueado_hasta: new Date(Date.now() - 60000).toISOString(),
+  });
+  mostrarError(vencido);
+  verificar(!(await reservar([pedido(900)], "nuevo@example.com", "+5491100000007")).error, "un pendiente de pago vencido no ocupa el horario");
+
+  const mover = (minutos) => admin.rpc("reprogramar_turno", { p_tenant: a.id, p_turno: ganador?.turno_id, p_fecha_hora: en(minutos) });
+  verificar((await mover(45)).data === false, "reprogramar a un horario ocupado: no lo mueve");
+  verificar((await mover(1200)).data === true, "reprogramar a un horario libre: lo mueve");
+  const movido = await admin.from("turnos").select("fecha_hora").eq("id", ganador?.turno_id).maybeSingle();
+  verificar(new Date(movido.data?.fecha_hora).getTime() === new Date(en(1200)).getTime(), "el turno quedó en el horario nuevo");
+  return { en, reservar, pedido, vencidoId: vencido.data?.[0]?.turno_id };
+}
+
 try {
   const a = await crearTenant("a");
   const b = await crearTenant("b");
@@ -399,6 +459,8 @@ try {
   const { count: aMedias } = await admin.from("tenants").select("id", { count: "exact", head: true }).eq("slug", slugIncompleto);
   verificar(aMedias === 0, "crear_tenant: si falla una fila no queda el tenant (una sola transacción)");
 
+  await reservaAtomica(a);
+
   console.log("\nUsuario logueado sin perfil (sin acceso por la API):");
   const sinPerfil = await crearUsuario("sin-perfil");
   const usuarioSinPerfil = await clienteLogueado(sinPerfil.email, sinPerfil.password);
@@ -460,12 +522,23 @@ try {
     p_colores: { primario: "#000000", secundario: "#000000", fondo: "#ffffff", texto: "#000000" },
   };
   for (const [quien, cliente] of [["anónimo", anon], ["cliente A", usuarioA], ["master", usuarioMaster]]) {
-    for (const [fn, args] of [["tenant_actual"], ["es_master"], ["crear_tenant", altaIntrusa]]) {
+    for (const [fn, args] of [
+      ["tenant_actual"], ["es_master"], ["crear_tenant", altaIntrusa],
+      ["reservar_turnos", {
+        p_tenant: a.id, p_turnos: [{ servicio_id: a.servicioId, fecha_hora: new Date(Date.now() + 40 * 86400000).toISOString(), duracion_minutos: 30, monto_sena: null }],
+        p_cliente_nombre: "Intruso", p_cliente_email: "intruso@example.com", p_cliente_telefono: "+5491100000000",
+        p_estado: "confirmado", p_bloqueado_hasta: null, p_maximo_por_cliente: 3,
+      }],
+      ["reprogramar_turno", { p_tenant: a.id, p_turno: a.turnoId, p_fecha_hora: new Date(Date.now() + 40 * 86400000).toISOString() }],
+      ["turno_choca", { p_tenant: a.id, p_inicio: new Date().toISOString(), p_fin: new Date().toISOString(), p_margen: 0, p_excluir: [] }],
+    ]) {
       verificar(esperaError(await cliente.rpc(fn, args), "42501"), `rpc ${fn}: ${quien} no la invoca`);
     }
   }
   const { count: intrusos } = await admin.from("tenants").select("id", { count: "exact", head: true }).eq("slug", altaIntrusa.p_slug);
   verificar(intrusos === 0, "crear_tenant: ningún intento por la API creó un cliente");
+  const { count: turnosIntrusos } = await admin.from("turnos").select("id", { count: "exact", head: true }).eq("cliente_email", "intruso@example.com");
+  verificar(turnosIntrusos === 0, "reservar_turnos: ningún intento por la API creó un turno");
   const serviciosAnon = await anon.from("servicios").select("nombre").in("tenant_id", [a.id, b.id]);
   verificar(
     !serviciosAnon.error && serviciosAnon.data.length === 2 && serviciosAnon.data.every((s) => s.nombre === "Servicio"),

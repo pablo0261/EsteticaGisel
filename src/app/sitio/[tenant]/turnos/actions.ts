@@ -4,6 +4,7 @@ import { getDisponibilidad } from "@/lib/data/turnos";
 import type { ConfiguracionNegocio, Servicio } from "@/lib/data/types";
 import { IDIOMA_POR_DEFECTO, traductor } from "@/lib/i18n/textos";
 import { isMpConfigurado, crearPreferencia } from "@/lib/mercadopago/client";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { tenantDelRequest } from "@/lib/tenant/actual";
 import { usaCredencialesGlobales } from "@/lib/tenant/credenciales-globales";
 import { datosDelTenant } from "@/lib/tenant/datos";
@@ -20,6 +21,17 @@ import { normalizarWhatsApp } from "@/lib/turnos/whatsapp";
 export type ReservarTurnoResult = { ok: true; url: string } | { ok: false; error: string };
 
 const MAXIMO_RESERVAS_POR_HORA = 2;
+/**
+ * Turnos futuros activos (confirmados, o pendientes de pago con el bloqueo vigente) que puede
+ * tener un mismo email, y por separado un mismo WhatsApp, en un tenant. Sin pago anticipado
+ * la reserva confirma al instante: este límite es el que frena llenar la agenda con datos de
+ * otro. El límite por IP solo corre con CABECERA_IP_CONFIABLE: sin ella (o si el proxy no
+ * manda la cabecera) la reserva igual se acepta y quedan estos límites por email y WhatsApp.
+ */
+const MAXIMO_TURNOS_FUTUROS_POR_CLIENTE = 3;
+/** Errores propios de reservar_turnos (migración 0023). */
+const CODIGO_HORARIO_OCUPADO = "TU001";
+const CODIGO_MAXIMO_POR_CLIENTE = "TU002";
 
 export async function reservarTurno(formData: FormData): Promise<ReservarTurnoResult> {
   const tenant = await tenantDelRequest();
@@ -117,14 +129,14 @@ export async function reservarTurno(formData: FormData): Promise<ReservarTurnoRe
     };
   }
 
-  // Re-verificar que el slot combinado sigue libre (evita choques por condición de carrera).
+  // El horario tiene que ser uno de los que ofrece la disponibilidad (horario de atención,
+  // paso de 30 minutos). El choque con otros turnos se vuelve a chequear al insertar.
+  const noDisponible: ReservarTurnoResult = {
+    ok: false,
+    error: t({ es: "Ese horario ya no está disponible. Elegí otro.", pt: "Esse horário não está mais disponível. Escolha outro." }),
+  };
   const disponibles = await getDisponibilidad(tenant.id, tenant.zonaHoraria, servicioIds, fecha);
-  if (!disponibles.some((s) => s.iso === iso)) {
-    return {
-      ok: false,
-      error: t({ es: "Ese horario ya no está disponible. Elegí otro.", pt: "Esse horário não está mais disponível. Escolha outro." }),
-    };
-  }
+  if (!disponibles.some((s) => s.iso === iso)) return noDisponible;
 
   const { data: filasServicios } = await db
     .select("servicios", "id, nombre, duracion_minutos, precio, activo")
@@ -159,37 +171,48 @@ export async function reservarTurno(formData: FormData): Promise<ReservarTurnoRe
   const montos = cobro.tipo === "cobro" ? cobro.montos : null;
   const bloqueadoHasta = new Date(Date.now() + 15 * 60 * 1000).toISOString();
 
-  let inicioActual = new Date(iso);
-  const creados: { id: string; token_gestion: string; inicioIso: string }[] = [];
+  // Chequeo e inserción atómicos (migración 0023): bajo un lock por tenant, reservar_turnos
+  // vuelve a verificar que ningún turno choque con otro activo (dos reservas simultáneas del
+  // mismo horario: pasa una sola) y cuenta los turnos futuros del email y del WhatsApp.
+  const pedidos: { servicio_id: string; fecha_hora: string; duracion_minutos: number; monto_sena: number | null }[] = [];
+  let inicioMs = new Date(iso).getTime();
   for (const [i, servicio] of servicios.entries()) {
-    const inicioIso = inicioActual.toISOString();
-    const { data: turno, error } = await db
-      .insert("turnos", {
-        servicio_id: servicio.id,
-        cliente_nombre: clienteNombre,
-        cliente_email: clienteEmail,
-        cliente_telefono: clienteWhatsApp,
-        fecha_hora: inicioIso,
-        duracion_minutos: servicio.duracion_minutos,
-        estado: montos ? "pendiente_pago" : "confirmado",
-        monto_sena: montos ? montos[i] : null,
-        bloqueado_hasta: montos ? bloqueadoHasta : null,
-      })
-      .select("id, token_gestion")
-      .single();
-
-    if (error || !turno) {
-      // Revertir los turnos ya creados de esta reserva combinada.
-      if (creados.length > 0) await db.delete("turnos").in("id", creados.map((c) => c.id));
-      return {
-        ok: false,
-        error: t({ es: "No se pudo crear el turno. Probá de nuevo.", pt: "Não foi possível criar o agendamento. Tente novamente." }),
-      };
-    }
-
-    creados.push({ id: turno.id, token_gestion: turno.token_gestion, inicioIso });
-    inicioActual = new Date(inicioActual.getTime() + servicio.duracion_minutos * 60000);
+    pedidos.push({
+      servicio_id: servicio.id,
+      fecha_hora: new Date(inicioMs).toISOString(),
+      duracion_minutos: servicio.duracion_minutos,
+      monto_sena: montos ? montos[i] : null,
+    });
+    inicioMs += servicio.duracion_minutos * 60000;
   }
+  const { data: filasCreadas, error: errorReserva } = await createAdminClient().rpc("reservar_turnos", {
+    p_tenant: tenant.id,
+    p_turnos: pedidos,
+    p_cliente_nombre: clienteNombre,
+    p_cliente_email: clienteEmail,
+    p_cliente_telefono: clienteWhatsApp,
+    p_estado: montos ? "pendiente_pago" : "confirmado",
+    p_bloqueado_hasta: montos ? bloqueadoHasta : null,
+    p_maximo_por_cliente: MAXIMO_TURNOS_FUTUROS_POR_CLIENTE,
+  });
+  const resultado = filasCreadas as { turno_id: string; token: string }[] | null;
+  if (errorReserva?.code === CODIGO_HORARIO_OCUPADO) return noDisponible;
+  if (errorReserva?.code === CODIGO_MAXIMO_POR_CLIENTE) {
+    return {
+      ok: false,
+      error: t({
+        es: `Ya tenés ${MAXIMO_TURNOS_FUTUROS_POR_CLIENTE} turnos reservados con este email o este WhatsApp. Si necesitás otro, escribinos por WhatsApp.`,
+        pt: `Você já tem ${MAXIMO_TURNOS_FUTUROS_POR_CLIENTE} agendamentos com este e-mail ou este WhatsApp. Se precisar de outro, fale com a gente pelo WhatsApp.`,
+      }),
+    };
+  }
+  if (errorReserva || !resultado || resultado.length !== pedidos.length) {
+    return {
+      ok: false,
+      error: t({ es: "No se pudo crear el turno. Probá de nuevo.", pt: "Não foi possível criar o agendamento. Tente novamente." }),
+    };
+  }
+  const creados = resultado.map((r, i) => ({ id: r.turno_id, token_gestion: r.token, inicioIso: pedidos[i].fecha_hora }));
 
   if (ip) await db.insert("intentos_reserva", { ip });
 
