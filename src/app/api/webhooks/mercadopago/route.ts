@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verificarFirmaWebhook } from "@/lib/mercadopago/signature";
 import { obtenerPago, type MpPayment } from "@/lib/mercadopago/client";
+import { montoDeCompraValido, parsearReferencia } from "@/lib/mercadopago/referencia";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isEmailConfigurado, enviarEmail } from "@/lib/email/gmail";
 import { plantillaCompraCurso } from "@/lib/email/plantillas";
@@ -11,6 +12,7 @@ import { mismoMonto, sumaEnCentavos } from "@/lib/turnos/reglas";
 import { datosDelTenant } from "@/lib/tenant/datos";
 import { urlDelTenant } from "@/lib/tenant/urls";
 import type { Idioma } from "@/lib/i18n/textos";
+import type { Moneda } from "@/lib/tenant/tipos";
 
 /**
  * Webhook de Mercado Pago. Nunca confía en el payload por sí solo:
@@ -51,13 +53,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "No se pudo consultar el pago" }, { status: 502 });
   }
 
-  const [refTipo, refId] = (pago.externalReference ?? "").split(":");
+  const referencia = parsearReferencia(pago.externalReference);
   try {
-    if (refTipo === "turno" && refId) {
+    if (referencia?.tipo === "turno") {
       // Una reserva puede combinar varios servicios consecutivos -> varios turnos.
-      await procesarPagoTurnos(refId.split(","), pago);
-    } else if (refTipo === "curso" && refId) {
-      await procesarPagoCurso(refId, pago);
+      await procesarPagoTurnos(referencia.ids, pago);
+    } else if (referencia?.tipo === "curso") {
+      await procesarPagoCurso(referencia.id, referencia.centavos, pago);
     }
   } catch (e) {
     // Error de la base: Mercado Pago reintenta la notificación (el procesamiento es idempotente).
@@ -173,37 +175,52 @@ async function avisarTurnoConfirmado(turno: FilaTurnoPagado) {
   await enviarConfirmacionDeTurno(confirmado);
 }
 
-async function procesarPagoCurso(cursoId: string, pago: MpPayment) {
+/** centavosEsperados: el monto que lleva la referencia (formato nuevo), o null (formato anterior). */
+async function procesarPagoCurso(cursoId: string, centavosEsperados: number | null, pago: MpPayment) {
   if (pago.status !== "approved" || !pago.payerEmail) return;
 
   // El pago llega sin tenant: se resuelve desde el curso (consulta de sistema por id).
   const { data: curso } = await createAdminClient()
     .from("cursos")
-    .select("tenant_id, titulo, dias_acceso, precio, precio_oferta, oferta_activa, oferta_desde, oferta_hasta, tenants(slug)")
+    .select("tenant_id, titulo, dias_acceso, precio, precio_oferta, oferta_activa, oferta_desde, oferta_hasta, tenants(slug, moneda)")
     .eq("id", cursoId)
     .maybeSingle();
   if (!curso) return;
+  const tenantCurso = curso.tenants as unknown as { slug: string; moneda: Moneda };
+  const precioOferta = curso.precio_oferta == null ? null : Number(curso.precio_oferta);
 
-  // Lo pagado tiene que ser el precio del curso: el vigente al crear el pago o el de ahora
-  // (una oferta puede terminar entre el pago y el webhook).
-  const precioEn = (ahoraIso: string) =>
-    precioEfectivo({
+  let montoValido: boolean;
+  if (centavosEsperados !== null) {
+    // Formato nuevo: lo pagado es el monto que se cobró al crear la preferencia, y ese monto
+    // es el precio o el de oferta del curso (la oferta puede terminar antes del pago).
+    montoValido = montoDeCompraValido({
+      pagado: Number(pago.transactionAmount),
+      centavosEsperados,
       precio: Number(curso.precio),
-      precioOferta: curso.precio_oferta == null ? null : Number(curso.precio_oferta),
-      ofertaActiva: curso.oferta_activa,
-      ofertaDesde: curso.oferta_desde,
-      ofertaHasta: curso.oferta_hasta,
-      ahoraIso,
+      precioOferta,
+      moneda: tenantCurso.moneda,
     });
-  const aceptados = [precioEn(new Date().toISOString())];
-  if (pago.fechaCreacion) aceptados.push(precioEn(pago.fechaCreacion));
-  if (!aceptados.some((precio) => mismoMonto(Number(pago.transactionAmount), precio))) {
+  } else {
+    // Formato anterior: el precio vigente al crear el pago o el de ahora.
+    const precioEn = (ahoraIso: string) =>
+      precioEfectivo({
+        precio: Number(curso.precio),
+        precioOferta,
+        ofertaActiva: curso.oferta_activa,
+        ofertaDesde: curso.oferta_desde,
+        ofertaHasta: curso.oferta_hasta,
+        ahoraIso,
+      });
+    const aceptados = [precioEn(new Date().toISOString())];
+    if (pago.fechaCreacion) aceptados.push(precioEn(pago.fechaCreacion));
+    montoValido = aceptados.some((precio) => mismoMonto(Number(pago.transactionAmount), precio));
+  }
+  if (!montoValido) {
     console.error(
-      `Webhook MP: el pago ${pago.id} es de ${pago.transactionAmount} y el curso ${cursoId} cuesta ${aceptados.join(" o ")}; no se da acceso.`,
+      `Webhook MP: el pago ${pago.id} es de ${pago.transactionAmount} y no es el precio del curso ${cursoId}; no se da acceso.`,
     );
     return;
   }
-  const tenantCurso = curso.tenants as unknown as { slug: string };
   const db = datosDelTenant(curso.tenant_id);
 
   const expiraEn = calcularExpiracion(new Date().toISOString(), curso.dias_acceso);
