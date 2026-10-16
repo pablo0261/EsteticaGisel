@@ -7,8 +7,10 @@
 // auxiliares ni el alta de clientes por RPC), que crear_tenant crea las cuatro filas de un
 // cliente en una sola transacción (con la service role), que la reserva atómica
 // (reservar_turnos, reprogramar_turno) no deja reservar dos veces el mismo horario ni pasar el
-// límite por cliente y no se invoca por la API, y que las tablas del login (códigos,
-// dispositivos, pedidos de recuperación e intentos de login) son solo del servidor. Por
+// límite por cliente, que la confirmación de pagos (confirmar_turnos_pagados) es idempotente
+// y no confirma un pago tardío con el horario tomado, y que nada de eso se invoca por la API;
+// y que las tablas del login (códigos, dispositivos, pedidos de recuperación e intentos de
+// login) son solo del servidor. Por
 // último revisa en el catálogo de Postgres (con SUPABASE_DB_URL) los privilegios de anon y
 // authenticated, RLS en todas las tablas y los privilegios por defecto. Las tablas de la
 // etapa C2 (galeria, preguntas_frecuentes) son solo del servidor: sin policies y sin
@@ -377,6 +379,56 @@ async function reservaAtomica(a) {
   return { en, reservar, pedido, vencidoId: vencido.data?.[0]?.turno_id };
 }
 
+/**
+ * Webhook idempotente (migración 0024), con la service role sobre el tenant temporal A:
+ * dos confirmaciones simultáneas del mismo pago (confirma una, la otra no hace nada), el
+ * pago tardío con el horario ya tomado y los índices únicos de pagos y accesos.
+ */
+async function pagosIdempotentes(a, { en, reservar, pedido, vencidoId }) {
+  console.log("\nConfirmación de pagos (confirmar_turnos_pagados, con la service role):");
+  const pendiente = (minutos, bloqueadoHasta) =>
+    reservar([{ ...pedido(minutos), monto_sena: 10 }], `pago-${minutos}@example.com`, `+54911000020${minutos}`, {
+      p_estado: "pendiente_pago", p_bloqueado_hasta: bloqueadoHasta,
+    });
+  const confirmar = (ids, mp) => admin.rpc("confirmar_turnos_pagados", { p_tenant: a.id, p_turnos: ids, p_mp_payment_id: mp });
+  const enQuinceMinutos = new Date(Date.now() + 15 * 60000).toISOString();
+
+  const reserva = await pendiente(1500, enQuinceMinutos);
+  mostrarError(reserva);
+  const ids = (reserva.data ?? []).map((r) => r.turno_id);
+  const mp = `mp-${sufijo}`;
+  const dobles = await Promise.all([confirmar(ids, mp), confirmar(ids, mp)]);
+  for (const r of dobles) mostrarError(r);
+  const resultados = dobles.map((r) => r.data).sort();
+  verificar(
+    JSON.stringify(resultados) === JSON.stringify(["confirmado", "ya_procesado"]),
+    "dos confirmaciones simultáneas del mismo pago: confirma una sola vez",
+  );
+  const { data: turnoPagado } = await admin.from("turnos").select("estado").eq("id", ids[0]).maybeSingle();
+  const { count: pagosDelMp } = await admin.from("pagos").select("id", { count: "exact", head: true }).eq("mp_payment_id", mp);
+  verificar(turnoPagado?.estado === "confirmado" && pagosDelMp === 1, "el turno queda confirmado con un solo pago registrado");
+  verificar((await confirmar(ids, mp)).data === "ya_procesado", "un reintento posterior: ya procesado");
+  verificar((await confirmar(ids, `otro-${mp}`)).data === "inconsistente", "otro pago para turnos ya confirmados: no confirma");
+
+  verificar((await confirmar([vencidoId], `${mp}-tarde`)).data === "ocupado", "pago tardío con el horario ya tomado: no confirma");
+  const { data: tardio } = await admin.from("turnos").select("estado").eq("id", vencidoId).maybeSingle();
+  verificar(tardio?.estado === "pendiente_pago", "ese turno sigue pendiente (para devolver el pago)");
+  const libre = await pendiente(1600, new Date(Date.now() - 60000).toISOString());
+  verificar(
+    (await confirmar((libre.data ?? []).map((r) => r.turno_id), `${mp}-libre`)).data === "confirmado",
+    "pago tardío con el horario libre: confirma",
+  );
+
+  console.log("\nÍndices únicos de pagos y accesos:");
+  const pagoRepetido = await admin.from("pagos").insert({
+    tenant_id: a.id, tipo: "turno", referencia_id: ids[0], mp_payment_id: mp, estado: "approved", monto: 10,
+  });
+  verificar(esperaError(pagoRepetido, "23505"), "pagos: el mismo pago de MP no se registra dos veces para un turno");
+  const acceso = { tenant_id: a.id, curso_id: a.cursoId, cliente_email: "c@example.com", expira_en: en(0), mp_payment_id: `curso-${mp}` };
+  await ok(admin.from("accesos_curso").insert(acceso), "acceso con pago");
+  verificar(esperaError(await admin.from("accesos_curso").insert(acceso), "23505"), "accesos_curso: un pago de MP da un solo acceso");
+}
+
 try {
   const a = await crearTenant("a");
   const b = await crearTenant("b");
@@ -459,7 +511,7 @@ try {
   const { count: aMedias } = await admin.from("tenants").select("id", { count: "exact", head: true }).eq("slug", slugIncompleto);
   verificar(aMedias === 0, "crear_tenant: si falla una fila no queda el tenant (una sola transacción)");
 
-  await reservaAtomica(a);
+  await pagosIdempotentes(a, await reservaAtomica(a));
 
   console.log("\nUsuario logueado sin perfil (sin acceso por la API):");
   const sinPerfil = await crearUsuario("sin-perfil");
@@ -531,6 +583,7 @@ try {
       }],
       ["reprogramar_turno", { p_tenant: a.id, p_turno: a.turnoId, p_fecha_hora: new Date(Date.now() + 40 * 86400000).toISOString() }],
       ["turno_choca", { p_tenant: a.id, p_inicio: new Date().toISOString(), p_fin: new Date().toISOString(), p_margen: 0, p_excluir: [] }],
+      ["confirmar_turnos_pagados", { p_tenant: a.id, p_turnos: [a.turnoId], p_mp_payment_id: "intruso" }],
     ]) {
       verificar(esperaError(await cliente.rpc(fn, args), "42501"), `rpc ${fn}: ${quien} no la invoca`);
     }
