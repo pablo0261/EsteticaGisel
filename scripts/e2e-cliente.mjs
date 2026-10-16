@@ -7,7 +7,9 @@
 // Crea dos clientes temporales con crear_tenant y un usuario para cada uno:
 // - Brasil (portugués, BRL, todos los módulos menos cursos): entra a su panel con el código del
 //   log, edita servicios (precio con centavos), horarios y reglas, textos, testimonios,
-//   preguntas y la galería, reserva en el sitio sin pago anticipado, apaga módulos y lo suspende.
+//   preguntas y la galería, reserva en el sitio sin pago anticipado (y los frenos al abuso: un
+//   solo email, el límite de 3 turnos futuros por email y dos reservas simultáneas del mismo
+//   horario), apaga módulos y lo suspende.
 // - Argentina (español, ARS, solo turnos): precios en pesos enteros, modo de pago con seña y
 //   pago total (sin Mercado Pago conectado la reserva se rechaza sin crear turnos) y las
 //   secciones de módulos apagados.
@@ -624,6 +626,57 @@ async function pruebaBrasil(galeriaHtml) {
     "marca el turno como completado",
     resumen(r),
   );
+
+  console.log("\nAbuso de la reserva sin pago anticipado:");
+  const { fecha: fechaAbuso, slots: slotsAbuso } = await horariosLibres(S, c, idDisponibilidad, servicioId);
+  verificar(slotsAbuso.length >= 11, "hay horarios para las pruebas de abuso", `${slotsAbuso.length} horarios`);
+  // Cada reserva desde otro navegador (otra IP): el límite que se prueba es el del email.
+  const reservar = (iso, email, telefono) => {
+    const fd = new FormData();
+    fd.append("servicioIds", servicioId);
+    fd.append("fecha", fechaAbuso);
+    fd.append("iso", iso ?? "");
+    fd.append("clienteNombre", "Cliente Abuso E2E");
+    fd.append("clienteEmail", email);
+    fd.append("clienteTelefono", telefono);
+    return new Navegador(host(c)).accion("/turnos", idReserva, fd);
+  };
+  const turnosAntes = (await filas(c, "turnos")).length;
+  r = await reservar(slotsAbuso[2]?.iso, "uno@example.com,otro@example.com", "(11) 91234-5601");
+  verificar(
+    r.valor?.ok === false && String(r.valor.error).includes("um único e-mail válido") && (await filas(c, "turnos")).length === turnosAntes,
+    "un email con dos direcciones separadas por coma se rechaza y no crea turnos",
+    r.valor?.ok ? "ok" : String(r.valor?.error ?? r.status),
+  );
+  const emailLimite = `e2e-c2-limite-${sufijo}@example.com`;
+  const aceptadas = [];
+  for (const [i, n] of [2, 4, 6].entries()) {
+    r = await reservar(slotsAbuso[n]?.iso, emailLimite, `(11) 91234-560${i + 2}`);
+    aceptadas.push(r.valor?.ok === true);
+  }
+  verificar(aceptadas.every(Boolean), "tres reservas futuras con el mismo email se aceptan", aceptadas.join(","));
+  r = await reservar(slotsAbuso[8]?.iso, emailLimite.toUpperCase(), "(11) 91234-5609");
+  verificar(
+    r.valor?.ok === false && String(r.valor.error).includes("agendamentos com este e-mail ou este WhatsApp"),
+    "la cuarta reserva futura con el mismo email se rechaza con un mensaje claro",
+    r.valor?.ok ? "ok" : String(r.valor?.error ?? r.status),
+  );
+  verificar((await filas(c, "turnos")).filter((t) => t.cliente_email === emailLimite).length === 3, "quedan tres turnos para ese email");
+  const simultaneas = await Promise.all([
+    reservar(slotsAbuso[10]?.iso, `e2e-c2-par-a-${sufijo}@example.com`, "(11) 91234-5611"),
+    reservar(slotsAbuso[10]?.iso, `e2e-c2-par-b-${sufijo}@example.com`, "(11) 91234-5612"),
+  ]);
+  const ganaron = simultaneas.filter((x) => x.valor?.ok === true).length;
+  const perdieron = simultaneas.filter((x) => x.valor?.ok === false && String(x.valor.error).includes("Esse horário não está mais disponível")).length;
+  verificar(
+    ganaron === 1 && perdieron === 1,
+    "dos reservas simultáneas del mismo horario: una se acepta y la otra dice que ya no está disponible",
+    simultaneas.map((x) => (x.valor?.ok ? "ok" : String(x.valor?.error ?? x.status))).join(" | "),
+  );
+  const enEseHorario = (await filas(c, "turnos")).filter(
+    (t) => slotsAbuso[10] && new Date(t.fecha_hora).getTime() === new Date(slotsAbuso[10].iso).getTime(),
+  );
+  verificar(enEseHorario.length === 1, "queda un solo turno en ese horario", String(enEseHorario.length));
 
   console.log("\nMódulos apagados:");
   await ok(admin.from("tenants").update({ modulo_faq: false, modulo_whatsapp: false }).eq("id", c.id), "apagar módulos");
