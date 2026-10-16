@@ -17,6 +17,12 @@ type CrearPreferenciaOpts = {
   /** URL del sitio del tenant: retorno de Mercado Pago y webhook. */
   baseUrl: string;
   backUrls: { success: string; pending: string; failure: string };
+  /**
+   * Hasta cuándo se puede pagar (ISO). La preferencia vence (expires + expiration_date_to) y
+   * los medios de pago diferidos (efectivo, boleto) vencen a la misma hora
+   * (date_of_expiration): así no se aprueba un pago después de que se liberó el turno.
+   */
+  venceEn?: string;
 };
 
 /** Crea una preferencia de Checkout Pro. Devuelve el init_point para redirigir. */
@@ -47,6 +53,9 @@ export async function crearPreferencia(
       },
       auto_return: "approved",
       notification_url: `${opts.baseUrl}/api/webhooks/mercadopago`,
+      ...(opts.venceEn
+        ? { expires: true, expiration_date_to: opts.venceEn, date_of_expiration: opts.venceEn }
+        : {}),
     }),
   });
 

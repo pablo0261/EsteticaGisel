@@ -259,6 +259,8 @@ export async function reservarTurno(formData: FormData): Promise<ReservarTurnoRe
       clienteEmail,
       baseUrl: urlDelTenant(tenant.slug),
       backUrls: { success: "/turnos/gracias", pending: "/turnos/gracias", failure: "/turnos" },
+      // El checkout vence con el bloqueo del turno (un pago tardío igual se revisa en el webhook).
+      venceEn: bloqueadoHasta,
     });
     return { ok: true, url: pref.initPoint };
   } catch {

@@ -129,7 +129,9 @@ async function procesarPagoTurnos(turnoIds: string[], pago: MpPayment) {
   if (error) throw new Error(`turnos: ${error.code}`);
   const filas = data as unknown as FilaTurnoPagado[] | null;
   if (!filas || filas.length !== ids.length) {
-    console.error(`Webhook MP: el pago ${pago.id} referencia turnos que no se encontraron; no se confirma.`);
+    console.error(
+      `Webhook MP: el pago ${pago.id} (de ${pago.transactionAmount}) referencia turnos que no se encontraron (la reserva se liberó); no se confirma. Hay que devolver el pago.`,
+    );
     return;
   }
   if (new Set(filas.map((f) => f.tenant_id)).size !== 1) {
@@ -162,12 +164,12 @@ async function procesarPagoTurnos(turnoIds: string[], pago: MpPayment) {
       return;
     case "ocupado":
       console.error(
-        `Webhook MP: el pago ${pago.id} llegó con la reserva vencida y el horario ya lo tomó otro turno; no se confirma. Hay que devolver el pago.`,
+        `Webhook MP: el pago ${pago.id} (de ${pago.transactionAmount}) llegó con la reserva vencida y el horario ya lo tomó otro turno; no se confirma. Hay que devolver el pago.`,
       );
       return;
     default:
       console.error(
-        `Webhook MP: los turnos del pago ${pago.id} no están todos pendientes de pago (${String(resultado)}); no se confirma.`,
+        `Webhook MP: los turnos del pago ${pago.id} (de ${pago.transactionAmount}) no están todos pendientes de pago (${String(resultado)}); no se confirma. Hay que devolver el pago.`,
       );
   }
 }
