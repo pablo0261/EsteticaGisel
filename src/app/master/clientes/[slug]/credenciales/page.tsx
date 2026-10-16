@@ -110,6 +110,8 @@ export default async function CredencialesCliente({ params, searchParams }: Prop
             name="mp_access_token"
             type="password"
             autoComplete="new-password"
+            data-1p-ignore
+            data-lpignore="true"
             placeholder={mp.accessTokenConfigurado ? MANTENER : "APP_USR-…"}
             className={CAMPO}
           />
@@ -124,6 +126,8 @@ export default async function CredencialesCliente({ params, searchParams }: Prop
             name="mp_webhook_secret"
             type="password"
             autoComplete="new-password"
+            data-1p-ignore
+            data-lpignore="true"
             placeholder={mp.webhookSecretConfigurado ? MANTENER : "de la aplicación del cliente en Mercado Pago"}
             className={CAMPO}
           />

@@ -19,7 +19,8 @@ const CAMPOS: { clave: keyof ColoresMarca; nombre: string; etiqueta: string }[] 
 const formatoRatio = (n: number) => n.toFixed(2).replace(".", ",");
 
 /** Aviso en vivo (antes de guardar); el de después de guardar es mensajeAviso("contraste_secundario"). */
-const AVISO_SECUNDARIO_EN_VIVO = "El color secundario tiene poco contraste con el fondo (se puede guardar igual).";
+const AVISO_SECUNDARIO_EN_VIVO =
+  "El color secundario tiene poco contraste con el fondo: el mínimo recomendado es 3:1 (se puede guardar igual).";
 
 /**
  * Los 4 colores de la marca con vista previa y contraste en vivo. Es una ayuda: la action
@@ -36,7 +37,8 @@ export function EditorColores({
   avisoGuardado?: boolean;
 }) {
   const [colores, setColores] = useState(inicial);
-  const sinCambios = CAMPOS.every((c) => colores[c.clave] === inicial[c.clave]);
+  // "#ABC" y "#aabbcc" son el mismo color: se comparan normalizados.
+  const sinCambios = CAMPOS.every((c) => normalizarHex(colores[c.clave]) === normalizarHex(inicial[c.clave]));
   const validos = CAMPOS.every((c) => normalizarHex(colores[c.clave]) !== null);
   const problemas = validos ? evaluarPaleta(colores) : [];
   const bloquea = !validos || problemas.some((p) => p.bloquea);

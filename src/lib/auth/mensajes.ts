@@ -35,14 +35,14 @@ const ERRORES: Record<string, Textos> = {
   },
   limite: {
     es: "Pediste demasiados códigos. Probá de nuevo en una hora.",
-    pt: "Você pediu códigos demais. Tente novamente em uma hora.",
+    pt: "Você solicitou muitos códigos. Tente novamente em uma hora.",
   },
   formato: { es: "El código tiene 6 números.", pt: "O código tem 6 números." },
   incorrecto: { es: "El código no es correcto.", pt: "O código não está correto." },
   vencido: { es: "El código venció. Pedí uno nuevo.", pt: "O código expirou. Peça um novo." },
   agotado: {
     es: "Agotaste los intentos. Pedí un código nuevo.",
-    pt: "Você esgotou as tentativas. Peça um código novo.",
+    pt: "Você esgotou as tentativas. Solicite um novo código.",
   },
   usado: { es: "Ese código ya se usó. Pedí uno nuevo.", pt: "Esse código já foi usado. Peça um novo." },
   sin_codigo: { es: "Pedí un código para continuar.", pt: "Peça um código para continuar." },
@@ -66,7 +66,7 @@ const ERRORES: Record<string, Textos> = {
   },
   contrasena_rechazada: {
     es: "No pudimos guardar esa contraseña (puede ser muy débil o igual a la anterior). Pedí un link nuevo y probá con otra.",
-    pt: "Não conseguimos salvar essa senha (pode ser muito fraca ou igual à anterior). Peça um link novo e tente outra.",
+    pt: "Não conseguimos salvar essa senha (pode ser muito fraca ou igual à anterior). Solicite um novo link e tente outra.",
   },
 };
 

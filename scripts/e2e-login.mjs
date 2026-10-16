@@ -279,7 +279,11 @@ async function pruebaDev() {
     `${respuestaExistente} / ${destino(r)}`,
   );
   const link = new URL(await esperarNueva(reLink(email), linksAntes));
-  verificar(link.host === HOST_TENANT && link.pathname === "/admin/restablecer", "el link apunta al sitio del tenant", link.href);
+  verificar(
+    link.host === HOST_TENANT && link.pathname === "/admin/restablecer",
+    "el link apunta al sitio del tenant",
+    `${link.host}${link.pathname}`,
+  );
   await dormir(1000);
   verificar(ocurrencias(reLink(emailInexistente)).length === 0, "para un email inexistente no se genera link");
 

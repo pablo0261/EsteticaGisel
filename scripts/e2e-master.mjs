@@ -277,14 +277,18 @@ async function prueba() {
   verificar(parametro(r, "ok") === "guardado" && parametro(r, "aviso") === "contraste_secundario", "secundario con poco contraste: se guarda con aviso", resumen(r));
   // El editor se renderiza en el servidor con su estado inicial: el aviso en vivo y el de después de guardar no se repiten.
   const AVISO_GUARDADO = "Se guardó, pero el color secundario";
-  const AVISO_EN_VIVO = "El color secundario tiene poco contraste con el fondo (se puede guardar igual).";
+  const AVISO_EN_VIVO =
+    "El color secundario tiene poco contraste con el fondo: el mínimo recomendado es 3:1 (se puede guardar igual).";
   const conAviso = (await M.get(destino(r))).html;
   const sinAviso = (await M.get(rutaMarca)).html;
   verificar(
     conAviso.includes(AVISO_GUARDADO) && !conAviso.includes(AVISO_EN_VIVO) && sinAviso.includes(AVISO_EN_VIVO) && !sinAviso.includes(AVISO_GUARDADO),
     "el aviso del secundario sale una sola vez (después de guardar o en vivo)",
   );
-  verificar(sinAviso.includes("contraste actual") && !sinAviso.includes("mínimo"), "el contraste muestra solo el valor actual");
+  verificar(
+    sinAviso.includes("contraste actual") && sinAviso.includes("el mínimo recomendado es 3:1"),
+    "el aviso en vivo muestra el contraste actual y el mínimo de 3:1",
+  );
   verificar(/aria-label="Secundario \(detalles\) \(hex\)"/.test(sinAviso), "el campo hex tiene nombre accesible");
   r = await colores({});
   verificar(destino(r) === `${rutaMarca}?ok=guardado`, "la paleta válida se vuelve a guardar", resumen(r));
@@ -368,7 +372,11 @@ async function prueba() {
   usuariosCreados.push(clienteUserId);
   verificar(perfil.rol === "cliente", "perfil cliente del tenant");
   const link = new URL(await esperarNueva(reInvitacion(emailCliente), linksAntes));
-  verificar(link.host === HOST_CLIENTE && link.pathname === "/admin/restablecer", "el link de invitación lleva al panel del cliente", link.href);
+  verificar(
+    link.host === HOST_CLIENTE && link.pathname === "/admin/restablecer",
+    "el link de invitación lleva al panel del cliente",
+    `${link.host}${link.pathname}`,
+  );
   pagina = await M.get(rutaUsuario);
   verificar(
     !pagina.html.includes('id="form-usuario-cliente"') && pagina.html.includes(emailCliente),
@@ -393,7 +401,7 @@ async function prueba() {
   r = await C.enviar("/admin/verificar", pagina.html, "form-verificar", { codigo: codigoCliente, recordar: "on" });
   verificar(destino(r) === "/admin", "código correcto: entra a su panel", resumen(r));
   r = await C.get("/admin");
-  verificar(r.status === 200 && r.html.includes("Hola,") && r.html.includes("Cliente C1"), "su panel responde con su nombre", String(r.status));
+  verificar(r.status === 200 && r.html.includes("Olá, Cliente C1"), "su panel responde con su nombre, en portugués", String(r.status));
 
   console.log("\nUna action del master desde la sesión del cliente:");
   const htmlDatos = (await M.get(base)).html;
@@ -506,7 +514,7 @@ async function prueba() {
       !credGmail.smtp_ultimo_error.includes(claveGmailFalsa) &&
       !credGmail.smtp_ultimo_error.includes(usuarioGmail),
     "se registra el error, sin datos sensibles",
-    credGmail?.smtp_ultimo_error,
+    `estado ${credGmail?.smtp_estado ?? "sin fila"}`,
   );
   pagina = await M.get("/");
   const inicioFila = pagina.html.indexOf(`>${slug}<`);
@@ -520,7 +528,11 @@ async function prueba() {
   r = await S.get("/");
   verificar(r.status === 200 && r.html.includes("indisponível"), "el sitio público muestra que no está disponible", String(r.status));
   r = await C.get("/admin");
-  verificar(!r.html.includes("Hola,"), "con el cliente suspendido su panel no deja entrar", resumen(r));
+  verificar(
+    r.html.includes("suspenso") && !r.html.includes("Olá,"),
+    "con el cliente suspendido su panel muestra el aviso y no deja entrar",
+    resumen(r),
+  );
   pagina = await M.get(rutaUsuario);
   r = await M.enviar(rutaUsuario, pagina.html, `form-reenviar-link-${clienteUserId}`, { slug, user_id: clienteUserId });
   verificar(destino(r) === `${rutaUsuario}?error=cliente_suspendido`, "con el cliente suspendido no se envían links", resumen(r));
@@ -529,6 +541,17 @@ async function prueba() {
   verificar(destino(r) === `${base}?ok=reactivado` && (await leerTenant())?.estado === "activo", "reactivar", resumen(r));
   r = await S.get("/");
   verificar(r.status === 200 && r.html.includes("Bem-vinda ao"), "el sitio vuelve a estar en línea", String(r.status));
+}
+
+/** Id del usuario de Auth con ese email (listUsers paginado), o null. */
+async function idDeUsuarioPorEmail(email) {
+  for (let page = 1; ; page++) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 200 });
+    if (error) throw new Error(error.message);
+    const usuario = data.users.find((u) => u.email === email);
+    if (usuario) return usuario.id;
+    if (data.users.length < 200) return null;
+  }
 }
 
 const hmacEmail = (dominio, e) => createHmac("sha256", secretoMfa).update(`${dominio}|${e}`).digest("hex");
@@ -554,8 +577,21 @@ try {
         fallas++;
       }
     }
-    const { data: perfiles } = await admin.from("perfiles").select("user_id").eq("tenant_id", id);
+    const { data: perfiles, error: errorPerfiles } = await admin.from("perfiles").select("user_id").eq("tenant_id", id);
+    if (errorPerfiles) {
+      console.error(`✗ limpieza: perfiles: ${errorPerfiles.message}`);
+      fallas++;
+    }
     for (const p of perfiles ?? []) if (!usuariosCreados.includes(p.user_id)) usuariosCreados.push(p.user_id);
+  }
+  // Si la prueba se cortó entre crear el usuario del cliente y su perfil, el usuario no aparece
+  // por el perfil: se lo busca por su email (único de esta corrida).
+  try {
+    const idPorEmail = await idDeUsuarioPorEmail(emailCliente);
+    if (idPorEmail && !usuariosCreados.includes(idPorEmail)) usuariosCreados.push(idPorEmail);
+  } catch (e) {
+    console.error(`✗ limpieza: buscar el usuario del cliente: ${e.message}`);
+    fallas++;
   }
   for (const uid of usuariosCreados) {
     const { error } = await admin.auth.admin.deleteUser(uid);
