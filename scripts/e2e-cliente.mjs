@@ -657,7 +657,7 @@ async function pruebaBrasil(galeriaHtml) {
   verificar(aceptadas.every(Boolean), "tres reservas futuras con el mismo email se aceptan", aceptadas.join(","));
   r = await reservar(slotsAbuso[8]?.iso, emailLimite.toUpperCase(), "(11) 91234-5609");
   verificar(
-    r.valor?.ok === false && String(r.valor.error).includes("agendamentos com este e-mail ou este WhatsApp"),
+    r.valor?.ok === false && String(r.valor.error).includes("máximo de agendamentos (3) com este e-mail ou este WhatsApp"),
     "la cuarta reserva futura con el mismo email se rechaza con un mensaje claro",
     r.valor?.ok ? "ok" : String(r.valor?.error ?? r.status),
   );

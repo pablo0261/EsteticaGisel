@@ -29,6 +29,8 @@ const MAXIMO_RESERVAS_POR_HORA = 2;
  * manda la cabecera) la reserva igual se acepta y quedan estos límites por email y WhatsApp.
  */
 const MAXIMO_TURNOS_FUTUROS_POR_CLIENTE = 3;
+/** Servicios que se pueden combinar en una sola reserva (uno por turno, consecutivos). */
+const MAXIMO_SERVICIOS_POR_RESERVA = 3;
 /** Errores propios de reservar_turnos (migración 0023). */
 const CODIGO_HORARIO_OCUPADO = "TU001";
 const CODIGO_MAXIMO_POR_CLIENTE = "TU002";
@@ -54,6 +56,16 @@ export async function reservarTurno(formData: FormData): Promise<ReservarTurnoRe
     return {
       ok: false,
       error: t({ es: "Completá todos los campos obligatorios.", pt: "Preencha todos os campos obrigatórios." }),
+    };
+  }
+
+  if (servicioIds.length > MAXIMO_SERVICIOS_POR_RESERVA) {
+    return {
+      ok: false,
+      error: t({
+        es: `Podés reservar hasta ${MAXIMO_SERVICIOS_POR_RESERVA} servicios juntos. Para más, escribinos por WhatsApp.`,
+        pt: `Você pode agendar até ${MAXIMO_SERVICIOS_POR_RESERVA} serviços juntos. Para mais, fale com a gente pelo WhatsApp.`,
+      }),
     };
   }
 
@@ -201,8 +213,8 @@ export async function reservarTurno(formData: FormData): Promise<ReservarTurnoRe
     return {
       ok: false,
       error: t({
-        es: `Ya tenés ${MAXIMO_TURNOS_FUTUROS_POR_CLIENTE} turnos reservados con este email o este WhatsApp. Si necesitás otro, escribinos por WhatsApp.`,
-        pt: `Você já tem ${MAXIMO_TURNOS_FUTUROS_POR_CLIENTE} agendamentos com este e-mail ou este WhatsApp. Se precisar de outro, fale com a gente pelo WhatsApp.`,
+        es: `Con esta reserva superás el máximo de turnos reservados (${MAXIMO_TURNOS_FUTUROS_POR_CLIENTE}) con este email o este WhatsApp. Si necesitás más, escribinos por WhatsApp.`,
+        pt: `Com este agendamento você passa do máximo de agendamentos (${MAXIMO_TURNOS_FUTUROS_POR_CLIENTE}) com este e-mail ou este WhatsApp. Se precisar de mais, fale com a gente pelo WhatsApp.`,
       }),
     };
   }

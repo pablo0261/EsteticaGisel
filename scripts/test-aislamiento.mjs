@@ -364,6 +364,11 @@ async function reservaAtomica(a) {
   verificar(esperaError(await reservar([pedido(480)], "LIMITE@example.com", "+5491100000999"), "TU002"), "un 4.º turno futuro con el mismo email: TU002");
   for (const m of [540, 600, 660]) await ok(reservar([pedido(m)], `tel-${m}@example.com`, "+5491100000777"), "reserva del límite por WhatsApp");
   verificar(esperaError(await reservar([pedido(720)], "otro@example.com", "+5491100000777"), "TU002"), "un 4.º turno futuro con el mismo WhatsApp: TU002");
+  for (const m of [1300, 1360]) await ok(reservar([pedido(m)], "combinada@example.com", `+54911000003${m}`), "reserva previa a la combinada");
+  verificar(
+    esperaError(await reservar([pedido(1420), pedido(1450)], "combinada@example.com", "+5491100000888"), "TU002"),
+    "2 turnos futuros + una reserva de 2 servicios con el mismo email: TU002",
+  );
 
   const vencido = await reservar([pedido(900)], "vencido@example.com", "+5491100000006", {
     p_estado: "pendiente_pago", p_bloqueado_hasta: new Date(Date.now() - 60000).toISOString(),
