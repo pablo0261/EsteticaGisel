@@ -9,6 +9,7 @@ import { calcularExpiracion, precioEfectivo } from "@/lib/cursos/reglas";
 import { validarEmailCliente } from "@/lib/turnos/cliente";
 import { crearEventoDeTurno, enviarConfirmacionDeTurno, type TurnoConfirmado } from "@/lib/turnos/confirmacion";
 import { mismoMonto, sumaEnCentavos } from "@/lib/turnos/reglas";
+import { usaCredencialesGlobales } from "@/lib/tenant/credenciales-globales";
 import { datosDelTenant } from "@/lib/tenant/datos";
 import { urlDelTenant } from "@/lib/tenant/urls";
 import type { Idioma } from "@/lib/i18n/textos";
@@ -81,8 +82,25 @@ type FilaTurnoPagado = {
   duracion_minutos: number;
   token_gestion: string;
   servicios: { nombre: string };
-  tenants: { slug: string; zona_horaria: string; idioma: string };
+  tenants: { slug: string; zona_horaria: string; idioma: string; moneda: Moneda };
 };
+
+/**
+ * Hasta la etapa D, las credenciales de Mercado Pago del .env son de un solo tenant: un pago
+ * que referencia turnos o cursos de otro no se procesa. Y el pago tiene que estar en la
+ * moneda del tenant (el monto se compara sin convertir).
+ */
+function pagoDelTenant(pago: MpPayment, tenant: { slug: string; moneda: Moneda }): boolean {
+  if (!usaCredencialesGlobales(tenant.slug)) {
+    console.error(`Webhook MP: el pago ${pago.id} es de un cliente sin Mercado Pago habilitado; no se procesa.`);
+    return false;
+  }
+  if (pago.moneda !== tenant.moneda) {
+    console.error(`Webhook MP: el pago ${pago.id} está en ${pago.moneda} y el cliente cobra en ${tenant.moneda}; no se procesa.`);
+    return false;
+  }
+  return true;
+}
 
 /** Resultado de confirmar_turnos_pagados (migración 0024). */
 type ResultadoConfirmacion = "confirmado" | "ya_procesado" | "ocupado" | "inconsistente";
@@ -105,7 +123,7 @@ async function procesarPagoTurnos(turnoIds: string[], pago: MpPayment) {
   const { data, error } = await createAdminClient()
     .from("turnos")
     .select(
-      "id, tenant_id, estado, monto_sena, cliente_nombre, cliente_email, fecha_hora, duracion_minutos, token_gestion, servicios(nombre), tenants(slug, zona_horaria, idioma)",
+      "id, tenant_id, estado, monto_sena, cliente_nombre, cliente_email, fecha_hora, duracion_minutos, token_gestion, servicios(nombre), tenants(slug, zona_horaria, idioma, moneda)",
     )
     .in("id", ids);
   if (error) throw new Error(`turnos: ${error.code}`);
@@ -118,6 +136,7 @@ async function procesarPagoTurnos(turnoIds: string[], pago: MpPayment) {
     console.error(`Webhook MP: el pago ${pago.id} referencia turnos de más de un cliente; no se confirma.`);
     return;
   }
+  if (!pagoDelTenant(pago, filas[0].tenants)) return;
   const esperado = sumaEnCentavos(filas.map((f) => Number(f.monto_sena ?? 0)));
   if (!mismoMonto(Number(pago.transactionAmount), esperado)) {
     console.error(
@@ -187,6 +206,7 @@ async function procesarPagoCurso(cursoId: string, centavosEsperados: number | nu
     .maybeSingle();
   if (!curso) return;
   const tenantCurso = curso.tenants as unknown as { slug: string; moneda: Moneda };
+  if (!pagoDelTenant(pago, tenantCurso)) return;
   const precioOferta = curso.precio_oferta == null ? null : Number(curso.precio_oferta);
 
   let montoValido: boolean;

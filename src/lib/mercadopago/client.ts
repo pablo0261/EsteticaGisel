@@ -64,6 +64,8 @@ export type MpPayment = {
   status: string; // approved | pending | rejected | ...
   externalReference: string | null;
   transactionAmount: number;
+  /** currency_id del pago (ARS, BRL, ...). */
+  moneda: string | null;
   payerEmail: string | null;
   /** Cuándo se creó el pago (ISO), para el precio de un curso con oferta por fechas. */
   fechaCreacion: string | null;
@@ -83,6 +85,7 @@ export async function obtenerPago(paymentId: string): Promise<MpPayment> {
     status: data.status,
     externalReference: data.external_reference ?? null,
     transactionAmount: data.transaction_amount,
+    moneda: data.currency_id ?? null,
     payerEmail: data.payer?.email ?? null,
     fechaCreacion: data.date_created ?? null,
   };
