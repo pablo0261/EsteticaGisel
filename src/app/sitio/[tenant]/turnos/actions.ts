@@ -9,6 +9,7 @@ import { usaCredencialesGlobales } from "@/lib/tenant/credenciales-globales";
 import { datosDelTenant } from "@/lib/tenant/datos";
 import { urlDelTenant } from "@/lib/tenant/urls";
 import { crearEventoDeTurno, enviarConfirmacionDeTurno } from "@/lib/turnos/confirmacion";
+import { LARGO_MAXIMO_NOMBRE_CLIENTE, validarEmailCliente, validarNombreCliente } from "@/lib/turnos/cliente";
 import { EJEMPLO_WHATSAPP } from "@/lib/turnos/ejemplo-whatsapp";
 import { getClientIp } from "@/lib/turnos/ip";
 import { cobroDeReserva } from "@/lib/turnos/pago";
@@ -33,14 +34,36 @@ export async function reservarTurno(formData: FormData): Promise<ReservarTurnoRe
   const servicioIds = formData.getAll("servicioIds").map(String);
   const fecha = String(formData.get("fecha"));
   const iso = String(formData.get("iso"));
-  const clienteNombre = String(formData.get("clienteNombre") || "").trim();
-  const clienteEmail = String(formData.get("clienteEmail") || "").trim();
+  const nombreCrudo = String(formData.get("clienteNombre") || "").trim();
+  const emailCrudo = String(formData.get("clienteEmail") || "").trim();
   const clienteTelefono = String(formData.get("clienteTelefono") || "").trim();
 
-  if (servicioIds.length === 0 || !iso || !clienteNombre || !clienteEmail || !clienteTelefono) {
+  if (servicioIds.length === 0 || !iso || !nombreCrudo || !emailCrudo || !clienteTelefono) {
     return {
       ok: false,
       error: t({ es: "Completá todos los campos obligatorios.", pt: "Preencha todos os campos obrigatórios." }),
+    };
+  }
+
+  const clienteNombre = validarNombreCliente(nombreCrudo);
+  if (!clienteNombre) {
+    return {
+      ok: false,
+      error: t({
+        es: `Ingresá tu nombre, de hasta ${LARGO_MAXIMO_NOMBRE_CLIENTE} caracteres.`,
+        pt: `Informe seu nome, com até ${LARGO_MAXIMO_NOMBRE_CLIENTE} caracteres.`,
+      }),
+    };
+  }
+  // Una sola dirección: es el destinatario del email de confirmación y el pagador en Mercado Pago.
+  const clienteEmail = validarEmailCliente(emailCrudo);
+  if (!clienteEmail) {
+    return {
+      ok: false,
+      error: t({
+        es: "Ingresá un solo email válido, ej.: nombre@dominio.com.",
+        pt: "Informe um único e-mail válido, ex.: nome@dominio.com.",
+      }),
     };
   }
 

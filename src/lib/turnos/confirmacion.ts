@@ -5,6 +5,7 @@ import { isGoogleConfigurado, crearEvento } from "@/lib/google-calendar/client";
 import { LOCALES, type Idioma } from "@/lib/i18n/textos";
 import { usaCredencialesGlobales } from "@/lib/tenant/credenciales-globales";
 import { urlDelTenant } from "@/lib/tenant/urls";
+import { validarEmailCliente } from "./cliente";
 
 /**
  * Lo que pasa cuando un turno queda confirmado (pago aprobado por Mercado Pago o reserva sin
@@ -44,6 +45,10 @@ export async function crearEventoDeTurno(turno: TurnoConfirmado, descripcion: st
 
 export async function enviarConfirmacionDeTurno(turno: TurnoConfirmado): Promise<void> {
   if (!isEmailConfigurado() || !usaCredencialesGlobales(turno.slug)) return;
+  // Un solo destinatario: la reserva ya lo valida, pero un turno anterior a esa validación
+  // (o cargado por otra vía) no debe convertirse en una lista de destinatarios.
+  const destinatario = validarEmailCliente(turno.clienteEmail);
+  if (!destinatario) return;
   const fechaHoraTexto = new Date(turno.fechaHoraIso).toLocaleString(LOCALES[turno.idioma], {
     dateStyle: "long",
     timeStyle: "short",
@@ -55,7 +60,7 @@ export async function enviarConfirmacionDeTurno(turno: TurnoConfirmado): Promise
     linkGestion: `${urlDelTenant(turno.slug)}/turnos/gestion/${turno.tokenGestion}`,
   });
   try {
-    await enviarEmail({ to: turno.clienteEmail, subject, html });
+    await enviarEmail({ to: destinatario, subject, html });
   } catch {
     // El turno ya quedó confirmado; el email es best effort.
   }

@@ -6,6 +6,7 @@ import { isMpConfigurado, crearPreferencia } from "@/lib/mercadopago/client";
 import { tenantDelRequest } from "@/lib/tenant/actual";
 import { urlDelTenant } from "@/lib/tenant/urls";
 import { usaCredencialesGlobales } from "@/lib/tenant/credenciales-globales";
+import { validarEmailCliente } from "@/lib/turnos/cliente";
 import { IDIOMA_POR_DEFECTO, traductor } from "@/lib/i18n/textos";
 
 export type ComprarCursoResult =
@@ -21,12 +22,22 @@ export async function comprarCurso(formData: FormData): Promise<ComprarCursoResu
   }
 
   const cursoId = String(formData.get("cursoId"));
-  const clienteEmail = String(formData.get("clienteEmail") || "").trim();
+  const emailCrudo = String(formData.get("clienteEmail") || "").trim();
 
-  if (!clienteEmail) {
+  if (!emailCrudo) {
     return {
       ok: false,
       error: t({ es: "Ingresá tu email para continuar.", pt: "Informe seu e-mail para continuar." }),
+    };
+  }
+  const clienteEmail = validarEmailCliente(emailCrudo);
+  if (!clienteEmail) {
+    return {
+      ok: false,
+      error: t({
+        es: "Ingresá un solo email válido, ej.: nombre@dominio.com.",
+        pt: "Informe um único e-mail válido, ex.: nome@dominio.com.",
+      }),
     };
   }
   if (!isMpConfigurado() || !usaCredencialesGlobales(tenant.slug)) {
