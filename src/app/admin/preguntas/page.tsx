@@ -29,6 +29,7 @@ export function generateMetadata(): Promise<Metadata> {
 
 export default async function PreguntasAdmin({ searchParams }: { searchParams: Promise<ParamsPanel> }) {
   const tenant = await tenantDeSeccion("preguntas");
+  if (!tenant) return null; // cliente suspendido: el layout muestra el aviso
   const t = traductor(tenant.idioma);
   const preguntas = await getPreguntasAdmin(tenant.id);
   const etiqueta = {

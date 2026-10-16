@@ -29,6 +29,7 @@ export function generateMetadata(): Promise<Metadata> {
 
 export default async function TestimoniosAdmin({ searchParams }: { searchParams: Promise<ParamsPanel> }) {
   const tenant = await tenantDeSeccion("testimonios");
+  if (!tenant) return null; // cliente suspendido: el layout muestra el aviso
   const t = traductor(tenant.idioma);
   const testimonios = await getTestimoniosAdmin(tenant.id);
   const etiqueta = {

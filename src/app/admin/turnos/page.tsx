@@ -26,6 +26,7 @@ const ESTADOS: Record<EstadoTurno, { etiqueta: Textos; clase: string }> = {
 
 export default async function TurnosAdmin({ searchParams }: { searchParams: Promise<ParamsPanel> }) {
   const tenant = await tenantDeSeccion("turnos");
+  if (!tenant) return null; // cliente suspendido: el layout muestra el aviso
   const t = traductor(tenant.idioma);
   const turnos = await getTurnosAdmin(tenant.id);
 

@@ -28,6 +28,7 @@ export function generateMetadata(): Promise<Metadata> {
 
 export default async function ServiciosAdmin({ searchParams }: { searchParams: Promise<ParamsPanel> }) {
   const tenant = await tenantDeSeccion("servicios");
+  if (!tenant) return null; // cliente suspendido: el layout muestra el aviso
   const t = traductor(tenant.idioma);
   const servicios = await getServiciosAdmin(tenant.id);
   // BRL tiene centavos; ARS se maneja en pesos enteros.

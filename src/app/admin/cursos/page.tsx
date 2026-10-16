@@ -11,6 +11,7 @@ export const metadata = { title: "Cursos · Panel" };
 
 export default async function CursosAdmin() {
   const tenant = await tenantDeSeccion("cursos");
+  if (!tenant) return null; // cliente suspendido: el layout muestra el aviso
   const cursos = await getCursosAdmin(tenant.id);
 
   return (

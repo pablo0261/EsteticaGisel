@@ -2,10 +2,11 @@ import Link from "next/link";
 import { Mensajes, SUBTITULO, TITULO, type ParamsPanel } from "@/components/panel/ui";
 import { traductor } from "@/lib/i18n/textos";
 import { seccionesDelPanel } from "@/lib/panel/secciones";
-import { tenantDelAdmin } from "@/lib/tenant/admin";
+import { tenantDelPanel } from "@/lib/tenant/admin";
 
 export default async function PanelInicio({ searchParams }: { searchParams: Promise<ParamsPanel> }) {
-  const tenant = await tenantDelAdmin();
+  const tenant = await tenantDelPanel();
+  if (!tenant) return null; // cliente suspendido: el layout muestra el aviso
   const t = traductor(tenant.idioma);
   return (
     <div>

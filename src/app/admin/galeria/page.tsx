@@ -31,6 +31,7 @@ export function generateMetadata(): Promise<Metadata> {
 
 export default async function GaleriaAdmin({ searchParams }: { searchParams: Promise<ParamsPanel> }) {
   const tenant = await tenantDeSeccion("galeria");
+  if (!tenant) return null; // cliente suspendido: el layout muestra el aviso
   const t = traductor(tenant.idioma);
   const imagenes = await getGaleriaAdmin(tenant.id);
   const llena = imagenes.length >= L.imagenesGaleria;

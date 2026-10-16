@@ -47,6 +47,7 @@ const AYUDA_MODO: Record<ModoPago, Textos> = {
 
 export default async function ConfiguracionAdmin({ searchParams }: { searchParams: Promise<ParamsPanel> }) {
   const tenant = await tenantDeSeccion("configuracion");
+  if (!tenant) return null; // cliente suspendido: el layout muestra el aviso
   const t = traductor(tenant.idioma);
   const config = await getConfiguracion(tenant.id);
 

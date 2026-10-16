@@ -1,7 +1,7 @@
 import "server-only";
 import { revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
-import { tenantDelAdmin } from "@/lib/tenant/admin";
+import { tenantDelAdmin, tenantDelPanel } from "@/lib/tenant/admin";
 import type { Tenant } from "@/lib/tenant/tipos";
 import type { ClaveError, ClaveInfo } from "./mensajes";
 import { seccionHabilitada, type SeccionPanel } from "./secciones";
@@ -12,9 +12,13 @@ import { seccionHabilitada, type SeccionPanel } from "./secciones";
  * a verificar la sesión (tenantDelAdmin) y el módulo de su sección.
  */
 
-/** Para páginas: 404 si el módulo de la sección está apagado. */
-export async function tenantDeSeccion(seccion: SeccionPanel): Promise<Tenant> {
-  const tenant = await tenantDelAdmin();
+/**
+ * Para páginas: 404 si el módulo de la sección está apagado. null si el cliente está
+ * suspendido (ver tenantDelPanel): la página no muestra nada.
+ */
+export async function tenantDeSeccion(seccion: SeccionPanel): Promise<Tenant | null> {
+  const tenant = await tenantDelPanel();
+  if (!tenant) return null;
   if (!seccionHabilitada(tenant.modulos, seccion)) notFound();
   return tenant;
 }

@@ -20,6 +20,7 @@ export default async function EditarCursoAdmin({
   params: Promise<{ id: string }>;
 }) {
   const tenant = await tenantDeSeccion("cursos");
+  if (!tenant) return null; // cliente suspendido: el layout muestra el aviso
   const { id } = await params;
   const curso = await getCursoAdmin(tenant.id, id);
   if (!curso) notFound();
