@@ -1,18 +1,20 @@
 import "server-only";
 import { isEmailConfigurado, enviarEmail } from "@/lib/email/gmail";
 import { plantillaConfirmacionTurno } from "@/lib/email/plantillas";
-import { isGoogleConfigurado, crearEvento } from "@/lib/google-calendar/client";
+import { crearEvento } from "@/lib/google-calendar/client";
+import { cuentaGoogle } from "@/lib/integraciones/cuenta";
 import { LOCALES, type Idioma } from "@/lib/i18n/textos";
+import { getTenantPorSlug } from "@/lib/tenant/actual";
 import { usaCredencialesGlobales } from "@/lib/tenant/credenciales-globales";
 import { urlDelTenant } from "@/lib/tenant/urls";
 import { validarEmailCliente } from "./cliente";
 
 /**
  * Lo que pasa cuando un turno queda confirmado (pago aprobado por Mercado Pago o reserva sin
- * pago anticipado): el evento de Google Calendar y el email de confirmación. Hasta la etapa D
- * los dos usan las credenciales globales del .env (el Calendar y el Gmail de un solo cliente,
- * y la plantilla del email lleva su logo), así que solo corren para ese tenant
- * (usaCredencialesGlobales). Son best effort: un fallo no deshace la confirmación.
+ * pago anticipado): el evento de Google Calendar y el email de confirmación.
+ * Calendar usa las credenciales del cliente (panel, o el .env del tenant global).
+ * El email sigue saliendo por el Gmail del .env, solo para ese tenant, hasta que cada
+ * cliente tenga el suyo. Los dos son best effort: un fallo no deshace la confirmación.
  */
 export type TurnoConfirmado = {
   slug: string;
@@ -28,10 +30,13 @@ export type TurnoConfirmado = {
 
 /** Id del evento creado, o null si no corresponde o falló. */
 export async function crearEventoDeTurno(turno: TurnoConfirmado, descripcion: string): Promise<string | null> {
-  if (!isGoogleConfigurado() || !usaCredencialesGlobales(turno.slug)) return null;
+  const tenant = await getTenantPorSlug(turno.slug);
+  const cuenta = tenant ? await cuentaGoogle(tenant.id, tenant.slug) : null;
+  if (!cuenta) return null;
   try {
     const fin = new Date(new Date(turno.fechaHoraIso).getTime() + turno.duracionMinutos * 60000).toISOString();
     return await crearEvento({
+      cuenta,
       titulo: `${turno.servicio} — ${turno.clienteNombre}`,
       descripcion,
       inicioIso: turno.fechaHoraIso,

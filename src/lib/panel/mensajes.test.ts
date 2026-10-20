@@ -50,6 +50,18 @@ describe("mensajes del panel", () => {
       "respuesta",
       "descripcion",
       "galeria_llena",
+      "mp_access_token",
+      "mp_public_key",
+      "mp_webhook_secret",
+      "mp_sin_access_token",
+      "google_client_id",
+      "google_client_secret",
+      "google_calendar",
+      "google_sin_secreto",
+      "google_sin_app",
+      "google_code",
+      "google_estado",
+      "clave_credenciales",
     ];
     for (const clave of errores) {
       const es = mensajeError("es", clave);
@@ -58,7 +70,16 @@ describe("mensajes del panel", () => {
       expect(pt, clave).toBeTruthy();
       expect(pt, clave).not.toBe(es);
     }
-    const infos: ClaveInfo[] = ["guardado", "creado", "eliminado", "imagen_subida", "turno_completado", "turno_cancelado"];
+    const infos: ClaveInfo[] = [
+      "guardado",
+      "creado",
+      "eliminado",
+      "imagen_subida",
+      "turno_completado",
+      "turno_cancelado",
+      "google_conectado",
+      "google_desconectado",
+    ];
     for (const clave of infos) {
       expect(mensajeInfo("es", clave), clave).toBeTruthy();
       expect(mensajeInfo("pt", clave), clave).not.toBe(mensajeInfo("es", clave));

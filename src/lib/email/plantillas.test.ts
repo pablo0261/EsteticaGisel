@@ -55,4 +55,14 @@ describe("plantillaCompraCurso", () => {
     expect(subject).toContain("Laminado de cejas profesional");
     expect(html).toContain("https://esteticagisel.com.ar/cursos/acceso/curso-1");
   });
+
+  it("escapa el título para que no se interprete como HTML", () => {
+    const { html } = plantillaCompraCurso({
+      curso: `<script>alert(1)</script>`,
+      linkAcceso: `https://esteticagisel.com.ar/cursos/acceso/a"onclick`,
+    });
+    expect(html).not.toContain("<script>");
+    expect(html).toContain("&lt;script&gt;");
+    expect(html).toContain("a&quot;onclick");
+  });
 });

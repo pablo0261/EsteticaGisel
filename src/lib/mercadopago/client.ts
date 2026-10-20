@@ -1,3 +1,4 @@
+import { esUrlDeMercadoPago } from "@/lib/mercadopago/destino";
 import type { Moneda } from "@/lib/tenant/tipos";
 
 const MP_API = "https://api.mercadopago.com";
@@ -23,6 +24,7 @@ type CrearPreferenciaOpts = {
    * (date_of_expiration): así no se aprueba un pago después de que se liberó el turno.
    */
   venceEn?: string;
+  accessToken: string;
 };
 
 /** Crea una preferencia de Checkout Pro. Devuelve el init_point para redirigir. */
@@ -32,7 +34,7 @@ export async function crearPreferencia(
   const res = await fetch(`${MP_API}/checkout/preferences`, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}`,
+      Authorization: `Bearer ${opts.accessToken}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
@@ -65,7 +67,11 @@ export async function crearPreferencia(
   }
 
   const data = await res.json();
-  return { id: data.id, initPoint: data.init_point };
+  const initPoint = String(data.init_point ?? "");
+  if (!esUrlDeMercadoPago(initPoint)) {
+    throw new Error("Mercado Pago devolvió una URL de pago que no es de Mercado Pago");
+  }
+  return { id: data.id, initPoint };
 }
 
 export type MpPayment = {
@@ -81,9 +87,9 @@ export type MpPayment = {
 };
 
 /** Consulta el estado real de un pago contra la API de MP (nunca confiar solo en el webhook). */
-export async function obtenerPago(paymentId: string): Promise<MpPayment> {
+export async function obtenerPago(paymentId: string, accessToken: string): Promise<MpPayment> {
   const res = await fetch(`${MP_API}/v1/payments/${paymentId}`, {
-    headers: { Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}` },
+    headers: { Authorization: `Bearer ${accessToken}` },
   });
   if (!res.ok) {
     throw new Error(`No se pudo consultar el pago ${paymentId}: ${res.status}`);

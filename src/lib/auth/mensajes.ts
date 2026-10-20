@@ -17,6 +17,10 @@ const ERRORES: Record<string, Textos> = {
     pt: "O serviço está ocupado. Tente novamente em alguns minutos.",
   },
   sitio: { es: "Este sitio no está disponible.", pt: "Este site não está disponível." },
+  origen: {
+    es: "El servidor no puede identificar la conexión. Tiene que estar detrás del proxy, con la cabecera de IP configurada.",
+    pt: "O servidor não consegue identificar a conexão. Ele precisa estar atrás do proxy, com o cabeçalho de IP configurado.",
+  },
   envio_no_configurado: {
     es: "El envío de códigos no está configurado.",
     pt: "O envio de códigos não está configurado.",

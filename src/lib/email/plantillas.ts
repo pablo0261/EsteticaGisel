@@ -1,4 +1,11 @@
+import { escaparHtml } from "./layout-marca";
+
 type EmailPlantilla = { subject: string; html: string };
+
+/** El asunto no es HTML, pero un salto de línea inyectaría otra cabecera. */
+function asunto(texto: string): string {
+  return texto.replace(/[\r\n]+/g, " ");
+}
 
 const COLOR = {
   mauve: "#c0899a",
@@ -21,8 +28,8 @@ function boton(texto: string, url: string): string {
     <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 8px 0 4px;">
       <tr>
         <td style="background-color:${COLOR.mauve}; border-radius: 999px;">
-          <a href="${url}" style="display:inline-block; padding: 12px 28px; font-family: ${FONT_SANS}; font-size: 14px; font-weight: 600; color: ${COLOR.cream}; text-decoration: none;">
-            ${texto}
+          <a href="${escaparHtml(url)}" style="display:inline-block; padding: 12px 28px; font-family: ${FONT_SANS}; font-size: 14px; font-weight: 600; color: ${COLOR.cream}; text-decoration: none;">
+            ${escaparHtml(texto)}
           </a>
         </td>
       </tr>
@@ -45,7 +52,7 @@ function layout(titulo: string, cuerpoHtml: string): string {
             <tr>
               <td style="background-color:#ffffff; border-radius: 16px; padding: 36px 32px; border-top: 4px solid ${COLOR.mauve};">
                 <h1 style="margin:0 0 16px; font-family: ${FONT_SERIF}; font-size: 24px; font-weight: 500; color:${COLOR.mauveDark};">
-                  ${titulo}
+                  ${escaparHtml(titulo)}
                 </h1>
                 <div style="font-family: ${FONT_SANS}; font-size: 15px; line-height: 1.7; color:${COLOR.ink};">
                   ${cuerpoHtml}
@@ -70,14 +77,16 @@ export function plantillaConfirmacionTurno(opts: {
   fechaHoraTexto: string;
   linkGestion: string;
 }): EmailPlantilla {
+  const servicio = escaparHtml(opts.servicio);
+  const fecha = escaparHtml(opts.fechaHoraTexto);
   return {
-    subject: `Turno confirmado — ${opts.servicio}`,
+    subject: asunto(`Turno confirmado — ${opts.servicio}`),
     html: layout(
       "¡Tu turno está confirmado!",
       `<p style="margin:0 0 4px;">Servicio</p>
-       <p style="margin:0 0 16px; font-size: 17px; color:${COLOR.ink};"><strong>${opts.servicio}</strong></p>
+       <p style="margin:0 0 16px; font-size: 17px; color:${COLOR.ink};"><strong>${servicio}</strong></p>
        <p style="margin:0 0 4px; color:${COLOR.inkSoft};">Fecha</p>
-       <p style="margin:0 0 20px; font-size: 17px;"><strong>${opts.fechaHoraTexto}</strong></p>
+       <p style="margin:0 0 20px; font-size: 17px;"><strong>${fecha}</strong></p>
        <p style="margin:0 0 4px; color:${COLOR.inkSoft};">¿Necesitás cancelar o reprogramar?</p>
        ${boton("Gestionar mi turno", opts.linkGestion)}`,
     ),
@@ -90,13 +99,15 @@ export function plantillaRecordatorioTurno(opts: {
   faltaTexto: string;
   linkGestion: string;
 }): EmailPlantilla {
+  const servicio = escaparHtml(opts.servicio);
+  const fecha = escaparHtml(opts.fechaHoraTexto);
   return {
-    subject: `Recordatorio: faltan ${opts.faltaTexto} para tu turno — ${opts.servicio}`,
+    subject: asunto(`Recordatorio: faltan ${opts.faltaTexto} para tu turno — ${opts.servicio}`),
     html: layout(
       `Faltan ${opts.faltaTexto} para tu turno`,
-      `<p style="margin:0 0 16px;">Te esperamos para tu turno de <strong>${opts.servicio}</strong>.</p>
+      `<p style="margin:0 0 16px;">Te esperamos para tu turno de <strong>${servicio}</strong>.</p>
        <p style="margin:0 0 4px; color:${COLOR.inkSoft};">Fecha</p>
-       <p style="margin:0 0 20px; font-size: 17px;"><strong>${opts.fechaHoraTexto}</strong></p>
+       <p style="margin:0 0 20px; font-size: 17px;"><strong>${fecha}</strong></p>
        <p style="margin:0 0 4px; color:${COLOR.inkSoft};">¿Necesitás cancelar o reprogramar?</p>
        ${boton("Gestionar mi turno", opts.linkGestion)}`,
     ),
@@ -108,10 +119,10 @@ export function plantillaCancelacionTurno(opts: {
   fechaHoraTexto: string;
 }): EmailPlantilla {
   return {
-    subject: `Turno cancelado — ${opts.servicio}`,
+    subject: asunto(`Turno cancelado — ${opts.servicio}`),
     html: layout(
       "Tu turno fue cancelado",
-      `<p>Se canceló el turno de <strong>${opts.servicio}</strong> del ${opts.fechaHoraTexto}.</p>
+      `<p>Se canceló el turno de <strong>${escaparHtml(opts.servicio)}</strong> del ${escaparHtml(opts.fechaHoraTexto)}.</p>
        <p style="color:${COLOR.inkSoft};">La seña abonada no es reembolsable. Cuando quieras, podés reservar un nuevo turno.</p>`,
     ),
   };
@@ -122,10 +133,10 @@ export function plantillaCompraCurso(opts: {
   linkAcceso: string;
 }): EmailPlantilla {
   return {
-    subject: `Ya tenés acceso a "${opts.curso}"`,
+    subject: asunto(`Ya tenés acceso a "${opts.curso}"`),
     html: layout(
       "¡Gracias por tu compra!",
-      `<p style="margin:0 0 20px;">Ya podés acceder a <strong>${opts.curso}</strong>.</p>
+      `<p style="margin:0 0 20px;">Ya podés acceder a <strong>${escaparHtml(opts.curso)}</strong>.</p>
        ${boton("Ver mi curso", opts.linkAcceso)}`,
     ),
   };

@@ -1,54 +1,43 @@
 import { NextRequest, NextResponse } from "next/server";
+import { secretoMfaValido } from "@/lib/auth/cookie-mfa";
 import { exchangeCodeForTokens } from "@/lib/google-calendar/client";
+import { leerEstadoOauth } from "@/lib/google-calendar/estado";
+import { appGoogleDelTenant } from "@/lib/integraciones/cuenta";
+import { guardarRefreshGoogle } from "@/lib/integraciones/guardar";
+import { tenantDelAdmin } from "@/lib/tenant/admin";
+import { origenDelRequest } from "@/lib/tenant/origen";
+import { urlDelTenant } from "@/lib/tenant/urls";
 
 /**
- * Callback de una sola vez: canjea el "code" por tokens y muestra el
- * refresh_token en pantalla para copiarlo a GOOGLE_REFRESH_TOKEN en .env.
- * No se persiste en la base — es un paso manual de configuración inicial.
+ * Google vuelve acá con el code. El state tiene que ser de este cliente y de esta sesión.
+ * El refresh token se guarda cifrado y no se muestra.
  */
 export async function GET(request: NextRequest) {
-  const code = request.nextUrl.searchParams.get("code");
-  const error = request.nextUrl.searchParams.get("error");
+  const aca = (path: string) => NextResponse.redirect(new URL(path, `${origenDelRequest(request)}/`));
+  const tenant = await tenantDelAdmin().catch(() => null);
+  if (!tenant) return aca("/admin/login");
+  if (request.nextUrl.searchParams.get("error")) return aca("/admin/conexiones?error=google_code");
 
-  if (error) {
-    return htmlResponse(`<p>Google devolvió un error: <code>${escapeHtml(error)}</code></p>`);
-  }
-  if (!code) {
-    return htmlResponse("<p>Falta el parámetro <code>code</code>.</p>", 400);
-  }
+  const secreto = process.env.MFA_SECRET;
+  const code = request.nextUrl.searchParams.get("code");
+  const state = request.nextUrl.searchParams.get("state");
+  if (!secretoMfaValido(secreto) || !code || !state) return aca("/admin/conexiones?error=google_estado");
+  if (leerEstadoOauth(secreto, state, Date.now()) !== tenant.id) return aca("/admin/conexiones?error=google_estado");
+
+  const app = await appGoogleDelTenant(tenant.id);
+  if (!app) return aca("/admin/conexiones?error=google_sin_app");
 
   try {
-    const { refreshToken } = await exchangeCodeForTokens(code);
-    if (!refreshToken) {
-      return htmlResponse(
-        `<p>Google no devolvió un refresh token (esto pasa si ya se autorizó antes).
-         Revocá el acceso en <a href="https://myaccount.google.com/permissions" target="_blank">
-         myaccount.google.com/permissions</a> y volvé a intentar.</p>`,
-      );
-    }
-    return htmlResponse(`
-      <p>✅ Autorización exitosa. Copiá este valor en <code>.env.local</code> como
-      <code>GOOGLE_REFRESH_TOKEN</code>:</p>
-      <pre style="background:#f6f1ea;padding:16px;border-radius:8px;word-break:break-all;">${escapeHtml(refreshToken)}</pre>
-      <p>Después reiniciá el servidor (<code>npm run dev</code>).</p>
-    `);
-  } catch (e) {
-    return htmlResponse(`<p>Error al canjear el code: ${escapeHtml((e as Error).message)}</p>`, 500);
+    const { refreshToken } = await exchangeCodeForTokens({
+      code,
+      clientId: app.clientId,
+      clientSecret: app.clientSecret,
+      redirectUri: `${urlDelTenant(tenant.slug)}/api/auth/google/callback`,
+    });
+    if (!refreshToken) return aca("/admin/conexiones?error=google_code");
+    await guardarRefreshGoogle(tenant.id, refreshToken);
+    return aca("/admin/conexiones?ok=google_conectado");
+  } catch {
+    return aca("/admin/conexiones?error=google_code");
   }
-}
-
-function escapeHtml(texto: string): string {
-  return texto
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
-function htmlResponse(bodyHtml: string, status = 200) {
-  return new NextResponse(
-    `<!doctype html><html lang="es-AR"><body style="font-family: sans-serif; max-width: 560px; margin: 60px auto;">${bodyHtml}</body></html>`,
-    { status, headers: { "Content-Type": "text/html; charset=utf-8" } },
-  );
 }

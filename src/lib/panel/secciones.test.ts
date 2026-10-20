@@ -23,14 +23,15 @@ const TODOS: Modulos = {
 
 describe("seccionesDelPanel", () => {
   it("sin módulos: servicios, horarios y reglas, y textos", () => {
-    expect(seccionesDelPanel(NINGUNO).map((s) => s.seccion)).toEqual(["servicios", "configuracion", "textos"]);
+    expect(seccionesDelPanel(NINGUNO).map((s) => s.seccion)).toEqual(["servicios", "configuracion", "conexiones", "textos"]);
   });
 
-  it("con todos los módulos: las ocho secciones, en orden", () => {
+  it("con todos los módulos: las nueve secciones, en orden", () => {
     expect(seccionesDelPanel(TODOS).map((s) => s.seccion)).toEqual([
       "turnos",
       "servicios",
       "configuracion",
+      "conexiones",
       "textos",
       "cursos",
       "testimonios",
@@ -43,10 +44,11 @@ describe("seccionesDelPanel", () => {
     expect(seccionesDelPanel({ ...NINGUNO, faq: true }).map((s) => s.seccion)).toEqual([
       "servicios",
       "configuracion",
+      "conexiones",
       "textos",
       "preguntas",
     ]);
-    expect(seccionesDelPanel({ ...NINGUNO, whatsapp: true, sobreMi: true })).toHaveLength(3);
+    expect(seccionesDelPanel({ ...NINGUNO, whatsapp: true, sobreMi: true })).toHaveLength(4);
   });
 });
 
@@ -54,6 +56,7 @@ describe("seccionHabilitada", () => {
   it("depende del módulo de la sección", () => {
     expect(seccionHabilitada(NINGUNO, "servicios")).toBe(true);
     expect(seccionHabilitada(NINGUNO, "configuracion")).toBe(true);
+    expect(seccionHabilitada(NINGUNO, "conexiones")).toBe(true);
     expect(seccionHabilitada(NINGUNO, "textos")).toBe(true);
     expect(seccionHabilitada(NINGUNO, "turnos")).toBe(false);
     expect(seccionHabilitada({ ...NINGUNO, turnos: true }, "turnos")).toBe(true);

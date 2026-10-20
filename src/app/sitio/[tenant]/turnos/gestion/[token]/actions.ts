@@ -3,11 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { getDisponibilidad } from "@/lib/data/turnos";
 import { puedeCancelar } from "@/lib/turnos/reglas";
-import { isGoogleConfigurado, crearEvento, borrarEvento } from "@/lib/google-calendar/client";
+import { crearEvento, borrarEvento } from "@/lib/google-calendar/client";
+import { cuentaGoogle } from "@/lib/integraciones/cuenta";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { tenantDelRequest } from "@/lib/tenant/actual";
 import { datosDelTenant } from "@/lib/tenant/datos";
-import { usaCredencialesGlobales } from "@/lib/tenant/credenciales-globales";
 import { IDIOMA_POR_DEFECTO, traducir, traductor } from "@/lib/i18n/textos";
 import type { ConfiguracionNegocio, Turno } from "@/lib/data/types";
 import type { Tenant } from "@/lib/tenant/tipos";
@@ -60,13 +60,10 @@ export async function cancelarTurno(token: string): Promise<AccionResult> {
     };
   }
 
-  if (
-    ctx.turno.google_calendar_event_id &&
-    isGoogleConfigurado() &&
-    usaCredencialesGlobales(tenant.slug)
-  ) {
+  const cuentaCancelar = ctx.turno.google_calendar_event_id ? await cuentaGoogle(tenant.id, tenant.slug) : null;
+  if (ctx.turno.google_calendar_event_id && cuentaCancelar) {
     try {
-      await borrarEvento(ctx.turno.google_calendar_event_id);
+      await borrarEvento(ctx.turno.google_calendar_event_id, cuentaCancelar);
     } catch {
       // La cancelación en la DB sigue adelante aunque falle Calendar.
     }
@@ -121,15 +118,17 @@ export async function reprogramarTurno(
   if (error || movido !== true) return noDisponible;
 
   let nuevoEventId: string | null = null;
-  if (isGoogleConfigurado() && usaCredencialesGlobales(tenant.slug)) {
+  const cuenta = await cuentaGoogle(tenant.id, tenant.slug);
+  if (cuenta) {
     try {
       if (ctx.turno.google_calendar_event_id) {
-        await borrarEvento(ctx.turno.google_calendar_event_id);
+        await borrarEvento(ctx.turno.google_calendar_event_id, cuenta);
       }
       const fin = new Date(
         new Date(nuevoIso).getTime() + ctx.turno.duracion_minutos * 60000,
       ).toISOString();
       nuevoEventId = await crearEvento({
+        cuenta,
         titulo: `${ctx.turno.servicios.nombre} — ${ctx.turno.cliente_nombre}`,
         descripcion: traducir(tenant.idioma, {
           es: "Turno reprogramado.",

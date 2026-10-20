@@ -9,8 +9,9 @@ import { calcularExpiracion, precioEfectivo } from "@/lib/cursos/reglas";
 import { validarEmailCliente } from "@/lib/turnos/cliente";
 import { crearEventoDeTurno, enviarConfirmacionDeTurno, type TurnoConfirmado } from "@/lib/turnos/confirmacion";
 import { mismoMonto, sumaEnCentavos } from "@/lib/turnos/reglas";
-import { usaCredencialesGlobales } from "@/lib/tenant/credenciales-globales";
+import { cuentaMercadoPago } from "@/lib/integraciones/cuenta";
 import { datosDelTenant } from "@/lib/tenant/datos";
+import { tenantDelRequest } from "@/lib/tenant/actual";
 import { urlDelTenant } from "@/lib/tenant/urls";
 import type { Idioma } from "@/lib/i18n/textos";
 import type { Moneda } from "@/lib/tenant/tipos";
@@ -31,25 +32,26 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ received: true });
   }
 
-  const secret = process.env.MP_WEBHOOK_SECRET;
-  if (secret && secret !== "xxx") {
-    const firmaOk = verificarFirmaWebhook({
-      xSignature: request.headers.get("x-signature"),
-      xRequestId: request.headers.get("x-request-id"),
-      dataId,
-      secret,
-    });
-    if (!firmaOk) {
-      return NextResponse.json({ error: "Firma inválida" }, { status: 401 });
-    }
+  // El aviso llega al subdominio del cliente (notification_url). Sin sus credenciales,
+  // o sin firma vigente, no se procesa: ni en desarrollo. No se acepta un aviso sin firmar.
+  const tenant = await tenantDelRequest();
+  const cuenta = tenant ? await cuentaMercadoPago(tenant.id, tenant.slug) : null;
+  if (!tenant || !cuenta) {
+    return NextResponse.json({ error: "Webhook sin configurar" }, { status: 401 });
   }
-  // Sin MP_WEBHOOK_SECRET configurado, no se puede verificar la firma; se
-  // procesa igual (la reconsulta contra la API de MP abajo sigue siendo la
-  // fuente de verdad), pero esto DEBE configurarse antes de producción.
+  const firmaOk = verificarFirmaWebhook({
+    xSignature: request.headers.get("x-signature"),
+    xRequestId: request.headers.get("x-request-id"),
+    dataId,
+    secret: cuenta.webhookSecret,
+  });
+  if (!firmaOk) {
+    return NextResponse.json({ error: "Firma inválida" }, { status: 401 });
+  }
 
   let pago;
   try {
-    pago = await obtenerPago(dataId);
+    pago = await obtenerPago(dataId, cuenta.accessToken);
   } catch {
     return NextResponse.json({ error: "No se pudo consultar el pago" }, { status: 502 });
   }
@@ -58,9 +60,9 @@ export async function POST(request: NextRequest) {
   try {
     if (referencia?.tipo === "turno") {
       // Una reserva puede combinar varios servicios consecutivos -> varios turnos.
-      await procesarPagoTurnos(referencia.ids, pago);
+      await procesarPagoTurnos(tenant.id, referencia.ids, pago);
     } else if (referencia?.tipo === "curso") {
-      await procesarPagoCurso(referencia.id, referencia.centavos, pago);
+      await procesarPagoCurso(tenant.id, referencia.id, referencia.centavos, pago);
     }
   } catch (e) {
     // Error de la base: Mercado Pago reintenta la notificación (el procesamiento es idempotente).
@@ -85,18 +87,14 @@ type FilaTurnoPagado = {
   tenants: { slug: string; zona_horaria: string; idioma: string; moneda: Moneda };
 };
 
-/**
- * Hasta la etapa D, las credenciales de Mercado Pago del .env son de un solo tenant: un pago
- * que referencia turnos o cursos de otro no se procesa. Y el pago tiene que estar en la
- * moneda del tenant (el monto se compara sin convertir).
- */
-function pagoDelTenant(pago: MpPayment, tenant: { slug: string; moneda: Moneda }): boolean {
-  if (!usaCredencialesGlobales(tenant.slug)) {
-    console.error(`Webhook MP: el pago ${pago.id} es de un cliente sin Mercado Pago habilitado; no se procesa.`);
+/** El pago se consultó con las credenciales del host: tiene que ser de ese cliente y de su moneda. */
+function pagoDelTenant(pago: MpPayment, tenantId: string, duenoId: string, moneda: Moneda): boolean {
+  if (duenoId !== tenantId) {
+    console.error(`Webhook MP: el pago ${pago.id} no es del cliente que recibió la notificación; no se procesa.`);
     return false;
   }
-  if (pago.moneda !== tenant.moneda) {
-    console.error(`Webhook MP: el pago ${pago.id} está en ${pago.moneda} y el cliente cobra en ${tenant.moneda}; no se procesa.`);
+  if (pago.moneda !== moneda) {
+    console.error(`Webhook MP: el pago ${pago.id} está en ${pago.moneda} y el cliente cobra en ${moneda}; no se procesa.`);
     return false;
   }
   return true;
@@ -115,7 +113,7 @@ type ResultadoConfirmacion = "confirmado" | "ya_procesado" | "ocupado" | "incons
  * notificación que los confirma crea el evento de Calendar y manda el email: un reintento o
  * una notificación simultánea del mismo pago no hacen nada.
  */
-async function procesarPagoTurnos(turnoIds: string[], pago: MpPayment) {
+async function procesarPagoTurnos(tenantId: string, turnoIds: string[], pago: MpPayment) {
   if (pago.status !== "approved") return;
   const ids = [...new Set(turnoIds)];
 
@@ -138,7 +136,7 @@ async function procesarPagoTurnos(turnoIds: string[], pago: MpPayment) {
     console.error(`Webhook MP: el pago ${pago.id} referencia turnos de más de un cliente; no se confirma.`);
     return;
   }
-  if (!pagoDelTenant(pago, filas[0].tenants)) return;
+  if (!pagoDelTenant(pago, tenantId, filas[0].tenant_id, filas[0].tenants.moneda)) return;
   const esperado = sumaEnCentavos(filas.map((f) => Number(f.monto_sena ?? 0)));
   if (!mismoMonto(Number(pago.transactionAmount), esperado)) {
     console.error(
@@ -158,7 +156,13 @@ async function procesarPagoTurnos(turnoIds: string[], pago: MpPayment) {
   }
   switch (resultado as ResultadoConfirmacion) {
     case "confirmado":
-      for (const turno of filas) await avisarTurnoConfirmado(turno);
+      // Los turnos ya quedaron confirmados y el pago registrado: un fallo de Calendar o del
+      // email no debe devolver un error (Mercado Pago reintentaría y no habría nada que hacer).
+      try {
+        for (const turno of filas) await avisarTurnoConfirmado(turno);
+      } catch {
+        console.error(`Webhook MP: los turnos del pago ${pago.id} quedaron confirmados, pero falló el evento de Calendar o el email.`);
+      }
       return;
     case "ya_procesado":
       return;
@@ -197,7 +201,7 @@ async function avisarTurnoConfirmado(turno: FilaTurnoPagado) {
 }
 
 /** centavosEsperados: el monto que lleva la referencia (formato nuevo), o null (formato anterior). */
-async function procesarPagoCurso(cursoId: string, centavosEsperados: number | null, pago: MpPayment) {
+async function procesarPagoCurso(tenantId: string, cursoId: string, centavosEsperados: number | null, pago: MpPayment) {
   if (pago.status !== "approved" || !pago.payerEmail) return;
 
   // El pago llega sin tenant: se resuelve desde el curso (consulta de sistema por id).
@@ -208,7 +212,7 @@ async function procesarPagoCurso(cursoId: string, centavosEsperados: number | nu
     .maybeSingle();
   if (!curso) return;
   const tenantCurso = curso.tenants as unknown as { slug: string; moneda: Moneda };
-  if (!pagoDelTenant(pago, tenantCurso)) return;
+  if (!pagoDelTenant(pago, tenantId, curso.tenant_id, tenantCurso.moneda)) return;
   const precioOferta = curso.precio_oferta == null ? null : Number(curso.precio_oferta);
 
   let montoValido: boolean;
@@ -276,14 +280,15 @@ async function procesarPagoCurso(cursoId: string, centavosEsperados: number | nu
   // Un solo destinatario: el email del pagador viene de Mercado Pago.
   const destinatario = validarEmailCliente(pago.payerEmail);
   if (isEmailConfigurado() && destinatario) {
-    const { subject, html } = plantillaCompraCurso({
-      curso: curso.titulo,
-      linkAcceso: `${urlDelTenant(tenantCurso.slug)}/cursos/acceso/${acceso.token_acceso}`,
-    });
     try {
+      const { subject, html } = plantillaCompraCurso({
+        curso: curso.titulo,
+        linkAcceso: `${urlDelTenant(tenantCurso.slug)}/cursos/acceso/${acceso.token_acceso}`,
+      });
       await enviarEmail({ to: destinatario, subject, html });
     } catch {
       // El acceso ya quedó creado; el email es best-effort.
+      console.error(`Webhook MP: el acceso del pago ${pago.id} quedó creado, pero falló el email.`);
     }
   }
 }

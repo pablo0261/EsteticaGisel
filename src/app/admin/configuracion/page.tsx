@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import {
   AYUDA,
   BOTON,
@@ -16,12 +17,11 @@ import { FormPendingOverlay } from "@/components/ui/FormPendingOverlay";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { getConfiguracion } from "@/lib/data/configuracion";
 import { traductor, type Textos } from "@/lib/i18n/textos";
-import { isMpConfigurado } from "@/lib/mercadopago/client";
+import { cuentaMercadoPago } from "@/lib/integraciones/cuenta";
 import { LIMITES_PANEL as L } from "@/lib/panel/limites";
 import { seccionHabilitada } from "@/lib/panel/secciones";
 import { metadataDelPanel } from "@/lib/panel/metadata";
 import { tenantDeSeccion } from "@/lib/panel/servidor";
-import { usaCredencialesGlobales } from "@/lib/tenant/credenciales-globales";
 import { DIAS_SEMANA, nombreDia } from "@/lib/turnos/horario";
 import { MODOS_PAGO, NOMBRE_MODO_PAGO, type ModoPago } from "@/lib/turnos/pago";
 import { guardarConfiguracion } from "./actions";
@@ -63,8 +63,7 @@ export default async function ConfiguracionAdmin({ searchParams }: { searchParam
   }
 
   const conTurnos = seccionHabilitada(tenant.modulos, "turnos");
-  // Hasta la etapa D, solo el tenant de las credenciales globales cobra con Mercado Pago.
-  const cobraOnline = isMpConfigurado() && usaCredencialesGlobales(tenant.slug);
+  const cobraOnline = (await cuentaMercadoPago(tenant.id, tenant.slug)) !== null;
   const numero = (nombre: string, etiqueta: string, valor: number, min: number, max: number) => (
     <label className={ETIQUETA}>
       {etiqueta}
@@ -156,9 +155,13 @@ export default async function ConfiguracionAdmin({ searchParams }: { searchParam
               {!cobraOnline && (
                 <p role="status" className="rounded-lg bg-primario/10 px-4 py-3 font-sans text-sm text-primario-oscuro">
                   {t({
-                    es: "Tu sitio todavía no tiene Mercado Pago conectado: con “Seña” o “Pago total” las reservas online no se pueden completar. Usá “Sin pago anticipado” hasta conectarlo.",
-                    pt: "Seu site ainda não tem o Mercado Pago conectado: com “Sinal” ou “Pagamento total”, os agendamentos online não podem ser concluídos. Use “Sem pagamento antecipado” até conectá-lo.",
+                    es: "Todavía no hay Mercado Pago: con “Seña” o “Pago total” la reserva online no se puede completar. Usá “Sin pago anticipado”, o conectalo en ",
+                    pt: "Ainda não há Mercado Pago: com “Sinal” ou “Pagamento total” o agendamento online não pode ser concluído. Use “Sem pagamento antecipado”, ou conecte em ",
                   })}
+                  <Link href="/admin/conexiones" className="underline">
+                    {t({ es: "Conexiones", pt: "Conexões" })}
+                  </Link>
+                  .
                 </p>
               )}
               {MODOS_PAGO.map((modo) => (

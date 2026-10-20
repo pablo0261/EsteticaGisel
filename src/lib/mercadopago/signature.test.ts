@@ -21,6 +21,7 @@ describe("verificarFirmaWebhook", () => {
       xRequestId: requestId,
       dataId,
       secret: SECRET,
+      ahoraMs: Number(ts) * 1000,
     });
     expect(ok).toBe(true);
   });
@@ -31,6 +32,7 @@ describe("verificarFirmaWebhook", () => {
       xRequestId: "req-abc",
       dataId: "123456789",
       secret: SECRET,
+      ahoraMs: 1700000000 * 1000,
     });
     expect(ok).toBe(false);
   });
@@ -56,6 +58,22 @@ describe("verificarFirmaWebhook", () => {
       xRequestId: requestId,
       dataId,
       secret: "otro-secreto",
+      ahoraMs: Number(ts) * 1000,
+    });
+    expect(ok).toBe(false);
+  });
+
+  it("rechaza una firma vencida", () => {
+    const dataId = "123456789";
+    const requestId = "req-abc";
+    const ts = "1700000000";
+    const v1 = firmarComoMercadoPago(dataId, requestId, ts);
+    const ok = verificarFirmaWebhook({
+      xSignature: `ts=${ts},v1=${v1}`,
+      xRequestId: requestId,
+      dataId,
+      secret: SECRET,
+      ahoraMs: Number(ts) * 1000 + 6 * 60 * 1000,
     });
     expect(ok).toBe(false);
   });

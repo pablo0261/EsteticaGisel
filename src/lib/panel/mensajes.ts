@@ -88,6 +88,54 @@ const ERRORES = {
     es: `La galería ya tiene ${L.imagenesGaleria} imágenes: eliminá alguna para subir otra.`,
     pt: `A galeria já tem ${L.imagenesGaleria} imagens: exclua alguma para enviar outra.`,
   },
+  mp_access_token: {
+    es: "El access token tiene que ser el de Mercado Pago (empieza con APP_USR- o TEST-).",
+    pt: "O access token precisa ser o do Mercado Pago (começa com APP_USR- ou TEST-).",
+  },
+  mp_public_key: {
+    es: "La public key tiene que ser la de Mercado Pago (empieza con APP_USR- o TEST-).",
+    pt: "A public key precisa ser a do Mercado Pago (começa com APP_USR- ou TEST-).",
+  },
+  mp_webhook_secret: {
+    es: "El secreto del webhook tiene de 16 a 128 letras y números.",
+    pt: "O segredo do webhook tem de 16 a 128 letras e números.",
+  },
+  mp_sin_access_token: {
+    es: "Para guardar Mercado Pago primero hace falta el access token.",
+    pt: "Para salvar o Mercado Pago primeiro é preciso o access token.",
+  },
+  google_client_id: {
+    es: "El Client ID tiene que terminar en .apps.googleusercontent.com.",
+    pt: "O Client ID precisa terminar em .apps.googleusercontent.com.",
+  },
+  google_client_secret: {
+    es: "El Client secret no tiene el formato de Google.",
+    pt: "O Client secret não tem o formato do Google.",
+  },
+  google_calendar: {
+    es: "El id del calendario solo puede tener letras, números, @, punto, + y guion.",
+    pt: "O id do calendário só pode ter letras, números, @, ponto, + e hífen.",
+  },
+  google_sin_secreto: {
+    es: "Para guardar la app de Google hace falta el Client secret (la primera vez).",
+    pt: "Para salvar o app do Google é preciso o Client secret (na primeira vez).",
+  },
+  google_sin_app: {
+    es: "Primero guardá el Client ID y el Client secret. Después conectá el calendario.",
+    pt: "Primeiro salve o Client ID e o Client secret. Depois conecte o calendário.",
+  },
+  google_code: {
+    es: "Google no autorizó el calendario. Volvé a conectar.",
+    pt: "O Google não autorizou o calendário. Conecte de novo.",
+  },
+  google_estado: {
+    es: "La conexión venció o no corresponde a este sitio. Apretá Conectar de nuevo.",
+    pt: "A conexão venceu ou não corresponde a este site. Toque em Conectar de novo.",
+  },
+  clave_credenciales: {
+    es: "Falta CREDENCIALES_KEY en el servidor: sin esa clave no se pueden guardar secretos.",
+    pt: "Falta CREDENCIALES_KEY no servidor: sem essa chave não dá para guardar segredos.",
+  },
 } satisfies Record<string, Textos>;
 
 const INFOS = {
@@ -97,6 +145,8 @@ const INFOS = {
   imagen_subida: { es: "Imagen subida.", pt: "Imagem enviada." },
   turno_completado: { es: "Turno marcado como completado.", pt: "Atendimento marcado como concluído." },
   turno_cancelado: { es: "Turno cancelado.", pt: "Agendamento cancelado." },
+  google_conectado: { es: "Calendario conectado. Los turnos confirmados se agendan solos.", pt: "Calendário conectado. Os horários confirmados entram sozinhos." },
+  google_desconectado: { es: "Calendario desconectado. Los turnos se siguen guardando.", pt: "Calendário desconectado. Os horários continuam sendo salvos." },
 } satisfies Record<string, Textos>;
 
 export type ClaveError = keyof typeof ERRORES;

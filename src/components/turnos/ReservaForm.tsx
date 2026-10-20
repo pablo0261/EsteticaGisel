@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { SlotPicker } from "./SlotPicker";
 import { reservarTurno } from "@/app/sitio/[tenant]/turnos/actions";
+import { esDestinoPermitido } from "@/lib/mercadopago/destino";
 import { formatPrecio } from "@/lib/format";
 import { cobroDeReserva, detalleCobro, textoModoPago, type ModoPago } from "@/lib/turnos/pago";
 import { EJEMPLO_WHATSAPP } from "@/lib/turnos/ejemplo-whatsapp";
@@ -68,8 +69,10 @@ export function ReservaForm({
 
     startTransition(async () => {
       const result = await reservarTurno(formData);
-      if (result.ok) {
+      if (result.ok && esDestinoPermitido(result.url)) {
         window.location.href = result.url;
+      } else if (result.ok) {
+        setError(t({ es: "No se pudo iniciar el pago.", pt: "Não foi possível iniciar o pagamento." }));
       } else {
         setError(result.error);
       }

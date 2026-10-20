@@ -223,7 +223,9 @@ const SECRETO_WEBHOOK = /^[A-Za-z0-9]{16,128}$/;
 /** null = mantener lo guardado. */
 export type FormMp = { accessToken: string | null; publicKey: string | null; webhookSecret: string | null };
 
-export function parsearMp(fd: FormData): Resultado<FormMp> {
+export type ErrorMp = "mp_access_token" | "mp_public_key" | "mp_webhook_secret";
+
+export function parsearMp(fd: FormData): { ok: true; valor: FormMp } | { ok: false; error: ErrorMp } {
   const accessToken = texto(fd, "mp_access_token");
   if (accessToken && !CLAVE_MP.test(accessToken)) return { ok: false, error: "mp_access_token" };
   const publicKey = texto(fd, "mp_public_key");

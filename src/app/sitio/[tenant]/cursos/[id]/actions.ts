@@ -2,11 +2,11 @@
 
 import { getCursoPublico } from "@/lib/data/cursos";
 import { precioEfectivo } from "@/lib/cursos/reglas";
-import { isMpConfigurado, crearPreferencia } from "@/lib/mercadopago/client";
+import { cuentaMercadoPago } from "@/lib/integraciones/cuenta";
+import { crearPreferencia } from "@/lib/mercadopago/client";
 import { referenciaCurso } from "@/lib/mercadopago/referencia";
 import { tenantDelRequest } from "@/lib/tenant/actual";
 import { urlDelTenant } from "@/lib/tenant/urls";
-import { usaCredencialesGlobales } from "@/lib/tenant/credenciales-globales";
 import { validarEmailCliente } from "@/lib/turnos/cliente";
 import { redondearMonto } from "@/lib/turnos/reglas";
 import { IDIOMA_POR_DEFECTO, traductor } from "@/lib/i18n/textos";
@@ -42,7 +42,8 @@ export async function comprarCurso(formData: FormData): Promise<ComprarCursoResu
       }),
     };
   }
-  if (!isMpConfigurado() || !usaCredencialesGlobales(tenant.slug)) {
+  const mercadoPago = await cuentaMercadoPago(tenant.id, tenant.slug);
+  if (!mercadoPago) {
     return {
       ok: false,
       error: t({
@@ -73,6 +74,7 @@ export async function comprarCurso(formData: FormData): Promise<ComprarCursoResu
 
   try {
     const pref = await crearPreferencia({
+      accessToken: mercadoPago.accessToken,
       titulo: curso.titulo,
       monto,
       moneda: tenant.moneda,

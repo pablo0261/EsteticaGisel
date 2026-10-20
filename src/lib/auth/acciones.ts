@@ -7,7 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { entregarEmailAuth, modoEnvioActual } from "@/lib/email/plataforma";
 import { plantillaCodigoLogin, plantillaRecuperacion } from "@/lib/email/plantillas-auth";
-import { getClientIp } from "@/lib/turnos/ip";
+import { bloqueadoSinIp, getClientIp } from "@/lib/turnos/ip";
 import {
   areaDelRequest,
   marcaEmailDelArea,
@@ -102,6 +102,7 @@ export async function iniciarSesion(formData: FormData) {
   // Es defensa en profundidad: el endpoint de tokens de Supabase se alcanza directo con la
   // clave publicable, sin pasar por acá. El control real es el segundo factor.
   const ip = await getClientIp();
+  if (bloqueadoSinIp(process.env.NODE_ENV, ip)) ir(area, RUTAS_AUTH.login, { error: "origen" });
   if (await loginBloqueado(email, ip)) ir(area, RUTAS_AUTH.login, { error: "demasiados_intentos" });
 
   const supabase = await createClient();
@@ -206,6 +207,7 @@ export async function pedirRecuperacion(formData: FormData) {
   if (!area) ir(null, RUTAS_AUTH.recuperar, { error: "sitio" });
   const email = normalizarEmail(String(formData.get("email") ?? ""));
   if (!email) ir(area, RUTAS_AUTH.recuperar, { error: "email" });
+  if (bloqueadoSinIp(process.env.NODE_ENV, await getClientIp())) ir(area, RUTAS_AUTH.recuperar, { error: "origen" });
   if (modoEnvioActual() === "bloqueado") ir(area, RUTAS_AUTH.recuperar, { error: "envio_emails_no_configurado" });
 
   if (await registrarPedidoRecuperacion(email, await getClientIp())) {

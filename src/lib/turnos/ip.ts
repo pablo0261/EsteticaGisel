@@ -24,6 +24,14 @@ export function ipDeCabecera(cabeceras: Cabeceras, nombreCabecera: string | unde
   return ip ? ip : null;
 }
 
+/**
+ * En producción, sin la IP que fija el proxy no hay límite real: las reservas y el ingreso
+ * se rechazan en vez de seguir (un cliente podría omitir la cabecera o trabar cuentas).
+ */
+export function bloqueadoSinIp(entorno: string | undefined, ip: string | null): boolean {
+  return entorno === "production" && !ip;
+}
+
 /** IP del cliente actual (ver ipDeCabecera). */
 export async function getClientIp(): Promise<string | null> {
   return ipDeCabecera(await headers(), process.env.CABECERA_IP_CONFIABLE);

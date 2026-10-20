@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { comprarCurso } from "@/app/sitio/[tenant]/cursos/[id]/actions";
+import { esUrlDeMercadoPago } from "@/lib/mercadopago/destino";
 import { LoadingOverlay } from "@/components/ui/LoadingOverlay";
 import { T, useT } from "@/lib/i18n/cliente";
 
@@ -15,8 +16,10 @@ export function CompraForm({ cursoId }: { cursoId: string }) {
     formData.set("cursoId", cursoId);
     startTransition(async () => {
       const result = await comprarCurso(formData);
-      if (result.ok) {
+      if (result.ok && esUrlDeMercadoPago(result.initPoint)) {
         window.location.href = result.initPoint;
+      } else if (result.ok) {
+        setError(t({ es: "No se pudo iniciar el pago.", pt: "Não foi possível iniciar o pagamento." }));
       } else {
         setError(result.error);
       }

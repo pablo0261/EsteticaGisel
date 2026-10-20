@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { LARGO_MAXIMO_IP, ipDeCabecera } from "./ip";
+import { LARGO_MAXIMO_IP, bloqueadoSinIp, ipDeCabecera } from "./ip";
 
 describe("ipDeCabecera", () => {
   const cabeceras = (h: Record<string, string>) => new Headers(h);
@@ -25,6 +25,13 @@ describe("ipDeCabecera", () => {
   it("recorta a 64 caracteres", () => {
     const ip = ipDeCabecera(cabeceras({ "x-real-ip": "a".repeat(200) }), "x-real-ip");
     expect(ip).toHaveLength(LARGO_MAXIMO_IP);
+  });
+
+  it("en producción, sin IP se bloquea; en desarrollo no", () => {
+    expect(bloqueadoSinIp("production", null)).toBe(true);
+    expect(bloqueadoSinIp("production", "203.0.113.7")).toBe(false);
+    expect(bloqueadoSinIp("development", null)).toBe(false);
+    expect(bloqueadoSinIp(undefined, null)).toBe(false);
   });
 
   it("un nombre de cabecera inválido no rompe", () => {

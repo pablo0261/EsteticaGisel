@@ -6,6 +6,7 @@ describe("getAuthUrl", () => {
     const url = getAuthUrl({
       clientId: "abc123.apps.googleusercontent.com",
       redirectUri: "http://localhost:3000/api/auth/google/callback",
+      state: "estado-firmado",
     });
     expect(url).toContain("https://accounts.google.com/o/oauth2/v2/auth?");
     expect(url).toContain("client_id=abc123.apps.googleusercontent.com");
@@ -16,5 +17,6 @@ describe("getAuthUrl", () => {
     expect(url).toContain("access_type=offline");
     expect(url).toContain("prompt=consent");
     expect(url).toContain("scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcalendar.events");
+    expect(url).toContain("state=estado-firmado");
   });
 });

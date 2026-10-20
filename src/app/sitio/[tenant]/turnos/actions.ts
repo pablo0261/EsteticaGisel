@@ -3,16 +3,16 @@
 import { getDisponibilidad } from "@/lib/data/turnos";
 import type { ConfiguracionNegocio, Servicio } from "@/lib/data/types";
 import { IDIOMA_POR_DEFECTO, traductor } from "@/lib/i18n/textos";
-import { isMpConfigurado, crearPreferencia } from "@/lib/mercadopago/client";
+import { cuentaMercadoPago } from "@/lib/integraciones/cuenta";
+import { crearPreferencia } from "@/lib/mercadopago/client";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { tenantDelRequest } from "@/lib/tenant/actual";
-import { usaCredencialesGlobales } from "@/lib/tenant/credenciales-globales";
 import { datosDelTenant } from "@/lib/tenant/datos";
 import { urlDelTenant } from "@/lib/tenant/urls";
 import { crearEventoDeTurno, enviarConfirmacionDeTurno } from "@/lib/turnos/confirmacion";
 import { LARGO_MAXIMO_NOMBRE_CLIENTE, validarEmailCliente, validarNombreCliente } from "@/lib/turnos/cliente";
 import { EJEMPLO_WHATSAPP } from "@/lib/turnos/ejemplo-whatsapp";
-import { getClientIp } from "@/lib/turnos/ip";
+import { bloqueadoSinIp, getClientIp } from "@/lib/turnos/ip";
 import { cobroDeReserva } from "@/lib/turnos/pago";
 import { puedeReservar } from "@/lib/turnos/reglas";
 import { normalizarWhatsApp } from "@/lib/turnos/whatsapp";
@@ -113,8 +113,9 @@ export async function reservarTurno(formData: FormData): Promise<ReservarTurnoRe
     };
   }
 
-  // Con pago anticipado hace falta Mercado Pago (hasta la etapa D, solo el tenant de las credenciales globales).
-  if (config.modo_pago !== "ninguno" && (!isMpConfigurado() || !usaCredencialesGlobales(tenant.slug))) {
+  const mercadoPago = config.modo_pago === "ninguno" ? null : await cuentaMercadoPago(tenant.id, tenant.slug);
+  // Con pago anticipado hacen falta el access token y el secreto del webhook de ESTE cliente.
+  if (config.modo_pago !== "ninguno" && !mercadoPago) {
     return {
       ok: false,
       error: t({
@@ -124,8 +125,18 @@ export async function reservarTurno(formData: FormData): Promise<ReservarTurnoRe
     };
   }
 
-  // Sin IP confiable (CABECERA_IP_CONFIABLE) no se limita por IP: no se junta a todos en un balde.
+  // Sin IP confiable no se junta a todos en un balde. En producción, sin esa IP no se reserva:
+  // si no, el límite de 2 por hora no existe.
   const ip = await getClientIp();
+  if (bloqueadoSinIp(process.env.NODE_ENV, ip)) {
+    return {
+      ok: false,
+      error: t({
+        es: "No pudimos validar la reserva. Probá de nuevo en unos minutos.",
+        pt: "Não foi possível validar o agendamento. Tente novamente em alguns minutos.",
+      }),
+    };
+  }
   const haceUnaHora = new Date(Date.now() - 60 * 60 * 1000).toISOString();
   const { data: intentos } = ip
     ? await db.select("intentos_reserva", "id").eq("ip", ip).gte("creado_en", haceUnaHora)
@@ -252,6 +263,7 @@ export async function reservarTurno(formData: FormData): Promise<ReservarTurnoRe
   try {
     const concepto = config.modo_pago === "total" ? t({ es: "Turno", pt: "Agendamento" }) : t({ es: "Seña", pt: "Sinal" });
     const pref = await crearPreferencia({
+      accessToken: mercadoPago!.accessToken,
       titulo: `${concepto} — ${servicios.map((s) => s.nombre).join(" + ")}`,
       monto: cobro.tipo === "cobro" ? cobro.total : 0,
       moneda: tenant.moneda,

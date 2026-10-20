@@ -1,5 +1,5 @@
 /** Arma la URL de consentimiento OAuth2 de Google para pedir acceso a Calendar. */
-export function getAuthUrl(opts: { clientId: string; redirectUri: string }): string {
+export function getAuthUrl(opts: { clientId: string; redirectUri: string; state: string }): string {
   const params = new URLSearchParams({
     client_id: opts.clientId,
     redirect_uri: opts.redirectUri,
@@ -7,6 +7,7 @@ export function getAuthUrl(opts: { clientId: string; redirectUri: string }): str
     scope: "https://www.googleapis.com/auth/calendar.events",
     access_type: "offline",
     prompt: "consent",
+    state: opts.state,
   });
   return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 }

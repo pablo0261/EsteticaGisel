@@ -17,6 +17,7 @@ export type ColumnaCifrada =
   | "mp_refresh_token"
   | "mp_webhook_secret"
   | "smtp_password"
+  | "google_client_secret"
   | "google_refresh_token";
 
 export type ContextoCifrado = { tenantId: string; columna: ColumnaCifrada };

@@ -10,6 +10,7 @@ export type SeccionPanel =
   | "turnos"
   | "servicios"
   | "configuracion"
+  | "conexiones"
   | "textos"
   | "cursos"
   | "testimonios"
@@ -47,6 +48,16 @@ export const SECCIONES_PANEL: readonly DefinicionSeccion[] = [
     descripcion: {
       es: "Horario de atención, cancelaciones y forma de pago.",
       pt: "Horário de atendimento, cancelamentos e forma de pagamento.",
+    },
+  },
+  {
+    seccion: "conexiones",
+    ruta: "/admin/conexiones",
+    modulo: null,
+    titulo: { es: "Conexiones", pt: "Conexões" },
+    descripcion: {
+      es: "Mercado Pago y Google Calendar, cuando quieras activarlos.",
+      pt: "Mercado Pago e Google Calendar, quando quiser ativá-los.",
     },
   },
   {

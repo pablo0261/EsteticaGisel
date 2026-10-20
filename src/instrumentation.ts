@@ -7,8 +7,8 @@ export function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
   if (process.env.NODE_ENV === "production" && !process.env.CABECERA_IP_CONFIABLE?.trim()) {
     console.error(
-      "[seguridad] CABECERA_IP_CONFIABLE está vacía: no se limita por IP y el login se limita solo por email. " +
-        "Configurala con la cabecera que fija el reverse proxy (ej. x-real-ip con Caddy).",
+      "[seguridad] CABECERA_IP_CONFIABLE está vacía: en producción no se aceptan reservas ni ingresos " +
+        "hasta configurar la cabecera que fija el reverse proxy (ej. x-real-ip con Caddy).",
     );
   }
 }

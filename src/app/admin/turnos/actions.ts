@@ -1,10 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { isGoogleConfigurado, borrarEvento } from "@/lib/google-calendar/client";
+import { borrarEvento } from "@/lib/google-calendar/client";
+import { cuentaGoogle } from "@/lib/integraciones/cuenta";
 import { parsearId } from "@/lib/panel/formularios";
 import { ir, tenantDeAccion } from "@/lib/panel/servidor";
-import { usaCredencialesGlobales } from "@/lib/tenant/credenciales-globales";
 import { datosDelTenant } from "@/lib/tenant/datos";
 import type { Turno } from "@/lib/data/types";
 
@@ -34,9 +34,10 @@ export async function cancelarTurno(formData: FormData) {
   if (error) ir(RUTA, { error: "error" });
   if (!data?.length) ir(RUTA, { error: "id" });
 
-  if (turno.google_calendar_event_id && isGoogleConfigurado() && usaCredencialesGlobales(tenant.slug)) {
+  const cuenta = turno.google_calendar_event_id ? await cuentaGoogle(tenant.id, tenant.slug) : null;
+  if (turno.google_calendar_event_id && cuenta) {
     try {
-      await borrarEvento(turno.google_calendar_event_id);
+      await borrarEvento(turno.google_calendar_event_id, cuenta);
     } catch {
       // El turno ya quedó cancelado aunque falle Calendar.
     }
