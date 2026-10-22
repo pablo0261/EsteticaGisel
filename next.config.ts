@@ -1,49 +1,5 @@
 import type { NextConfig } from "next";
-
-const securityHeaders = [
-  { key: "X-Frame-Options", value: "DENY" },
-  { key: "X-Content-Type-Options", value: "nosniff" },
-  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
-  { key: "Content-Security-Policy", value: politicaContenido() },
-];
-
-if (process.env.NODE_ENV === "production") {
-  securityHeaders.push({
-    key: "Strict-Transport-Security",
-    value: "max-age=63072000; includeSubDomains",
-  });
-}
-
-/** Orígenes de imágenes, video y la API de YouTube. En desarrollo Next necesita eval. */
-function politicaContenido(): string {
-  let supabase = "";
-  try {
-    const base = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
-    if (base) supabase = new URL(base).origin;
-  } catch {
-    supabase = "";
-  }
-  const extra = supabase ? ` ${supabase}` : "";
-  const script =
-    process.env.NODE_ENV === "production"
-      ? "script-src 'self' 'unsafe-inline' https://www.youtube.com https://www.youtube-nocookie.com https://s.ytimg.com"
-      : "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.youtube.com https://www.youtube-nocookie.com https://s.ytimg.com";
-  return [
-    "default-src 'self'",
-    "base-uri 'self'",
-    "object-src 'none'",
-    "frame-ancestors 'none'",
-    "form-action 'self'",
-    script,
-    "style-src 'self' 'unsafe-inline'",
-    `img-src 'self' data: blob: https://i.ytimg.com https://*.supabase.co${extra}`,
-    "font-src 'self'",
-    `connect-src 'self' https://*.supabase.co https://www.youtube.com https://www.youtube-nocookie.com${extra}`,
-    "frame-src https://www.youtube.com https://www.youtube-nocookie.com",
-    `media-src 'self' blob: https://*.supabase.co${extra}`,
-  ].join("; ");
-}
+import { headersDeSeguridad } from "./src/lib/seguridad/headers";
 
 /**
  * Imágenes de la marca de cada cliente (bucket público "sitios" de Supabase). El host sale
@@ -70,7 +26,15 @@ const nextConfig: NextConfig = {
     serverActions: { bodySizeLimit: "3mb" },
   },
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    return [
+      {
+        source: "/:path*",
+        headers: headersDeSeguridad({
+          produccion: process.env.NODE_ENV === "production",
+          supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+        }),
+      },
+    ];
   },
 };
 

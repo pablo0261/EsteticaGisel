@@ -1,5 +1,9 @@
--- Etapa A1: núcleo multi-tenant. Gisel pasa a ser el primer tenant.
+-- Núcleo multi-tenant. No crea clientes ni carga textos, fotos ni testimonios:
+-- cada salón se da de alta desde el panel master o con supabase/seeds/.
 -- Requiere la 0005 (recordatorios_enviados).
+-- Si esta base ya aplicó una versión anterior de este archivo, no hay que volver a
+-- correrlo: el registro de migraciones lo saltea. Los datos de un salón existente
+-- siguen en la base.
 
 -- ---------- tenants ----------
 create table tenants (
@@ -28,10 +32,10 @@ create table tenants (
 -- ---------- tenant_marca: lo que hace única la página ----------
 create table tenant_marca (
   tenant_id uuid primary key references tenants (id) on delete cascade,
-  color_primario text not null default '#c0899a',
-  color_secundario text not null default '#4e5340',
-  color_fondo text not null default '#f6f1ea',
-  color_texto text not null default '#1a1a1a',
+  color_primario text not null default '#3d5a80',
+  color_secundario text not null default '#5c677d',
+  color_fondo text not null default '#f4f5f7',
+  color_texto text not null default '#1f2933',
   logo_url text,
   logo_claro_url text,
   foto_perfil_url text,
@@ -91,15 +95,15 @@ create table testimonios (
 );
 create index idx_testimonios_tenant on testimonios (tenant_id);
 
--- ---------- Gisel ----------
-insert into tenants (slug, nombre, modulo_turnos, modulo_cursos, modulo_sobre_mi, modulo_testimonios)
-values ('gisel', 'Gisel Bigurrarena', true, true, true, true);
-
 -- ---------- tenant_id en las tablas existentes ----------
+-- Una instalación nueva llega vacía. Si hubiera filas de un esquema de un solo
+-- negocio, se asignan al único tenant que ya exista; si no hay tenant, se corta
+-- para no inventar un cliente dentro de la migración.
 do $$
 declare
   t text;
-  gisel uuid := (select id from public.tenants where slug = 'gisel');
+  destino uuid := (select id from public.tenants order by creado_en limit 1);
+  hay bigint;
 begin
   foreach t in array array[
     'servicios', 'turnos', 'cursos', 'archivos_curso', 'accesos_curso',
@@ -107,7 +111,13 @@ begin
   ] loop
     execute format(
       'alter table public.%I add column tenant_id uuid references public.tenants (id) on delete cascade', t);
-    execute format('update public.%I set tenant_id = %L', t, gisel);
+    execute format('select count(*) from public.%I', t) into hay;
+    if hay > 0 then
+      if destino is null then
+        raise exception 'La tabla % tiene filas y no hay un tenant para asignarlas. Esta migración no crea clientes.', t;
+      end if;
+      execute format('update public.%I set tenant_id = %L where tenant_id is null', t, destino);
+    end if;
     execute format('alter table public.%I alter column tenant_id set not null', t);
     execute format('create index %I on public.%I (tenant_id)', 'idx_' || t || '_tenant', t);
   end loop;
@@ -139,51 +149,21 @@ alter table recordatorios_enviados add constraint recordatorios_mismo_tenant
 -- ---------- configuracion_negocio: de "una sola fila" a una fila por tenant ----------
 alter table configuracion_negocio
   add column tenant_id uuid references tenants (id) on delete cascade;
-update configuracion_negocio set tenant_id = (select id from tenants where slug = 'gisel');
+do $$
+declare
+  destino uuid := (select id from public.tenants order by creado_en limit 1);
+  hay bigint;
+begin
+  select count(*) into hay from public.configuracion_negocio;
+  if hay > 0 then
+    if destino is null then
+      raise exception 'configuracion_negocio tiene filas y no hay un tenant para asignarlas.';
+    end if;
+    update public.configuracion_negocio set tenant_id = destino where tenant_id is null;
+  end if;
+end $$;
 alter table configuracion_negocio drop constraint solo_una_fila;
 alter table configuracion_negocio drop constraint configuracion_negocio_pkey;
 alter table configuracion_negocio drop column id;
 alter table configuracion_negocio alter column tenant_id set not null;
 alter table configuracion_negocio add primary key (tenant_id);
-
--- ---------- Contenido de Gisel (antes fijo en el código) ----------
-insert into tenant_marca (
-  tenant_id, logo_url, logo_claro_url, foto_perfil_url, rubro, tagline,
-  inicio_titulo, inicio_destacado, inicio_texto, sobre_mi_titulo, sobre_mi_texto,
-  nota_reservas, whatsapp, instagram, email_contacto, direccion
-)
-select
-  id,
-  '/brand/horizontal-negro.png',
-  '/brand/horizontal-blanco.png',
-  '/gisel/retrato.jpg',
-  'Estética y Salud',
-  'Belleza y bienestar con mirada profesional',
-  'Tu momento de',
-  'belleza y bienestar',
-  'Tratamientos faciales, corporales, manos y pies con mirada profesional. Reservá tu turno online y sumate a mis cursos de estética.',
-  'Hola, soy Gisel',
-  E'Soy esteticista y me dedico a cuidar la piel y el bienestar de cada persona que pasa por mi espacio. Trabajo de forma personalizada, con productos de calidad y mucha dedicación.\n\nAdemás de atender en el consultorio, comparto mi experiencia a través de cursos de estética, tanto para profesionales del rubro como para quienes quieren aprender a cuidarse en casa.\n\n(Texto de ejemplo — se reemplaza por la presentación real de Gisel.)',
-  'Llegadas tarde: el turno se realiza únicamente dentro del tiempo restante disponible, sin extender el horario.',
-  '+5490000000000',
-  'esteticaysaludgisel',
-  'hola@esteticagisel.com.ar',
-  'Argentina'
-from tenants where slug = 'gisel';
-
-insert into tenant_credenciales (tenant_id) select id from tenants where slug = 'gisel';
-
-insert into testimonios (tenant_id, nombre, texto, orden)
-select t.id, v.nombre, v.texto, v.orden
-from tenants t,
-  (values
-    ('Carla M.', 'Salí renovada. Gisel es súper profesional y el trato es hermoso. Ya reservé mi próximo turno.', 1),
-    ('Sofía R.', 'El laminado de cejas me encantó, quedó natural y prolijo. Recomendadísima.', 2),
-    ('Daniela P.', 'Hice uno de sus cursos y aprendí un montón. Explica clarísimo y con mucha dedicación.', 3)
-  ) as v (nombre, texto, orden)
-where t.slug = 'gisel';
-
--- Los usuarios que existen hoy son el admin de Gisel.
-insert into perfiles (user_id, rol, tenant_id)
-select u.id, 'cliente', t.id from auth.users u, tenants t where t.slug = 'gisel'
-on conflict (user_id) do nothing;

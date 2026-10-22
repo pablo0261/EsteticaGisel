@@ -4,6 +4,7 @@ import { Logo } from "@/components/ui/Logo";
 import { getConfiguracion } from "@/lib/data/configuracion";
 import { resumirHorario } from "@/lib/turnos/horario";
 import { whatsappLink, MENSAJES_WHATSAPP } from "@/lib/tenant/urls";
+import { creditoVisible } from "@/lib/sitio/credito";
 import { traductor } from "@/lib/i18n/textos";
 import type { Tenant } from "@/lib/tenant/tipos";
 
@@ -11,6 +12,7 @@ export async function Footer({ tenant }: { tenant: Tenant }) {
   const { marca } = tenant;
   const t = traductor(tenant.idioma);
   const config = await getConfiguracion(tenant.id);
+  const credito = creditoVisible(config?.mostrar_credito === true, tenant.idioma);
   const horarios = config ? resumirHorario(config.horario_atencion, tenant.idioma) : [];
   const whatsapp = whatsappLink(marca.whatsapp, t(MENSAJES_WHATSAPP.consulta));
 
@@ -94,10 +96,17 @@ export async function Footer({ tenant }: { tenant: Tenant }) {
           )}
         </div>
 
-        <div className="mt-12 border-t border-fondo/15 pt-6 font-sans text-xs text-fondo/50">
-          © {tenant.nombre}
-          {marca.rubro && ` · ${marca.rubro}`}.{" "}
-          {t({ es: "Todos los derechos reservados.", pt: "Todos os direitos reservados." })}
+        <div className="mt-12 flex flex-col gap-2 border-t border-fondo/15 pt-6 font-sans text-xs text-fondo/50 sm:flex-row sm:items-center sm:justify-between">
+          <p>
+            © {tenant.nombre}
+            {marca.rubro && ` · ${marca.rubro}`}.{" "}
+            {t({ es: "Todos los derechos reservados.", pt: "Todos os direitos reservados." })}
+          </p>
+          {credito && (
+            <a href={credito.href} className="transition hover:text-fondo" target="_blank" rel="noopener noreferrer">
+              {credito.texto}
+            </a>
+          )}
         </div>
       </Container>
     </footer>

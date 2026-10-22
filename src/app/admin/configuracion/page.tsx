@@ -207,6 +207,23 @@ export default async function ConfiguracionAdmin({ searchParams }: { searchParam
           </>
         )}
 
+        <section className="flex flex-col gap-3">
+          <h2 className="font-serif text-2xl text-texto">{t({ es: "Pie del sitio", pt: "Rodapé do site" })}</h2>
+          <label className={CASILLA}>
+            <input name="mostrar_credito" type="checkbox" defaultChecked={config.mostrar_credito === true} />
+            {t({
+              es: "Mostrar “Sitio creado por Certea” en el pie",
+              pt: "Mostrar “Site criado por Certea” no rodapé",
+            })}
+          </label>
+          <p className={AYUDA}>
+            {t({
+              es: "Apagado por defecto. Es un enlace a https://certea.com.br y no incluye el nombre de ninguna persona.",
+              pt: "Desligado por padrão. É um link para https://certea.com.br e não inclui o nome de nenhuma pessoa.",
+            })}
+          </p>
+        </section>
+
         <div>
           <SubmitButton className={BOTON}>{t({ es: "Guardar", pt: "Salvar" })}</SubmitButton>
         </div>

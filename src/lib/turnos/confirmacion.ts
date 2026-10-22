@@ -1,5 +1,6 @@
 import "server-only";
 import { isEmailConfigurado, enviarEmail } from "@/lib/email/gmail";
+import { marcaEmailDeTenant } from "@/lib/email/layout-marca";
 import { plantillaConfirmacionTurno } from "@/lib/email/plantillas";
 import { crearEvento } from "@/lib/google-calendar/client";
 import { cuentaGoogle } from "@/lib/integraciones/cuenta";
@@ -13,8 +14,9 @@ import { validarEmailCliente } from "./cliente";
  * Lo que pasa cuando un turno queda confirmado (pago aprobado por Mercado Pago o reserva sin
  * pago anticipado): el evento de Google Calendar y el email de confirmación.
  * Calendar usa las credenciales del cliente (panel, o el .env del tenant global).
- * El email sigue saliendo por el Gmail del .env, solo para ese tenant, hasta que cada
- * cliente tenga el suyo. Los dos son best effort: un fallo no deshace la confirmación.
+ * El email sale por el Gmail del .env, solo para el tenant de esas credenciales, y la
+ * plantilla usa la marca de ese tenant. Los dos son best effort: un fallo no deshace
+ * la confirmación.
  */
 export type TurnoConfirmado = {
   slug: string;
@@ -54,12 +56,15 @@ export async function enviarConfirmacionDeTurno(turno: TurnoConfirmado): Promise
   // (o cargado por otra vía) no debe convertirse en una lista de destinatarios.
   const destinatario = validarEmailCliente(turno.clienteEmail);
   if (!destinatario) return;
+  const tenant = await getTenantPorSlug(turno.slug).catch(() => null);
+  if (!tenant) return;
   const fechaHoraTexto = new Date(turno.fechaHoraIso).toLocaleString(LOCALES[turno.idioma], {
     dateStyle: "long",
     timeStyle: "short",
     timeZone: turno.zonaHoraria,
   });
   const { subject, html } = plantillaConfirmacionTurno({
+    marca: marcaEmailDeTenant(tenant, urlDelTenant(turno.slug)),
     servicio: turno.servicio,
     fechaHoraTexto,
     linkGestion: `${urlDelTenant(turno.slug)}/turnos/gestion/${turno.tokenGestion}`,

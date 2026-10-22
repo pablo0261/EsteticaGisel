@@ -4,15 +4,20 @@ import { obtenerPago, type MpPayment } from "@/lib/mercadopago/client";
 import { montoDeCompraValido, parsearReferencia } from "@/lib/mercadopago/referencia";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isEmailConfigurado, enviarEmail } from "@/lib/email/gmail";
+import { marcaEmailDeTenant } from "@/lib/email/layout-marca";
 import { plantillaCompraCurso } from "@/lib/email/plantillas";
+import { esIdNotificacionMp } from "@/lib/seguridad/entrada";
+import { permitirPorIpOGlobal } from "@/lib/seguridad/limite-memoria";
 import { calcularExpiracion, precioEfectivo } from "@/lib/cursos/reglas";
 import { validarEmailCliente } from "@/lib/turnos/cliente";
 import { crearEventoDeTurno, enviarConfirmacionDeTurno, type TurnoConfirmado } from "@/lib/turnos/confirmacion";
 import { mismoMonto, sumaEnCentavos } from "@/lib/turnos/reglas";
 import { cuentaMercadoPago } from "@/lib/integraciones/cuenta";
 import { datosDelTenant } from "@/lib/tenant/datos";
-import { tenantDelRequest } from "@/lib/tenant/actual";
+import { getTenantPorSlug, tenantDelRequest } from "@/lib/tenant/actual";
+import { usaCredencialesGlobales } from "@/lib/tenant/credenciales-globales";
 import { urlDelTenant } from "@/lib/tenant/urls";
+import { ipDeCabecera } from "@/lib/turnos/ip";
 import type { Idioma } from "@/lib/i18n/textos";
 import type { Moneda } from "@/lib/tenant/tipos";
 
@@ -22,13 +27,18 @@ import type { Moneda } from "@/lib/tenant/tipos";
  * Es idempotente: MP reintenta las notificaciones y puede mandar dos a la vez.
  */
 export async function POST(request: NextRequest) {
+  const ip = ipDeCabecera(request.headers, process.env.CABECERA_IP_CONFIABLE);
+  if (!permitirPorIpOGlobal("webhook-mp", ip, { porIp: 120, sinIp: 300, ventanaMs: 60_000 })) {
+    return NextResponse.json({ error: "Demasiadas solicitudes" }, { status: 429 });
+  }
+
   const body = await request.json().catch(() => null);
   const dataId: string | undefined =
-    body?.data?.id ?? request.nextUrl.searchParams.get("data.id") ?? undefined;
+    body?.data?.id != null ? String(body.data.id) : (request.nextUrl.searchParams.get("data.id") ?? undefined);
   const tipo: string | undefined =
     body?.type ?? request.nextUrl.searchParams.get("type") ?? undefined;
 
-  if (tipo !== "payment" || !dataId) {
+  if (tipo !== "payment" || !dataId || !esIdNotificacionMp(dataId)) {
     return NextResponse.json({ received: true });
   }
 
@@ -278,10 +288,15 @@ async function procesarPagoCurso(tenantId: string, cursoId: string, centavosEspe
   }
 
   // Un solo destinatario: el email del pagador viene de Mercado Pago.
+  // La plantilla es la marca de este tenant. El envío por el Gmail global solo si
+  // esas credenciales son de este cliente.
   const destinatario = validarEmailCliente(pago.payerEmail);
-  if (isEmailConfigurado() && destinatario) {
+  if (isEmailConfigurado() && destinatario && usaCredencialesGlobales(tenantCurso.slug)) {
     try {
+      const tenantEmail = await getTenantPorSlug(tenantCurso.slug);
+      if (!tenantEmail) return;
       const { subject, html } = plantillaCompraCurso({
+        marca: marcaEmailDeTenant(tenantEmail, urlDelTenant(tenantEmail.slug)),
         curso: curso.titulo,
         linkAcceso: `${urlDelTenant(tenantCurso.slug)}/cursos/acceso/${acceso.token_acceso}`,
       });

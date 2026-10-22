@@ -7,6 +7,8 @@ import { guardarRefreshGoogle } from "@/lib/integraciones/guardar";
 import { tenantDelAdmin } from "@/lib/tenant/admin";
 import { origenDelRequest } from "@/lib/tenant/origen";
 import { urlDelTenant } from "@/lib/tenant/urls";
+import { permitirPorIpOGlobal } from "@/lib/seguridad/limite-memoria";
+import { ipDeCabecera } from "@/lib/turnos/ip";
 
 /**
  * Google vuelve acá con el code. El state tiene que ser de este cliente y de esta sesión.
@@ -14,6 +16,10 @@ import { urlDelTenant } from "@/lib/tenant/urls";
  */
 export async function GET(request: NextRequest) {
   const aca = (path: string) => NextResponse.redirect(new URL(path, `${origenDelRequest(request)}/`));
+  const ip = ipDeCabecera(request.headers, process.env.CABECERA_IP_CONFIABLE);
+  if (!permitirPorIpOGlobal("google-oauth", ip, { porIp: 30, sinIp: 60, ventanaMs: 60_000 })) {
+    return aca("/admin/conexiones?error=google_code");
+  }
   const tenant = await tenantDelAdmin().catch(() => null);
   if (!tenant) return aca("/admin/login");
   if (request.nextUrl.searchParams.get("error")) return aca("/admin/conexiones?error=google_code");

@@ -2,22 +2,22 @@
 
 /*
  * Colores de la marca del tenant. Los layouts del sitio y del panel los redefinen con
- * style (estiloMarca). Los valores por defecto son la paleta de Gisel, para que las
- * páginas sin tenant se vean igual que antes.
+ * style (estiloMarca). Estos valores son la paleta neutra de la plataforma, para las
+ * páginas que no tienen tenant (el master y los errores). Cada salón trae la suya.
  */
 :root {
   color-scheme: light;
-  --marca-primario: #c0899a;
-  --marca-secundario: #4e5340;
-  --marca-fondo: #f6f1ea;
-  --marca-texto: #1a1a1a;
+  --marca-primario: #3d5a80;
+  --marca-secundario: #5c677d;
+  --marca-fondo: #f4f5f7;
+  --marca-texto: #1f2933;
 }
 
 /*
  * "inline": cada clase lleva el valor (var(--marca-…) o el color-mix) y no var(--color-…).
  * Así el color-mix se resuelve en cada elemento con las variables de su tenant. Sin inline
  * se resolvería una sola vez en :root, con los colores por defecto.
- * En cada comentario: el resultado con la paleta de Gisel y el valor fijo que reemplaza.
+ * En cada comentario: el color-mix con la paleta neutra de :root.
  */
 @theme inline {
   --color-primario: var(--marca-primario);

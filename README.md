@@ -1,29 +1,37 @@
-# Estética y Salud — Gisel Bigurrarena
+# Turnos online
 
-Sitio web del centro de estética de Gisel Bigurrarena (Argentina): landing pública, sistema de turnos con seña, y cursos online con acceso pago.
+Plataforma multi-tenant para el sitio de un salón: landing, turnos con seña, cursos y panel de cada cliente. Cada salón es un subdominio. El primero que existió (Gisel) no está metido en el código: sus datos van en [`supabase/seeds/gisel.sql`](supabase/seeds/gisel.sql) y un demo ficticio en [`supabase/seeds/demo.sql`](supabase/seeds/demo.sql).
 
 ## Stack
 
-Next.js (App Router) + TypeScript · Tailwind CSS · Supabase (Postgres/Auth/Storage) · Mercado Pago · Google Calendar · Resend.
+Next.js (App Router) + TypeScript · Tailwind CSS · Supabase (Postgres/Auth/Storage) · Mercado Pago · Google Calendar · email por SMTP.
 
-## Estado
+## Alta de un salón
 
-En desarrollo por fases. Ver el diseño y el roadmap en
-[docs/superpowers/specs/2026-07-06-sitio-estetica-gisel-design.md](docs/superpowers/specs/2026-07-06-sitio-estetica-gisel-design.md).
+La guía para crear un tenant a mano (subdominio, Supabase, Mercado Pago a nombre del salón, Google Calendar y dominio) está en [docs/alta-de-tenant.md](docs/alta-de-tenant.md).
 
-- **Fase 0 — Fundaciones:** scaffold + sistema de diseño + wiring Supabase.
-- **Fase 1 — Landing pública.**
-- Fases 2–5: admin, turnos, cursos, deploy.
+Borradores legales para Argentina (Ley 25.326), no son asesoramiento:
+
+- [docs/legal/terminos-borrador.md](docs/legal/terminos-borrador.md)
+- [docs/legal/privacidad-borrador.md](docs/legal/privacidad-borrador.md)
 
 ## Desarrollo
 
 ```bash
 npm install
 cp .env.example .env.local   # completar con las credenciales (nunca commitear)
-npm run dev                  # http://gisel.localhost:3000 (cada cliente es un subdominio)
-npm test                     # tests unitarios
+npm run dev                  # http://<slug>.localhost:3000
+npm test
+npm run lint
 npm run test:aislamiento     # aislamiento entre tenants contra la base real
 npm run migrar -- supabase/migrations/<archivo>.sql
+```
+
+Después de las migraciones, si hace falta un salón de ejemplo:
+
+```bash
+npm run migrar -- supabase/seeds/demo.sql
+npm run migrar -- supabase/seeds/gisel.sql   # solo en la base de ese salón
 ```
 
 ## Docker
@@ -31,7 +39,7 @@ npm run migrar -- supabase/migrations/<archivo>.sql
 Requiere `.env.local` completo (se usa en el build para las `NEXT_PUBLIC_*` y en runtime para los secretos; no se copia a la imagen).
 
 ```bash
-docker compose up -d --build   # http://gisel.localhost:3000
+docker compose up -d --build   # http://<slug>.localhost:3000
 docker compose logs -f
 docker compose down
 ```
@@ -46,3 +54,5 @@ Liberar turnos sin pagar cada 5 min y recordatorios (48h, 24h, 2h) cada 10 min. 
 ## Seguridad
 
 Los secretos van **solo** en `.env.local` (gitignoreado). Nunca se commitean ni se comparten en texto plano.
+
+El paquete es privado (`"private": true`, `"license": "UNLICENSED"`). El texto de la licencia está en [LICENSE](LICENSE).
