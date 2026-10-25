@@ -119,8 +119,10 @@ describe("parsearConfiguracion", () => {
       senaPorcentaje: 50,
     });
     if (r.ok) {
+      expect(r.valor.mostrarCredito).toBe(false);
       expect(columnasConfiguracion(r.valor)).toEqual({
         horario_atencion: r.valor.horario,
+        mostrar_credito: false,
         horas_minimas_cancelacion: 24,
         minutos_preparacion_entre_turnos: 15,
         modo_pago: "ninguno",
@@ -129,10 +131,18 @@ describe("parsearConfiguracion", () => {
     }
   });
 
-  it("sin el módulo turnos: solo el horario (las reglas no se tocan aunque vengan)", () => {
+  it("el crédito del pie queda apagado si no viene tildado y encendido si viene on", () => {
+    const apagado = parsearConfiguracion(fd({ ...SEMANA, ...REGLAS }), true);
+    const encendido = parsearConfiguracion(fd({ ...SEMANA, ...REGLAS, mostrar_credito: "on" }), false);
+    expect(apagado.ok && apagado.valor.mostrarCredito).toBe(false);
+    expect(encendido.ok && encendido.valor.mostrarCredito).toBe(true);
+    if (encendido.ok) expect(columnasConfiguracion(encendido.valor).mostrar_credito).toBe(true);
+  });
+
+  it("sin el módulo turnos: el horario y el crédito (las reglas no se tocan aunque vengan)", () => {
     const r = parsearConfiguracion(fd({ ...SEMANA, ...REGLAS, modo_pago: "gratis" }), false);
     expect(r.ok && r.valor.reglas).toBeNull();
-    if (r.ok) expect(Object.keys(columnasConfiguracion(r.valor))).toEqual(["horario_atencion"]);
+    if (r.ok) expect(Object.keys(columnasConfiguracion(r.valor)).sort()).toEqual(["horario_atencion", "mostrar_credito"]);
   });
 
   it("cada error", () => {

@@ -17,6 +17,8 @@ export type ConfiguracionNegocio = {
   sena_porcentaje: number;
   modo_pago: ModoPago;
   horario_atencion: Record<string, [string, string]>;
+  /** Crédito del pie. false si la migración todavía no corrió o el salón no lo activó. */
+  mostrar_credito?: boolean;
 };
 
 export type EstadoTurno = "pendiente_pago" | "confirmado" | "cancelado" | "completado";

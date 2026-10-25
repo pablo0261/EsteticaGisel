@@ -102,7 +102,12 @@ export type ReglasTurnos = {
 };
 
 /** reglas null: el módulo turnos está apagado y sus reglas no se tocan. */
-export type FormConfiguracion = { horario: Record<string, [string, string]>; reglas: ReglasTurnos | null };
+export type FormConfiguracion = {
+  horario: Record<string, [string, string]>;
+  reglas: ReglasTurnos | null;
+  /** Crédito "Sitio creado por Certea" en el pie. Apagado si el formulario no lo tilda. */
+  mostrarCredito: boolean;
+};
 
 export function parsearConfiguracion(fd: FormData, conTurnos: boolean): Resultado<FormConfiguracion> {
   const horario: Record<string, [string, string]> = {};
@@ -114,7 +119,8 @@ export function parsearConfiguracion(fd: FormData, conTurnos: boolean): Resultad
     if (!HORA.test(desde) || !HORA.test(hasta) || desde >= hasta) return { ok: false, error: "horario" };
     horario[key] = [desde, hasta];
   }
-  if (!conTurnos) return { ok: true, valor: { horario, reglas: null } };
+  const mostrarCredito = tildado(fd, "mostrar_credito");
+  if (!conTurnos) return { ok: true, valor: { horario, reglas: null, mostrarCredito } };
 
   const horasMinimasCancelacion = entero(fd, "horas_minimas_cancelacion", 0, L.horasCancelacionMax);
   if (horasMinimasCancelacion === null) return { ok: false, error: "horas_cancelacion" };
@@ -126,13 +132,18 @@ export function parsearConfiguracion(fd: FormData, conTurnos: boolean): Resultad
   if (senaPorcentaje === null) return { ok: false, error: "sena_porcentaje" };
   return {
     ok: true,
-    valor: { horario, reglas: { horasMinimasCancelacion, minutosEntreTurnos, modoPago, senaPorcentaje } },
+    valor: {
+      horario,
+      reglas: { horasMinimasCancelacion, minutosEntreTurnos, modoPago, senaPorcentaje },
+      mostrarCredito,
+    },
   };
 }
 
 export function columnasConfiguracion(c: FormConfiguracion) {
   return {
     horario_atencion: c.horario,
+    mostrar_credito: c.mostrarCredito,
     ...(c.reglas
       ? {
           horas_minimas_cancelacion: c.reglas.horasMinimasCancelacion,

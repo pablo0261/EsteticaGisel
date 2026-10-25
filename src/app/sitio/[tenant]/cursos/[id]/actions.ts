@@ -7,7 +7,10 @@ import { crearPreferencia } from "@/lib/mercadopago/client";
 import { referenciaCurso } from "@/lib/mercadopago/referencia";
 import { tenantDelRequest } from "@/lib/tenant/actual";
 import { urlDelTenant } from "@/lib/tenant/urls";
+import { esUuid } from "@/lib/seguridad/entrada";
+import { permitirPorIpOGlobal } from "@/lib/seguridad/limite-memoria";
 import { validarEmailCliente } from "@/lib/turnos/cliente";
+import { bloqueadoSinIp, getClientIp } from "@/lib/turnos/ip";
 import { redondearMonto } from "@/lib/turnos/reglas";
 import { IDIOMA_POR_DEFECTO, traductor } from "@/lib/i18n/textos";
 
@@ -23,8 +26,9 @@ export async function comprarCurso(formData: FormData): Promise<ComprarCursoResu
     return { ok: false, error: noDisponible };
   }
 
-  const cursoId = String(formData.get("cursoId"));
+  const cursoId = String(formData.get("cursoId") ?? "");
   const emailCrudo = String(formData.get("clienteEmail") || "").trim();
+  if (!esUuid(cursoId)) return { ok: false, error: noDisponible };
 
   if (!emailCrudo) {
     return {
@@ -42,6 +46,26 @@ export async function comprarCurso(formData: FormData): Promise<ComprarCursoResu
       }),
     };
   }
+  const ip = await getClientIp();
+  if (bloqueadoSinIp(process.env.NODE_ENV, ip)) {
+    return {
+      ok: false,
+      error: t({
+        es: "No pudimos validar la compra. Probá de nuevo en unos minutos.",
+        pt: "Não foi possível validar a compra. Tente novamente em alguns minutos.",
+      }),
+    };
+  }
+  if (!permitirPorIpOGlobal(`compra:${tenant.id}`, ip, { porIp: 8, sinIp: 8, ventanaMs: 60 * 60 * 1000 })) {
+    return {
+      ok: false,
+      error: t({
+        es: "Por seguridad, alcanzaste el máximo de intentos de compra por hora. Esperá una hora para volver a intentar.",
+        pt: "Por segurança, você atingiu o máximo de tentativas de compra por hora. Aguarde uma hora para tentar novamente.",
+      }),
+    };
+  }
+
   const mercadoPago = await cuentaMercadoPago(tenant.id, tenant.slug);
   if (!mercadoPago) {
     return {

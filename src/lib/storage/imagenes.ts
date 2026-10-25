@@ -80,7 +80,7 @@ const ARCHIVO_PROPIO = /^(logo|logo_claro|foto_perfil)-\d+\.(png|jpg|webp)$/;
 
 /**
  * Path del objeto de una URL guardada en tenant_marca, solo si es una imagen subida por el
- * panel a la carpeta de ese tenant. Las rutas del sitio ("/brand/…") o de otro tenant dan
+ * panel a la carpeta de ese tenant. Las rutas del sitio ("/tenants/…") o de otro tenant dan
  * null: nunca se borra algo ajeno.
  */
 export function pathDeUrlPublica(url: string | null, urlSupabase: string, tenantId: string): string | null {

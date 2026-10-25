@@ -4,9 +4,8 @@ import { esColorHex, type ColoresMarca } from "@/lib/tenant/estilo";
 import type { Tenant } from "@/lib/tenant/tipos";
 
 /**
- * Layout de email con la marca (spec 10): tablas y estilos inline, que es lo que
- * soportan los clientes de email. Lo usan los emails de login de la etapa B; la etapa D
- * pasa a usarlo en el resto de las plantillas.
+ * Layout de email con la marca del tenant: tablas y estilos inline, que es lo que
+ * soportan los clientes de email. Lo usan el login y los emails de turnos y cursos.
  */
 export type MarcaEmail = {
   nombre: string;
@@ -47,7 +46,7 @@ export function coloresSeguros(colores: ColoresMarca): ColoresMarca {
   };
 }
 
-/** URL absoluta del logo. Las rutas del sitio ("/brand/x.png") se completan con su URL. */
+/** URL absoluta del logo. Las rutas del sitio ("/tenants/<slug>/…") se completan con su URL. */
 export function logoAbsoluto(logo: string | null, urlBase: string): string | null {
   if (!logo) return null;
   if (/^https?:\/\//i.test(logo)) return logo;

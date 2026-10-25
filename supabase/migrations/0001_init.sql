@@ -1,6 +1,6 @@
 -- =====================================================================
--- Migración inicial — Estética y Salud Gisel Bigurrarena
--- Tablas del MVP + RLS + seed de servicios y configuración de negocio.
+-- Migración inicial del producto. Tablas del MVP y RLS.
+-- Sin datos de ningún salón: eso vive en supabase/seeds/.
 -- =====================================================================
 
 -- ---------- servicios ----------
@@ -127,24 +127,4 @@ create policy "cursos publicados son públicos"
 
 -- turnos, accesos_curso, pagos, configuracion_negocio y archivos_curso
 -- no tienen policy pública: solo se acceden vía service-role (backend)
--- o vía el admin autenticado (policies que se agregan en Fase 2).
-
--- =====================================================================
--- Seed
--- =====================================================================
-insert into servicios (nombre, duracion_minutos, orden) values
-  ('Tratamientos faciales', 90, 1),
-  ('Manicuría', 90, 2),
-  ('Pedicuría', 60, 3),
-  ('Pedicuría + belleza de pies', 90, 4),
-  ('Masajes', 60, 5),
-  ('Tratamientos capilares', 40, 6),
-  ('Laminado de cejas', 60, 7),
-  ('Laminado + lifting de pestañas', 90, 8),
-  ('Tratamientos corporales (por zona)', 60, 9);
-
-insert into configuracion_negocio (id, horario_atencion) values
-  (
-    1,
-    '{"lun":["14:00","19:00"],"mar":["14:00","19:00"],"mie":["14:00","19:00"],"jue":["14:00","19:00"],"vie":["14:00","19:00"],"sab":["09:00","14:00"]}'
-  );
+-- o vía el admin autenticado (policies posteriores).

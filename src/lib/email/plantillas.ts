@@ -1,4 +1,5 @@
-import { escaparHtml } from "./layout-marca";
+import { traductor } from "@/lib/i18n/textos";
+import { botonMarca, coloresSeguros, escaparHtml, layoutMarca, type MarcaEmail } from "./layout-marca";
 
 type EmailPlantilla = { subject: string; html: string };
 
@@ -7,137 +8,120 @@ function asunto(texto: string): string {
   return texto.replace(/[\r\n]+/g, " ");
 }
 
-const COLOR = {
-  mauve: "#c0899a",
-  mauveDark: "#a66f82",
-  sage: "#4e5340",
-  cream: "#f6f1ea",
-  ink: "#1a1a1a",
-  inkSoft: "#55514e",
-};
-
-const FONT_SERIF = "Georgia, 'Times New Roman', serif";
-const FONT_SANS = "Helvetica, Arial, sans-serif";
-
-function logoUrl(): string {
-  return `${process.env.NEXT_PUBLIC_SITE_URL}/brand/horizontal-rosa.png`;
+function plantilla(marca: MarcaEmail, titulo: string, cuerpoHtml: string): string {
+  return layoutMarca(marca, { titulo, cuerpoHtml });
 }
 
-function boton(texto: string, url: string): string {
-  return `
-    <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 8px 0 4px;">
-      <tr>
-        <td style="background-color:${COLOR.mauve}; border-radius: 999px;">
-          <a href="${escaparHtml(url)}" style="display:inline-block; padding: 12px 28px; font-family: ${FONT_SANS}; font-size: 14px; font-weight: 600; color: ${COLOR.cream}; text-decoration: none;">
-            ${escaparHtml(texto)}
-          </a>
-        </td>
-      </tr>
-    </table>`;
-}
-
-function layout(titulo: string, cuerpoHtml: string): string {
-  return `<!doctype html>
-<html lang="es-AR">
-  <body style="margin:0; padding:0; background-color:${COLOR.cream};">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:${COLOR.cream};">
-      <tr>
-        <td align="center" style="padding: 40px 16px;">
-          <table role="presentation" width="100%" style="max-width: 520px;" cellpadding="0" cellspacing="0">
-            <tr>
-              <td align="center" style="padding-bottom: 28px;">
-                <img src="${logoUrl()}" alt="Gisel Bigurrarena" width="200" style="display:block; max-width: 200px;" />
-              </td>
-            </tr>
-            <tr>
-              <td style="background-color:#ffffff; border-radius: 16px; padding: 36px 32px; border-top: 4px solid ${COLOR.mauve};">
-                <h1 style="margin:0 0 16px; font-family: ${FONT_SERIF}; font-size: 24px; font-weight: 500; color:${COLOR.mauveDark};">
-                  ${escaparHtml(titulo)}
-                </h1>
-                <div style="font-family: ${FONT_SANS}; font-size: 15px; line-height: 1.7; color:${COLOR.ink};">
-                  ${cuerpoHtml}
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td align="center" style="padding-top: 28px; font-family: ${FONT_SANS}; font-size: 12px; letter-spacing: 0.05em; text-transform: uppercase; color:${COLOR.sage};">
-                Gisel Bigurrarena · Estética y Salud
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-    </table>
-  </body>
-</html>`;
-}
-
+/**
+ * Emails de turnos y cursos con la marca del tenant (nombre, idioma, colores y logo).
+ * No hay una marca fija de ningún salón.
+ */
 export function plantillaConfirmacionTurno(opts: {
+  marca: MarcaEmail;
   servicio: string;
   fechaHoraTexto: string;
   linkGestion: string;
 }): EmailPlantilla {
+  const t = traductor(opts.marca.idioma);
+  const { colorTexto } = coloresSeguros(opts.marca.colores);
   const servicio = escaparHtml(opts.servicio);
   const fecha = escaparHtml(opts.fechaHoraTexto);
   return {
-    subject: asunto(`Turno confirmado — ${opts.servicio}`),
-    html: layout(
-      "¡Tu turno está confirmado!",
-      `<p style="margin:0 0 4px;">Servicio</p>
-       <p style="margin:0 0 16px; font-size: 17px; color:${COLOR.ink};"><strong>${servicio}</strong></p>
-       <p style="margin:0 0 4px; color:${COLOR.inkSoft};">Fecha</p>
-       <p style="margin:0 0 20px; font-size: 17px;"><strong>${fecha}</strong></p>
-       <p style="margin:0 0 4px; color:${COLOR.inkSoft};">¿Necesitás cancelar o reprogramar?</p>
-       ${boton("Gestionar mi turno", opts.linkGestion)}`,
+    subject: asunto(t({ es: `Turno confirmado — ${opts.servicio}`, pt: `Horário confirmado — ${opts.servicio}` })),
+    html: plantilla(
+      opts.marca,
+      t({ es: "¡Tu turno está confirmado!", pt: "Seu horário está confirmado!" }),
+      `<p style="margin:0 0 4px;">${t({ es: "Servicio", pt: "Serviço" })}</p>
+       <p style="margin:0 0 16px; font-size:17px; color:${colorTexto};"><strong>${servicio}</strong></p>
+       <p style="margin:0 0 4px;">${t({ es: "Fecha", pt: "Data" })}</p>
+       <p style="margin:0 0 20px; font-size:17px;"><strong>${fecha}</strong></p>
+       <p style="margin:0 0 4px;">${t({ es: "¿Necesitás cancelar o reprogramar?", pt: "Precisa cancelar ou reagendar?" })}</p>
+       ${botonMarca(opts.marca, t({ es: "Gestionar mi turno", pt: "Gerenciar meu horário" }), opts.linkGestion)}`,
     ),
   };
 }
 
+const FALTA = {
+  "48h": { es: "2 días", pt: "2 dias" },
+  "24h": { es: "1 día", pt: "1 dia" },
+  "2h": { es: "2 horas", pt: "2 horas" },
+} as const;
+
+export type FaltaRecordatorio = keyof typeof FALTA;
+
 export function plantillaRecordatorioTurno(opts: {
+  marca: MarcaEmail;
   servicio: string;
   fechaHoraTexto: string;
-  faltaTexto: string;
+  falta: FaltaRecordatorio;
   linkGestion: string;
 }): EmailPlantilla {
+  const t = traductor(opts.marca.idioma);
+  const faltaTexto = t(FALTA[opts.falta]);
   const servicio = escaparHtml(opts.servicio);
   const fecha = escaparHtml(opts.fechaHoraTexto);
   return {
-    subject: asunto(`Recordatorio: faltan ${opts.faltaTexto} para tu turno — ${opts.servicio}`),
-    html: layout(
-      `Faltan ${opts.faltaTexto} para tu turno`,
-      `<p style="margin:0 0 16px;">Te esperamos para tu turno de <strong>${servicio}</strong>.</p>
-       <p style="margin:0 0 4px; color:${COLOR.inkSoft};">Fecha</p>
-       <p style="margin:0 0 20px; font-size: 17px;"><strong>${fecha}</strong></p>
-       <p style="margin:0 0 4px; color:${COLOR.inkSoft};">¿Necesitás cancelar o reprogramar?</p>
-       ${boton("Gestionar mi turno", opts.linkGestion)}`,
+    subject: asunto(
+      t({
+        es: `Recordatorio: faltan ${faltaTexto} para tu turno — ${opts.servicio}`,
+        pt: `Lembrete: faltam ${faltaTexto} para o seu horário — ${opts.servicio}`,
+      }),
+    ),
+    html: plantilla(
+      opts.marca,
+      t({ es: `Faltan ${faltaTexto} para tu turno`, pt: `Faltam ${faltaTexto} para o seu horário` }),
+      `<p style="margin:0 0 16px;">${t({
+        es: `Te esperamos para tu turno de <strong>${servicio}</strong>.`,
+        pt: `Esperamos você para o atendimento de <strong>${servicio}</strong>.`,
+      })}</p>
+       <p style="margin:0 0 4px;">${t({ es: "Fecha", pt: "Data" })}</p>
+       <p style="margin:0 0 20px; font-size:17px;"><strong>${fecha}</strong></p>
+       <p style="margin:0 0 4px;">${t({ es: "¿Necesitás cancelar o reprogramar?", pt: "Precisa cancelar ou reagendar?" })}</p>
+       ${botonMarca(opts.marca, t({ es: "Gestionar mi turno", pt: "Gerenciar meu horário" }), opts.linkGestion)}`,
     ),
   };
 }
 
 export function plantillaCancelacionTurno(opts: {
+  marca: MarcaEmail;
   servicio: string;
   fechaHoraTexto: string;
 }): EmailPlantilla {
+  const t = traductor(opts.marca.idioma);
+  const { colorSecundario } = coloresSeguros(opts.marca.colores);
   return {
-    subject: asunto(`Turno cancelado — ${opts.servicio}`),
-    html: layout(
-      "Tu turno fue cancelado",
-      `<p>Se canceló el turno de <strong>${escaparHtml(opts.servicio)}</strong> del ${escaparHtml(opts.fechaHoraTexto)}.</p>
-       <p style="color:${COLOR.inkSoft};">La seña abonada no es reembolsable. Cuando quieras, podés reservar un nuevo turno.</p>`,
+    subject: asunto(t({ es: `Turno cancelado — ${opts.servicio}`, pt: `Horário cancelado — ${opts.servicio}` })),
+    html: plantilla(
+      opts.marca,
+      t({ es: "Tu turno fue cancelado", pt: "Seu horário foi cancelado" }),
+      `<p>${t({
+        es: `Se canceló el turno de <strong>${escaparHtml(opts.servicio)}</strong> del ${escaparHtml(opts.fechaHoraTexto)}.`,
+        pt: `O atendimento de <strong>${escaparHtml(opts.servicio)}</strong> de ${escaparHtml(opts.fechaHoraTexto)} foi cancelado.`,
+      })}</p>
+       <p style="color:${colorSecundario};">${t({
+         es: "La seña abonada no es reembolsable. Cuando quieras, podés reservar un nuevo turno.",
+         pt: "O sinal pago não é reembolsável. Quando quiser, você pode agendar um novo horário.",
+       })}</p>`,
     ),
   };
 }
 
 export function plantillaCompraCurso(opts: {
+  marca: MarcaEmail;
   curso: string;
   linkAcceso: string;
 }): EmailPlantilla {
+  const t = traductor(opts.marca.idioma);
   return {
-    subject: asunto(`Ya tenés acceso a "${opts.curso}"`),
-    html: layout(
-      "¡Gracias por tu compra!",
-      `<p style="margin:0 0 20px;">Ya podés acceder a <strong>${escaparHtml(opts.curso)}</strong>.</p>
-       ${boton("Ver mi curso", opts.linkAcceso)}`,
+    subject: asunto(t({ es: `Ya tenés acceso a "${opts.curso}"`, pt: `Você já tem acesso a "${opts.curso}"` })),
+    html: plantilla(
+      opts.marca,
+      t({ es: "¡Gracias por tu compra!", pt: "Obrigado pela sua compra!" }),
+      `<p style="margin:0 0 20px;">${t({
+        es: `Ya podés acceder a <strong>${escaparHtml(opts.curso)}</strong>.`,
+        pt: `Você já pode acessar <strong>${escaparHtml(opts.curso)}</strong>.`,
+      })}</p>
+       ${botonMarca(opts.marca, t({ es: "Ver mi curso", pt: "Ver meu curso" }), opts.linkAcceso)}`,
     ),
   };
 }

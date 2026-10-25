@@ -73,7 +73,7 @@ describe("tipos, paths y URLs", () => {
     const propia = urlPublica(SUPABASE, `${TENANT}/logo-123.png`);
     expect(pathDeUrlPublica(propia, SUPABASE, TENANT)).toBe(`${TENANT}/logo-123.png`);
     expect(pathDeUrlPublica(propia, SUPABASE, OTRO)).toBeNull();
-    expect(pathDeUrlPublica("/brand/horizontal-negro.png", SUPABASE, TENANT)).toBeNull();
+    expect(pathDeUrlPublica("/tenants/gisel/brand/horizontal-negro.png", SUPABASE, TENANT)).toBeNull();
     expect(pathDeUrlPublica(null, SUPABASE, TENANT)).toBeNull();
     expect(pathDeUrlPublica(`https://abc.supabase.co/storage/v1/object/public/cursos-archivos/${TENANT}/logo-1.png`, SUPABASE, TENANT)).toBeNull();
     expect(pathDeUrlPublica(urlPublica(SUPABASE, `${TENANT}/../${OTRO}/logo-1.png`), SUPABASE, TENANT)).toBeNull();
